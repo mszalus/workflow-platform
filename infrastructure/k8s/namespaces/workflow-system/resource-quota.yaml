@@ -1,0 +1,50 @@
+---
+# =============================================================================
+# ResourceQuota: workflow-system
+# Enforces aggregate resource ceilings across all pods in the workflow-system
+# namespace. Prevents runaway consumption from misconfigured deployments.
+# Managed by ArgoCD — do not apply manually in production.
+# =============================================================================
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: workflow-system-quota
+  namespace: workflow-system
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+    app.kubernetes.io/part-of: workflow-platform
+  annotations:
+    description: >
+      Aggregate resource quota for the workflow-system namespace.
+      Covers compute (CPU/memory requests and limits), pod count, and
+      Kubernetes object counts for services, secrets, and configmaps.
+spec:
+  hard:
+    # ----- Compute: requests (guaranteed/scheduled) -----
+    requests.cpu: "8"
+    requests.memory: 16Gi
+
+    # ----- Compute: limits (maximum burstable) -----
+    limits.cpu: "16"
+    limits.memory: 32Gi
+
+    # ----- Pod count -----
+    pods: "50"
+
+    # ----- Storage -----
+    # Total storage requested across all PersistentVolumeClaims
+    requests.storage: "200Gi"
+    persistentvolumeclaims: "20"
+
+    # ----- Kubernetes object counts -----
+    services: "30"
+    secrets: "60"
+    configmaps: "60"
+    replicationcontrollers: "0"
+
+    # ----- Service type restrictions -----
+    # Disallow NodePort and LoadBalancer services; all external traffic must
+    # flow through the gateway namespace (Kong) via ClusterIP services.
+    services.nodeports: "0"
+    services.loadbalancers: "0"

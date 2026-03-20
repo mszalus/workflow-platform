@@ -1,0 +1,63 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: scheduler-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/scheduler_svc}
+    username: ${DB_USERNAME:scheduler_svc}
+    password: ${DB_PASSWORD:scheduler_svc}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 3
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/workflow}
+          jwk-set-uri: ${KEYCLOAK_JWK_URI:http://localhost:8080/realms/workflow/protocol/openid-connect/certs}
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never   # Managed by Liquibase
+    properties:
+      org.quartz.scheduler.instanceName: WorkflowScheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.threadPool.threadCount: 10
+      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 20000
+      org.quartz.jobStore.misfireThreshold: 60000
+
+workflow-engine:
+  base-url: ${WORKFLOW_ENGINE_URL:http://localhost:8080}
+  service-token: ${WORKFLOW_ENGINE_TOKEN:dev-token}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:4200}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.workflowplatform: INFO
+    org.quartz: WARN

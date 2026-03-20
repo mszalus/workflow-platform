@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Task Assigned</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+<div style="max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px;">
+    <h2 style="color: #333;">Task Assigned</h2>
+    <p>You have been assigned a new task:</p>
+    <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #007bff; margin: 20px 0;">
+        <strong th:text="${taskName}">Task Name</strong>
+    </div>
+    <p>Process Instance: <code th:text="${processInstanceId}">pid</code></p>
+    <a th:href="${actionUrl}"
+       style="display:inline-block; padding:10px 20px; background:#007bff; color:white; text-decoration:none; border-radius:5px;">
+        View Task
+    </a>
+    <p style="color:#888; font-size:12px; margin-top:30px;">This is an automated notification from the Workflow Platform.</p>
+</div>
+</body>
+</html>

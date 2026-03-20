@@ -1,0 +1,5 @@
+{
+  "name": "@workflow/frontend",
+  "private": true,
+  "workspaces": ["packages/*", "bpmn-designer", "task-inbox"]
+}

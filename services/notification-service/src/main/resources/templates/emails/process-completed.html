@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Process Completed</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+<div style="max-width: 600px; margin: auto; background: white; padding: 30px; border-radius: 8px;">
+    <h2 style="color: #28a745;">Process Completed</h2>
+    <p>The following process has been completed successfully:</p>
+    <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0;">
+        <strong th:text="${processDefinitionKey}">Process Key</strong><br/>
+        <small>Instance ID: <code th:text="${processInstanceId}">pid</code></small>
+    </div>
+    <p style="color:#888; font-size:12px; margin-top:30px;">This is an automated notification from the Workflow Platform.</p>
+</div>
+</body>
+</html>

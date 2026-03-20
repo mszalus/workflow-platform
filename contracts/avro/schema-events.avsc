@@ -1,0 +1,67 @@
+{
+  "type": "record",
+  "name": "SchemaEvent",
+  "namespace": "com.workflowplatform.events",
+  "doc": "Envelope for all schema lifecycle events published by the Schema Service. Consumed by downstream services that need to react to form/schema changes (e.g. search indexing, audit, notifications).",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID v4 uniquely identifying this event instance"
+    },
+    {
+      "name": "eventType",
+      "type": {
+        "type": "enum",
+        "name": "SchemaEventType",
+        "namespace": "com.workflowplatform.events",
+        "doc": "Discriminator for schema lifecycle event types",
+        "symbols": [
+          "SCHEMA_CREATED",
+          "SCHEMA_UPDATED",
+          "SCHEMA_DEACTIVATED",
+          "FIELD_VALUES_SAVED"
+        ]
+      },
+      "doc": "Discriminator field indicating which schema lifecycle event occurred"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string",
+      "doc": "ISO-8601 UTC timestamp of when the event occurred, e.g. 2024-01-15T10:30:00Z"
+    },
+    {
+      "name": "tenantId",
+      "type": "string",
+      "doc": "Identifier of the tenant that owns the schema resource"
+    },
+    {
+      "name": "schemaId",
+      "type": "string",
+      "doc": "UUID of the schema resource that was affected"
+    },
+    {
+      "name": "schemaVersion",
+      "type": ["null", "int"],
+      "default": null,
+      "doc": "Version number of the schema at the time of the event; null for SCHEMA_CREATED before version is assigned"
+    },
+    {
+      "name": "actorId",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Keycloak user ID (sub claim) of the actor who triggered the event; null for system-generated events"
+    },
+    {
+      "name": "correlationId",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Optional correlation ID for distributed request tracing; propagated from inbound HTTP X-Correlation-ID header"
+    },
+    {
+      "name": "payload",
+      "type": "string",
+      "doc": "JSON-encoded payload whose structure is specific to the eventType. For SCHEMA_CREATED/UPDATED: full schema definition. For SCHEMA_DEACTIVATED: minimal tombstone. For FIELD_VALUES_SAVED: submitted field values keyed by field ID."
+    }
+  ]
+}

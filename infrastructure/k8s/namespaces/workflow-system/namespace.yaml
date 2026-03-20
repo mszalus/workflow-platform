@@ -1,0 +1,60 @@
+---
+# =============================================================================
+# Namespace: workflow-system
+# Hosts all workflow platform microservices:
+#   workflow-engine, schema-service, audit-service, notifications-service,
+#   scheduler-service, attachment-service, sla-service
+# Managed by ArgoCD — do not apply manually in production.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: workflow-system
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+    app.kubernetes.io/part-of: workflow-platform
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+    description: "Workflow platform microservices — engines, schemas, audit, notifications, scheduler"
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: workflow-system-limit-range
+  namespace: workflow-system
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+spec:
+  limits:
+    # Default limits applied to every container that does not specify its own
+    - type: Container
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      max:
+        cpu: "4"
+        memory: "8Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+    # Limit the maximum size of a single PersistentVolumeClaim
+    - type: PersistentVolumeClaim
+      max:
+        storage: "50Gi"
+      min:
+        storage: "1Gi"
+    # Pod-level limits (sum of all containers in the pod)
+    - type: Pod
+      max:
+        cpu: "8"
+        memory: "16Gi"

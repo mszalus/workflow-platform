@@ -1,0 +1,989 @@
+openapi: 3.1.0
+info:
+  title: Workflow Engine Service API
+  version: 1.0.0
+  description: >
+    REST API wrapping the Flowable 7.x workflow engine. Provides endpoints for
+    managing BPMN deployments, process definitions, process instances, and human
+    tasks. All operations are tenant-scoped via the JWT bearer token.
+  contact:
+    name: Platform Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://workflow-engine-service:8080
+    description: Internal Kubernetes service endpoint
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: deployments
+    description: BPMN deployment management
+  - name: processes
+    description: Process definition catalogue
+  - name: instances
+    description: Running and completed process instances
+  - name: tasks
+    description: Human task management
+
+paths:
+
+  # ─── Deployments ────────────────────────────────────────────────────────────
+
+  /api/v1/deployments:
+    post:
+      tags: [deployments]
+      operationId: createDeployment
+      summary: Deploy a BPMN resource
+      description: >
+        Uploads a BPMN 2.0 XML file (or ZIP archive) to the Flowable engine.
+        The tenantId is resolved from the JWT claim and cannot be overridden by
+        the caller.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: BPMN 2.0 XML file or ZIP archive containing BPMN resources
+                deploymentName:
+                  type: string
+                  description: Human-readable label for this deployment
+                  example: Order Fulfilment v3
+      responses:
+        '201':
+          description: Deployment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeploymentDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    get:
+      tags: [deployments]
+      operationId: listDeployments
+      summary: List deployments for the current tenant
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of deployments
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DeploymentDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/deployments/{deploymentId}:
+    delete:
+      tags: [deployments]
+      operationId: deleteDeployment
+      summary: Delete a deployment and all its process definitions
+      description: >
+        Cascade-deletes the deployment. Fails with 409 if any active process
+        instances reference definitions from this deployment unless the
+        `force` query parameter is provided.
+      parameters:
+        - $ref: '#/components/parameters/DeploymentIdPath'
+        - name: force
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true, terminates all related instances before deletion
+      responses:
+        '204':
+          description: Deployment deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ─── Process Definitions ────────────────────────────────────────────────────
+
+  /api/v1/process-definitions:
+    get:
+      tags: [processes]
+      operationId: listProcessDefinitions
+      summary: List process definitions
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: key
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by process definition key (exact match)
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: When true returns only non-suspended definitions
+      responses:
+        '200':
+          description: Paged list of process definitions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProcessDefinitionDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/process-definitions/{processDefinitionId}:
+    get:
+      tags: [processes]
+      operationId: getProcessDefinition
+      summary: Get a single process definition
+      parameters:
+        - $ref: '#/components/parameters/ProcessDefinitionIdPath'
+      responses:
+        '200':
+          description: Process definition detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessDefinitionDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/process-definitions/{processDefinitionId}/bpmn:
+    get:
+      tags: [processes]
+      operationId: getProcessDefinitionBpmn
+      summary: Download the raw BPMN XML for a process definition
+      parameters:
+        - $ref: '#/components/parameters/ProcessDefinitionIdPath'
+      responses:
+        '200':
+          description: BPMN 2.0 XML document
+          content:
+            application/xml:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ─── Process Instances ──────────────────────────────────────────────────────
+
+  /api/v1/process-instances:
+    post:
+      tags: [instances]
+      operationId: startProcessInstance
+      summary: Start a new process instance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartProcessInstanceRequest'
+      responses:
+        '201':
+          description: Process instance started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstanceDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Process definition not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    get:
+      tags: [instances]
+      operationId: listProcessInstances
+      summary: List process instances
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: processDefinitionKey
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVE, SUSPENDED, COMPLETED]
+      responses:
+        '200':
+          description: Paged list of process instances
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ProcessInstanceDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/process-instances/{instanceId}:
+    get:
+      tags: [instances]
+      operationId: getProcessInstance
+      summary: Get a process instance by ID
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdPath'
+      responses:
+        '200':
+          description: Process instance detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstanceDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [instances]
+      operationId: cancelProcessInstance
+      summary: Cancel (delete) a process instance
+      description: Terminates an active or suspended process instance.
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdPath'
+        - name: reason
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Human-readable cancellation reason recorded in the audit log
+      responses:
+        '204':
+          description: Process instance cancelled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Instance is already completed and cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/process-instances/{instanceId}/suspend:
+    post:
+      tags: [instances]
+      operationId: suspendProcessInstance
+      summary: Suspend an active process instance
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdPath'
+      responses:
+        '200':
+          description: Process instance suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstanceDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Instance is not in a suspendable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/process-instances/{instanceId}/activate:
+    post:
+      tags: [instances]
+      operationId: activateProcessInstance
+      summary: Reactivate a suspended process instance
+      parameters:
+        - $ref: '#/components/parameters/InstanceIdPath'
+      responses:
+        '200':
+          description: Process instance activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessInstanceDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Instance is not in a suspended state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ─── Tasks ──────────────────────────────────────────────────────────────────
+
+  /api/v1/tasks:
+    get:
+      tags: [tasks]
+      operationId: listTasks
+      summary: List tasks visible to the current user
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - name: assignee
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by assignee user ID
+        - name: candidateGroup
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter tasks where this group is a candidate
+        - name: processInstanceId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [OPEN, CLAIMED, COMPLETED]
+      responses:
+        '200':
+          description: Paged list of tasks
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TaskDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/tasks/{taskId}:
+    get:
+      tags: [tasks]
+      operationId: getTask
+      summary: Get a single task by ID
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      responses:
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tasks/{taskId}/claim:
+    post:
+      tags: [tasks]
+      operationId: claimTask
+      summary: Claim a task
+      description: Assigns the task to the specified user and sets status to CLAIMED.
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserIdRequest'
+      responses:
+        '200':
+          description: Task claimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Task is already claimed by another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags: [tasks]
+      operationId: unclaimTask
+      summary: Release a claimed task back to the candidate pool
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      responses:
+        '200':
+          description: Task unclaimed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tasks/{taskId}/complete:
+    post:
+      tags: [tasks]
+      operationId: completeTask
+      summary: Complete a task and advance the process
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskRequest'
+      responses:
+        '204':
+          description: Task completed; process continues asynchronously
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/v1/tasks/{taskId}/delegate:
+    post:
+      tags: [tasks]
+      operationId: delegateTask
+      summary: Delegate a task to another user
+      description: >
+        The original assignee (owner) retains ownership. The delegated user
+        must resolve the task back to the owner.
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserIdRequest'
+      responses:
+        '200':
+          description: Task delegated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/tasks/{taskId}/assignee:
+    put:
+      tags: [tasks]
+      operationId: setTaskAssignee
+      summary: Directly set the assignee of a task (admin / manager operation)
+      parameters:
+        - $ref: '#/components/parameters/TaskIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserIdRequest'
+      responses:
+        '200':
+          description: Assignee updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT issued by Keycloak. Must include `tenant_id` and standard `sub`
+        claims. Pass as `Authorization: Bearer <token>`.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Zero-based page index
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+      description: Number of items per page
+
+    DeploymentIdPath:
+      name: deploymentId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Flowable deployment ID
+
+    ProcessDefinitionIdPath:
+      name: processDefinitionId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Flowable process definition ID
+
+    InstanceIdPath:
+      name: instanceId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Process instance ID
+
+    TaskIdPath:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Task ID
+
+  responses:
+    BadRequest:
+      description: Request body or query parameters failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Authenticated user lacks permission for this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Operation conflicts with current resource state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    UnprocessableEntity:
+      description: Semantically invalid request (e.g. invalid BPMN)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    # ── Pagination wrapper ────────────────────────────────────────────────────
+    PagedResponse:
+      type: object
+      description: Generic envelope for paginated list responses
+      required: [content, totalElements, totalPages, page, size]
+      properties:
+        content:
+          type: array
+          items: {}
+          description: Page of result items (type depends on endpoint)
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of items across all pages
+          example: 143
+        totalPages:
+          type: integer
+          description: Total number of pages for the requested page size
+          example: 8
+        page:
+          type: integer
+          description: Zero-based index of the current page
+          example: 0
+        size:
+          type: integer
+          description: Requested page size
+          example: 20
+
+    # ── Deployment ────────────────────────────────────────────────────────────
+    DeploymentDto:
+      type: object
+      required: [id, name, tenantId, deployedAt, resources]
+      properties:
+        id:
+          type: string
+          description: Flowable-assigned deployment ID
+          example: "deploy-7f3a1"
+        name:
+          type: string
+          description: Human-readable deployment label
+          example: "Order Fulfilment v3"
+        tenantId:
+          type: string
+          description: Tenant that owns this deployment
+          example: "acme-corp"
+        deployedAt:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp of when the deployment was created
+          example: "2025-11-01T14:23:00Z"
+        resources:
+          type: array
+          description: List of BPMN resource names included in this deployment
+          items:
+            type: string
+          example: ["order-fulfilment.bpmn20.xml", "order-subprocess.bpmn20.xml"]
+
+    # ── Process Definition ────────────────────────────────────────────────────
+    ProcessDefinitionDto:
+      type: object
+      required: [id, key, name, version, tenantId, deploymentId, suspended, hasStartForm]
+      properties:
+        id:
+          type: string
+          example: "order-fulfilment:3:abc123"
+        key:
+          type: string
+          description: Stable identifier across versions
+          example: "order-fulfilment"
+        name:
+          type: string
+          example: "Order Fulfilment"
+        version:
+          type: integer
+          description: Auto-incremented deployment version for this key
+          example: 3
+        tenantId:
+          type: string
+          example: "acme-corp"
+        deploymentId:
+          type: string
+          example: "deploy-7f3a1"
+        suspended:
+          type: boolean
+          description: When true, no new instances can be started
+          example: false
+        hasStartForm:
+          type: boolean
+          description: Whether a start-event form key is defined in the BPMN
+          example: true
+
+    # ── Process Instance ──────────────────────────────────────────────────────
+    ProcessInstanceDto:
+      type: object
+      required: [id, processDefinitionKey, processDefinitionId, tenantId, startTime, status, startedBy]
+      properties:
+        id:
+          type: string
+          example: "pi-99a2b"
+        processDefinitionKey:
+          type: string
+          example: "order-fulfilment"
+        processDefinitionId:
+          type: string
+          example: "order-fulfilment:3:abc123"
+        businessKey:
+          type: string
+          description: Optional external correlation key
+          example: "ORD-20251101-0042"
+          nullable: true
+        tenantId:
+          type: string
+          example: "acme-corp"
+        startTime:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:00:00Z"
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Populated when the instance has completed or been cancelled
+          example: null
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, COMPLETED, CANCELLED]
+          example: "ACTIVE"
+        startedBy:
+          type: string
+          description: User ID of the principal who started the instance
+          example: "user-uuid-1234"
+
+    # ── Task ─────────────────────────────────────────────────────────────────
+    TaskDto:
+      type: object
+      required: [id, name, processInstanceId, processDefinitionKey, taskDefinitionKey, createdTime, priority, status]
+      properties:
+        id:
+          type: string
+          example: "task-aa1b2"
+        name:
+          type: string
+          example: "Review Order"
+        description:
+          type: string
+          nullable: true
+          example: "Manually review high-value order before dispatch"
+        assignee:
+          type: string
+          nullable: true
+          description: User ID of the current assignee
+          example: "user-uuid-5678"
+        owner:
+          type: string
+          nullable: true
+          description: User ID of the task owner (set on delegation)
+          example: null
+        processInstanceId:
+          type: string
+          example: "pi-99a2b"
+        processDefinitionKey:
+          type: string
+          example: "order-fulfilment"
+        taskDefinitionKey:
+          type: string
+          description: The BPMN flow element ID for this user task
+          example: "reviewOrderTask"
+        createdTime:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:01:00Z"
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-11-02T15:01:00Z"
+        priority:
+          type: integer
+          description: Flowable priority (0 = lowest, 100 = highest)
+          minimum: 0
+          maximum: 100
+          default: 50
+          example: 75
+        status:
+          type: string
+          enum: [OPEN, CLAIMED, COMPLETED]
+          example: "OPEN"
+        formKey:
+          type: string
+          nullable: true
+          description: Reference to the form schema for this task
+          example: "review-order-form-v2"
+        candidateGroups:
+          type: array
+          items:
+            type: string
+          example: ["order-reviewers", "finance"]
+        candidateUsers:
+          type: array
+          items:
+            type: string
+          example: []
+
+    # ── Request bodies ────────────────────────────────────────────────────────
+    StartProcessInstanceRequest:
+      type: object
+      required: [processDefinitionKey]
+      properties:
+        processDefinitionKey:
+          type: string
+          example: "order-fulfilment"
+        businessKey:
+          type: string
+          description: External correlation key (must be unique within the tenant)
+          example: "ORD-20251101-0042"
+        variables:
+          type: object
+          additionalProperties: true
+          description: >
+            Initial process variables. Values may be any JSON-serialisable type.
+          example:
+            orderId: "ORD-20251101-0042"
+            totalAmount: 1500.00
+            priority: "HIGH"
+
+    CompleteTaskRequest:
+      type: object
+      properties:
+        variables:
+          type: object
+          additionalProperties: true
+          description: Output variables to inject into the process scope
+          example:
+            approved: true
+            reviewerComment: "Looks good"
+
+    UserIdRequest:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: string
+          description: Keycloak user UUID
+          example: "user-uuid-5678"
+
+    # ── Error ─────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred (server time, UTC)
+          example: "2025-11-01T15:05:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 404
+        error:
+          type: string
+          description: Short HTTP reason phrase
+          example: "Not Found"
+        message:
+          type: string
+          description: Human-readable description of the error
+          example: "Process instance pi-99a2b not found for tenant acme-corp"
+        path:
+          type: string
+          description: Request URI that produced the error
+          example: "/api/v1/process-instances/pi-99a2b"

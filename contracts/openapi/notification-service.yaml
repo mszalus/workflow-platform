@@ -1,0 +1,565 @@
+openapi: 3.1.0
+info:
+  title: Notification Service API
+  version: 1.0.0
+  description: >
+    Manages in-app and email notifications for workflow platform events.
+    Notifications are generated internally by platform services via an
+    event bus; this API exposes read and preference management endpoints
+    to end users, and template management endpoints to platform admins.
+    All user-facing operations are implicitly scoped to the principal in
+    the JWT (the "current user").
+  contact:
+    name: Platform Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://notification-service:8080
+    description: Internal Kubernetes service endpoint
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: notifications
+    description: User notification inbox
+  - name: preferences
+    description: Per-user notification channel preferences
+  - name: templates
+    description: Notification template management (admin only)
+
+paths:
+
+  # ─── Notifications ───────────────────────────────────────────────────────────
+
+  /api/v1/notifications:
+    get:
+      tags: [notifications]
+      operationId: getMyNotifications
+      summary: Get notifications for the current user
+      description: >
+        Returns notifications addressed to the JWT subject in descending
+        creation-time order.
+      parameters:
+        - name: unreadOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true, returns only notifications where readAt is null
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of notifications
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NotificationDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/notifications/{id}/read:
+    put:
+      tags: [notifications]
+      operationId: markNotificationRead
+      summary: Mark a single notification as read
+      parameters:
+        - $ref: '#/components/parameters/NotificationIdPath'
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Notification is already marked as read
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/notifications/read-all:
+    put:
+      tags: [notifications]
+      operationId: markAllNotificationsRead
+      summary: Mark all unread notifications for the current user as read
+      responses:
+        '200':
+          description: Count of notifications that were marked read
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [markedRead]
+                properties:
+                  markedRead:
+                    type: integer
+                    description: Number of notifications that were updated
+                    example: 7
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ─── Preferences ─────────────────────────────────────────────────────────────
+
+  /api/v1/notification-preferences:
+    get:
+      tags: [preferences]
+      operationId: getMyNotificationPreferences
+      summary: Get notification preferences for the current user
+      description: >
+        Returns the saved preferences or a defaults object if the user has
+        not yet customised their preferences.
+      responses:
+        '200':
+          description: Current user notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferencesDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags: [preferences]
+      operationId: updateMyNotificationPreferences
+      summary: Update notification preferences for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferencesDto'
+      responses:
+        '200':
+          description: Updated notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPreferencesDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  # ─── Templates (admin) ───────────────────────────────────────────────────────
+
+  /api/v1/templates:
+    get:
+      tags: [templates]
+      operationId: listNotificationTemplates
+      summary: List all notification templates (admin)
+      description: >
+        Requires the `notification-admin` realm role. Returns all templates
+        across notification types and channels.
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationType'
+          description: Filter by notification type
+        - name: channel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationChannel'
+          description: Filter by delivery channel
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of templates
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/NotificationTemplateDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [templates]
+      operationId: createNotificationTemplate
+      summary: Create a notification template (admin)
+      description: Requires the `notification-admin` realm role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTemplateInput'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplateDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: A template already exists for this type/channel combination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /api/v1/templates/{id}:
+    put:
+      tags: [templates]
+      operationId: updateNotificationTemplate
+      summary: Update a notification template (admin)
+      description: Requires the `notification-admin` realm role.
+      parameters:
+        - $ref: '#/components/parameters/TemplateIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTemplateInput'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationTemplateDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT issued by Keycloak. Must include `tenant_id` and `sub` claims.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Zero-based page index
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+      description: Number of items per page
+
+    NotificationIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Notification UUID
+
+    TemplateIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Notification template UUID
+
+  responses:
+    BadRequest:
+      description: Request body or query parameters failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Caller lacks the required role for this operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    UnprocessableEntity:
+      description: Request is syntactically valid but fails business rules
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    # ── Pagination ────────────────────────────────────────────────────────────
+    PagedResponse:
+      type: object
+      required: [content, totalElements, totalPages, page, size]
+      properties:
+        content:
+          type: array
+          items: {}
+        totalElements:
+          type: integer
+          format: int64
+          example: 31
+        totalPages:
+          type: integer
+          example: 2
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+
+    # ── Enumerations ──────────────────────────────────────────────────────────
+    NotificationType:
+      type: string
+      enum:
+        - TASK_ASSIGNED
+        - TASK_DUE
+        - PROCESS_COMPLETED
+        - SLA_BREACH
+      description: >
+        TASK_ASSIGNED: a task has been assigned or re-assigned to the user;
+        TASK_DUE: a task's due date is approaching or has passed;
+        PROCESS_COMPLETED: a process instance the user initiated has finished;
+        SLA_BREACH: a configured SLA threshold has been exceeded.
+
+    NotificationChannel:
+      type: string
+      enum:
+        - EMAIL
+        - IN_APP
+      description: Delivery channel for a notification or template
+
+    # ── Notification ──────────────────────────────────────────────────────────
+    NotificationDto:
+      type: object
+      required: [id, userId, tenantId, type, title, body, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "notif-uuid-0001"
+        userId:
+          type: string
+          description: Keycloak user UUID of the recipient
+          example: "user-uuid-5678"
+        tenantId:
+          type: string
+          example: "acme-corp"
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+          description: Short notification headline
+          example: "Task assigned: Review Order ORD-20251101-0042"
+        body:
+          type: string
+          description: Full notification body (may contain HTML for email channel)
+          example: "You have been assigned the task 'Review Order' in process Order Fulfilment."
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the user read the notification; null if unread
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:02:00Z"
+        relatedEntityId:
+          type: string
+          nullable: true
+          description: ID of the entity that triggered this notification (e.g. task ID)
+          example: "task-aa1b2"
+        relatedEntityType:
+          type: string
+          nullable: true
+          description: Type discriminator for relatedEntityId
+          enum: [TASK, PROCESS_INSTANCE, null]
+          example: "TASK"
+
+    # ── Preferences ───────────────────────────────────────────────────────────
+    NotificationPreferencesDto:
+      type: object
+      required: [userId, emailEnabled, inAppEnabled, channels]
+      properties:
+        userId:
+          type: string
+          description: >
+            Keycloak user UUID. On PUT this must match the JWT subject; the field
+            is included in the response for client convenience.
+          example: "user-uuid-5678"
+        emailEnabled:
+          type: boolean
+          description: Master switch for all email notifications
+          example: true
+        inAppEnabled:
+          type: boolean
+          description: Master switch for all in-app notifications
+          example: true
+        channels:
+          type: object
+          description: >
+            Per-notification-type channel overrides. Keys are NotificationType values.
+            If a type is absent, both email and in-app follow the master switches.
+          additionalProperties:
+            $ref: '#/components/schemas/ChannelPreference'
+          example:
+            TASK_ASSIGNED:
+              emailEnabled: true
+              inAppEnabled: true
+            TASK_DUE:
+              emailEnabled: true
+              inAppEnabled: false
+            SLA_BREACH:
+              emailEnabled: true
+              inAppEnabled: true
+            PROCESS_COMPLETED:
+              emailEnabled: false
+              inAppEnabled: true
+
+    ChannelPreference:
+      type: object
+      required: [emailEnabled, inAppEnabled]
+      description: Per-type channel preference overrides
+      properties:
+        emailEnabled:
+          type: boolean
+        inAppEnabled:
+          type: boolean
+
+    # ── Templates ─────────────────────────────────────────────────────────────
+    NotificationTemplateDto:
+      type: object
+      required: [id, type, subject, bodyTemplate, channel]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "tmpl-uuid-0001"
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        subject:
+          type: string
+          description: >
+            Email subject line or in-app notification title template.
+            Supports Handlebars-style interpolation: {{taskName}}, {{processKey}}, etc.
+          example: "Task assigned: {{taskName}}"
+        bodyTemplate:
+          type: string
+          description: >
+            Full body template. HTML is allowed and will be sanitised for in-app
+            delivery. Supports Handlebars expressions.
+          example: >
+            <p>Hi {{recipientName}},</p>
+            <p>You have been assigned the task <strong>{{taskName}}</strong>
+            in process <em>{{processName}}</em>.</p>
+            <p><a href="{{taskUrl}}">Open task</a></p>
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+
+    NotificationTemplateInput:
+      type: object
+      required: [type, subject, bodyTemplate, channel]
+      description: Request body for creating or updating a notification template
+      properties:
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        subject:
+          type: string
+          example: "Task assigned: {{taskName}}"
+        bodyTemplate:
+          type: string
+          example: "<p>Hi {{recipientName}}, you have a new task: {{taskName}}.</p>"
+        channel:
+          $ref: '#/components/schemas/NotificationChannel'
+
+    # ── Error ─────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:05:00Z"
+        status:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "Notification notif-uuid-9999 not found for user user-uuid-5678"
+        path:
+          type: string
+          example: "/api/v1/notifications/notif-uuid-9999/read"

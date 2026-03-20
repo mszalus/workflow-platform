@@ -1,0 +1,526 @@
+openapi: 3.1.0
+info:
+  title: Scheduler Service API
+  version: 1.0.0
+  description: >
+    Manages scheduled (cron-based) and manually triggered process launches.
+    Built on Quartz Scheduler. Each schedule is tenant-scoped and stores the
+    process definition key, input variables, and a cron expression. Execution
+    history is retained for auditing and debugging.
+  contact:
+    name: Platform Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://scheduler-service:8080
+    description: Internal Kubernetes service endpoint
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: schedules
+    description: Scheduled process management
+  - name: history
+    description: Schedule execution history
+
+paths:
+
+  # ─── Scheduled Processes ─────────────────────────────────────────────────────
+
+  /api/v1/scheduled-processes:
+    post:
+      tags: [schedules]
+      operationId: createSchedule
+      summary: Create a new scheduled process
+      description: >
+        Registers a Quartz trigger that will start the specified process definition
+        according to the provided cron expression. The tenantId is derived from
+        the JWT. If `enabled` is false the trigger is created in a paused state
+        and will not fire until explicitly enabled via a PUT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleRequest'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledProcessDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    get:
+      tags: [schedules]
+      operationId: listSchedules
+      summary: List scheduled processes for the current tenant
+      parameters:
+        - name: processDefKey
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by process definition key
+        - name: enabled
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: Filter by enabled state
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of scheduled processes
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ScheduledProcessDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/scheduled-processes/{id}:
+    get:
+      tags: [schedules]
+      operationId: getSchedule
+      summary: Get a scheduled process by ID
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      responses:
+        '200':
+          description: Scheduled process detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledProcessDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [schedules]
+      operationId: updateSchedule
+      summary: Update a scheduled process
+      description: >
+        Full replacement of the schedule configuration. If the cron expression
+        changes the Quartz trigger is rescheduled immediately. Changing `enabled`
+        from false to true resumes the trigger; the reverse pauses it.
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleRequest'
+      responses:
+        '200':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduledProcessDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+    delete:
+      tags: [schedules]
+      operationId: deleteSchedule
+      summary: Delete a scheduled process
+      description: >
+        Removes the schedule and its Quartz trigger. Existing execution history
+        records are retained.
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      responses:
+        '204':
+          description: Schedule deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/scheduled-processes/{id}/trigger:
+    post:
+      tags: [schedules]
+      operationId: triggerScheduleNow
+      summary: Manually trigger a scheduled process immediately
+      description: >
+        Fires the process outside of its normal cron cadence. Does not affect
+        the cron schedule or nextFireTime. A history record is created with
+        status RUNNING that is updated once the process instance returns a
+        terminal state.
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      responses:
+        '202':
+          description: Process instance launch accepted; returns the initial execution record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleExecutionDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: A manually triggered execution for this schedule is already RUNNING
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/scheduled-processes/{id}/history:
+    get:
+      tags: [history]
+      operationId: getScheduleHistory
+      summary: Get execution history for a scheduled process
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ExecutionStatus'
+          description: Filter by execution status
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Return executions fired at or after this ISO-8601 timestamp
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: Return executions fired at or before this ISO-8601 timestamp
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged execution history in descending firedAt order
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ScheduleExecutionDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT issued by Keycloak. Must include `tenant_id` and `sub` claims.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Zero-based page index
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+      description: Number of items per page
+
+    ScheduleIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Scheduled process UUID
+
+  responses:
+    BadRequest:
+      description: Request body or query parameters failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Authenticated user lacks permission for this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Scheduled process not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    UnprocessableEntity:
+      description: Request is syntactically valid but fails business validation (e.g. invalid cron expression)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    # ── Pagination ────────────────────────────────────────────────────────────
+    PagedResponse:
+      type: object
+      required: [content, totalElements, totalPages, page, size]
+      properties:
+        content:
+          type: array
+          items: {}
+        totalElements:
+          type: integer
+          format: int64
+          example: 5
+        totalPages:
+          type: integer
+          example: 1
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+
+    # ── Enumerations ──────────────────────────────────────────────────────────
+    ExecutionStatus:
+      type: string
+      enum: [SUCCESS, FAILED, RUNNING]
+      description: >
+        SUCCESS: the process instance completed without error;
+        FAILED: the launch or execution raised an unhandled exception;
+        RUNNING: the process instance is currently active.
+
+    # ── Scheduled Process ─────────────────────────────────────────────────────
+    ScheduledProcessDto:
+      type: object
+      required: [id, tenantId, name, processDefKey, cronExpression, variables, enabled, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "sched-uuid-0001"
+        tenantId:
+          type: string
+          example: "acme-corp"
+        name:
+          type: string
+          description: Human-readable schedule label
+          example: "Nightly Inventory Reconciliation"
+        processDefKey:
+          type: string
+          description: Process definition key to start on each firing
+          example: "inventory-reconciliation"
+        cronExpression:
+          type: string
+          description: >
+            Quartz cron expression (6 or 7 fields: seconds minutes hours
+            day-of-month month day-of-week [year]).
+          example: "0 0 2 * * ?"
+        variables:
+          type: object
+          additionalProperties: true
+          description: Static process variables injected at each launch
+          example:
+            reportType: "FULL"
+            notifyOnCompletion: true
+        enabled:
+          type: boolean
+          description: When false the Quartz trigger is paused and will not fire
+          example: true
+        nextFireTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Next scheduled fire time as computed by Quartz; null if disabled
+          example: "2025-11-02T02:00:00Z"
+        lastFireTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Most recent fire time; null if never fired
+          example: "2025-11-01T02:00:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-10-01T12:00:00Z"
+
+    # ── Schedule Execution ────────────────────────────────────────────────────
+    ScheduleExecutionDto:
+      type: object
+      required: [id, scheduledProcessId, firedAt, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "exec-uuid-0001"
+        scheduledProcessId:
+          type: string
+          format: uuid
+          description: Parent scheduled process UUID
+          example: "sched-uuid-0001"
+        firedAt:
+          type: string
+          format: date-time
+          description: When the trigger fired (cron-scheduled or manual)
+          example: "2025-11-01T02:00:00Z"
+        status:
+          $ref: '#/components/schemas/ExecutionStatus'
+        processInstanceId:
+          type: string
+          nullable: true
+          description: The launched process instance ID; null if the launch itself failed
+          example: "pi-1a2b3c"
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error detail when status is FAILED; null otherwise
+          example: null
+
+    # ── Request bodies ────────────────────────────────────────────────────────
+    CreateScheduleRequest:
+      type: object
+      required: [name, processDefKey, cronExpression]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Nightly Inventory Reconciliation"
+        processDefKey:
+          type: string
+          example: "inventory-reconciliation"
+        cronExpression:
+          type: string
+          description: Quartz cron expression (6 or 7 fields)
+          example: "0 0 2 * * ?"
+        variables:
+          type: object
+          additionalProperties: true
+          description: Static process variables; defaults to empty object if omitted
+          example:
+            reportType: "FULL"
+        enabled:
+          type: boolean
+          default: true
+          description: Whether the schedule starts in an active state
+
+    UpdateScheduleRequest:
+      type: object
+      required: [name, processDefKey, cronExpression, variables, enabled]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: "Nightly Inventory Reconciliation (Updated)"
+        processDefKey:
+          type: string
+          example: "inventory-reconciliation"
+        cronExpression:
+          type: string
+          example: "0 30 2 * * ?"
+        variables:
+          type: object
+          additionalProperties: true
+          example:
+            reportType: "DELTA"
+        enabled:
+          type: boolean
+          example: true
+
+    # ── Error ─────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:05:00Z"
+        status:
+          type: integer
+          example: 422
+        error:
+          type: string
+          example: "Unprocessable Entity"
+        message:
+          type: string
+          example: "Invalid cron expression: '0 0 25 * * ?' - field 'day-of-month' value 25 exceeds maximum 31"
+        path:
+          type: string
+          example: "/api/v1/scheduled-processes"

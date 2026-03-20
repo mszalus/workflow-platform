@@ -1,0 +1,59 @@
+---
+# =============================================================================
+# Namespace: data
+# Hosts stateful data-tier components:
+#   PostgreSQL clusters (CloudNativePG operator), Redis (Redis Operator),
+#   database backup jobs, migration jobs
+# Managed by ArgoCD — do not apply manually in production.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+    app.kubernetes.io/part-of: workflow-platform
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-25"
+    description: "Data tier — PostgreSQL clusters (CloudNativePG), Redis, backup jobs"
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: data-limit-range
+  namespace: data
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+spec:
+  limits:
+    # Database pods require stable, predictable resources; set conservative defaults
+    - type: Container
+      default:
+        cpu: "1"
+        memory: "2Gi"
+      defaultRequest:
+        cpu: "500m"
+        memory: "1Gi"
+      max:
+        cpu: "8"
+        memory: "32Gi"
+      min:
+        cpu: "100m"
+        memory: "128Mi"
+    # Database PVCs can be large; set a generous upper bound
+    - type: PersistentVolumeClaim
+      max:
+        storage: "2Ti"
+      min:
+        storage: "5Gi"
+    - type: Pod
+      max:
+        cpu: "16"
+        memory: "64Gi"

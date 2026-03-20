@@ -1,0 +1,76 @@
+{
+  "type": "record",
+  "name": "WorkflowEvent",
+  "namespace": "com.workflowplatform.events",
+  "doc": "Envelope for all workflow lifecycle events published to the workflow.events Kafka topic",
+  "fields": [
+    {
+      "name": "eventId",
+      "type": "string",
+      "doc": "UUID v4 uniquely identifying this event instance"
+    },
+    {
+      "name": "eventType",
+      "type": {
+        "type": "enum",
+        "name": "EventType",
+        "namespace": "com.workflowplatform.events",
+        "doc": "Discriminator for all event types published to the workflow.events topic",
+        "symbols": [
+          "PROCESS_INSTANCE_STARTED",
+          "PROCESS_INSTANCE_COMPLETED",
+          "PROCESS_INSTANCE_CANCELLED",
+          "PROCESS_INSTANCE_SUSPENDED",
+          "PROCESS_INSTANCE_ACTIVATED",
+          "TASK_CREATED",
+          "TASK_ASSIGNED",
+          "TASK_CLAIMED",
+          "TASK_UNCLAIMED",
+          "TASK_COMPLETED",
+          "TASK_DELEGATED",
+          "TASK_DUE_SOON",
+          "TASK_OVERDUE",
+          "DEPLOYMENT_CREATED",
+          "DEPLOYMENT_DELETED",
+          "SCHEMA_CREATED",
+          "SCHEMA_UPDATED",
+          "SCHEMA_DELETED",
+          "FIELD_VALUES_SAVED",
+          "SCHEDULE_TRIGGERED",
+          "SCHEDULE_CREATED",
+          "SCHEDULE_UPDATED",
+          "SCHEDULE_DELETED",
+          "SLA_BREACH_DETECTED"
+        ]
+      },
+      "doc": "Discriminator field indicating which event occurred; drives payload deserialization"
+    },
+    {
+      "name": "occurredAt",
+      "type": "string",
+      "doc": "ISO-8601 UTC timestamp of when the event occurred, e.g. 2024-01-15T10:30:00Z"
+    },
+    {
+      "name": "tenantId",
+      "type": "string",
+      "doc": "Identifier of the tenant that owns the resource that produced this event"
+    },
+    {
+      "name": "actorId",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Keycloak user ID (sub claim) of the actor who triggered the event; null for system-generated events"
+    },
+    {
+      "name": "correlationId",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Optional correlation ID for distributed request tracing; propagated from inbound HTTP X-Correlation-ID header"
+    },
+    {
+      "name": "payload",
+      "type": "string",
+      "doc": "JSON-encoded payload whose structure is specific to the eventType. Consumers must deserialize based on the eventType discriminator."
+    }
+  ]
+}

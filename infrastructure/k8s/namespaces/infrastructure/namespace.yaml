@@ -1,0 +1,58 @@
+---
+# =============================================================================
+# Namespace: infrastructure
+# Hosts shared infrastructure components:
+#   Kafka (Strimzi operator), Kafka Connect, Schema Registry,
+#   MinIO (object storage), Prometheus, Grafana, Loki, Tempo, OpenTelemetry
+# Managed by ArgoCD — do not apply manually in production.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: infrastructure
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+    app.kubernetes.io/part-of: workflow-platform
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-20"
+    description: "Shared infrastructure — Kafka, MinIO, observability stack (Prometheus, Grafana, Loki, Tempo)"
+
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: infrastructure-limit-range
+  namespace: infrastructure
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    environment: production
+spec:
+  limits:
+    # Infrastructure components typically need more headroom than application pods
+    - type: Container
+      default:
+        cpu: "1"
+        memory: "1Gi"
+      defaultRequest:
+        cpu: "250m"
+        memory: "256Mi"
+      max:
+        cpu: "8"
+        memory: "16Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+    - type: PersistentVolumeClaim
+      max:
+        storage: "500Gi"
+      min:
+        storage: "1Gi"
+    - type: Pod
+      max:
+        cpu: "16"
+        memory: "32Gi"

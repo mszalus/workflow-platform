@@ -1,0 +1,415 @@
+openapi: 3.1.0
+info:
+  title: Attachment Service API
+  version: 1.0.0
+  description: >
+    Manages file attachments associated with process instances and tasks.
+    Files are stored in object storage (S3-compatible). This service never
+    handles file bytes directly; instead it issues time-limited presigned URLs
+    that the client uses to upload to or download from the object store.
+
+    Upload flow:
+      1. Client calls POST /api/v1/attachments/presigned-upload to register
+         the attachment metadata and receive a presigned PUT URL.
+      2. Client PUTs the file bytes directly to the object store using the
+         presigned URL (no Authorization header needed for that PUT).
+      3. The attachment record is marked CONFIRMED automatically when the
+         object store fires a completion event, or on the next metadata query.
+
+    Download flow:
+      1. Client calls POST /api/v1/attachments/presigned-download/{attachmentId}
+         to receive a time-limited presigned GET URL.
+      2. Client GETs the file from the object store using that URL.
+  contact:
+    name: Platform Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://attachment-service:8080
+    description: Internal Kubernetes service endpoint
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: upload
+    description: Presigned upload URL generation
+  - name: download
+    description: Presigned download URL generation
+  - name: attachments
+    description: Attachment metadata management
+
+paths:
+
+  # ─── Presigned Upload ─────────────────────────────────────────────────────
+
+  /api/v1/attachments/presigned-upload:
+    post:
+      tags: [upload]
+      operationId: getPresignedUploadUrl
+      summary: Register an attachment and obtain a presigned upload URL
+      description: >
+        Creates a pending attachment record and returns a presigned S3 PUT URL.
+        The client must complete the upload within the URL's expiry window
+        (default 15 minutes). The `contentType` provided here must exactly
+        match the `Content-Type` header sent with the S3 PUT request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresignedUploadRequest'
+      responses:
+        '200':
+          description: Attachment record created and presigned upload URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignedUploadResponseDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          description: Requested fileSize exceeds the tenant or field-level size limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  # ─── Presigned Download ───────────────────────────────────────────────────
+
+  /api/v1/attachments/presigned-download/{attachmentId}:
+    post:
+      tags: [download]
+      operationId: getPresignedDownloadUrl
+      summary: Obtain a presigned download URL for an attachment
+      description: >
+        Generates a time-limited presigned S3 GET URL for the specified
+        attachment. The calling user must belong to the same tenant as the
+        attachment. Access may be further restricted by task-level editability
+        rules; the service validates role eligibility before issuing the URL.
+      parameters:
+        - $ref: '#/components/parameters/AttachmentIdPath'
+      responses:
+        '200':
+          description: Presigned download URL generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignedDownloadResponseDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Attachment upload has not yet been confirmed (file not in object store)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ─── Attachment Metadata ──────────────────────────────────────────────────
+
+  /api/v1/attachments:
+    get:
+      tags: [attachments]
+      operationId: listAttachments
+      summary: List attachment metadata records
+      description: >
+        Returns confirmed attachments matching the provided filters. At least
+        one of processInstanceId or taskId is required.
+      parameters:
+        - name: processInstanceId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by process instance ID
+          example: "pi-99a2b"
+        - name: taskId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by task ID
+          example: "task-aa1b2"
+        - name: fieldKey
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by the field key the attachment is associated with
+          example: "invoiceDocument"
+      responses:
+        '200':
+          description: List of attachment metadata records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentDto'
+        '400':
+          description: At least one of processInstanceId or taskId must be provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/attachments/{attachmentId}:
+    delete:
+      tags: [attachments]
+      operationId: deleteAttachment
+      summary: Delete an attachment
+      description: >
+        Soft-deletes the attachment record and schedules the object store object
+        for deletion. The operation is asynchronous; the object may remain in
+        storage for up to 24 hours after deletion.
+      parameters:
+        - $ref: '#/components/parameters/AttachmentIdPath'
+      responses:
+        '204':
+          description: Attachment deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: >
+            Attachment belongs to a completed process instance and cannot be
+            deleted (retention policy enforced). Contact an admin for exceptions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT issued by Keycloak. Must include `tenant_id` and `sub` claims.
+
+  parameters:
+    AttachmentIdPath:
+      name: attachmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Attachment UUID
+
+  responses:
+    BadRequest:
+      description: Request body or query parameters failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Authenticated user lacks permission for this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Attachment not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    UnprocessableEntity:
+      description: Request is syntactically valid but fails business validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    # ── Presigned Upload ──────────────────────────────────────────────────────
+    PresignedUploadRequest:
+      type: object
+      required: [processInstanceId, fileName, contentType, fileSize]
+      properties:
+        processInstanceId:
+          type: string
+          description: Process instance this attachment belongs to
+          example: "pi-99a2b"
+        taskId:
+          type: string
+          nullable: true
+          description: Task context for this attachment; null for process-level attachments
+          example: "task-aa1b2"
+        fieldKey:
+          type: string
+          nullable: true
+          description: >
+            Schema field key this file is uploaded for. Required when the
+            attachment corresponds to a FILE_REF field in the active schema.
+          example: "invoiceDocument"
+        fileName:
+          type: string
+          description: Original file name including extension
+          example: "invoice-2025-11-01.pdf"
+        contentType:
+          type: string
+          description: >
+            MIME type of the file. Must exactly match the Content-Type header
+            used when PUTting to the presigned URL.
+          example: "application/pdf"
+        fileSize:
+          type: integer
+          format: int64
+          description: File size in bytes (used for quota and validation checks)
+          minimum: 1
+          example: 204800
+
+    PresignedUploadResponseDto:
+      type: object
+      required: [attachmentId, uploadUrl, expiresAt]
+      properties:
+        attachmentId:
+          type: string
+          format: uuid
+          description: >
+            UUID of the pending attachment record. Store this ID in the
+            corresponding field value (FILE_REF type) after upload completes.
+          example: "att-uuid-0001"
+        uploadUrl:
+          type: string
+          format: uri
+          description: >
+            Presigned S3 PUT URL. The client must issue an HTTP PUT to this URL
+            with the file bytes and the same Content-Type specified in the request.
+          example: "https://s3.us-east-1.amazonaws.com/workflow-attachments/acme-corp/att-uuid-0001?X-Amz-Signature=..."
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the presigned URL expires (typically 15 minutes from issuance)
+          example: "2025-11-01T15:20:00Z"
+
+    PresignedDownloadResponseDto:
+      type: object
+      required: [downloadUrl, expiresAt, fileName, contentType]
+      properties:
+        downloadUrl:
+          type: string
+          format: uri
+          description: Presigned S3 GET URL (time-limited)
+          example: "https://s3.us-east-1.amazonaws.com/workflow-attachments/acme-corp/att-uuid-0001?X-Amz-Signature=..."
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the presigned URL expires (typically 5 minutes from issuance)
+          example: "2025-11-01T15:10:00Z"
+        fileName:
+          type: string
+          description: Original file name, suitable for use as a download filename
+          example: "invoice-2025-11-01.pdf"
+        contentType:
+          type: string
+          description: MIME type of the file
+          example: "application/pdf"
+
+    # ── Attachment Metadata ───────────────────────────────────────────────────
+    AttachmentDto:
+      type: object
+      required: [id, tenantId, processInstanceId, fileName, contentType, fileSize, objectKey, uploadedBy, uploadedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "att-uuid-0001"
+        tenantId:
+          type: string
+          example: "acme-corp"
+        processInstanceId:
+          type: string
+          example: "pi-99a2b"
+        taskId:
+          type: string
+          nullable: true
+          description: Task context; null for process-level attachments
+          example: "task-aa1b2"
+        fieldKey:
+          type: string
+          nullable: true
+          description: Schema field key this attachment is associated with
+          example: "invoiceDocument"
+        fileName:
+          type: string
+          description: Original file name as provided by the uploader
+          example: "invoice-2025-11-01.pdf"
+        contentType:
+          type: string
+          description: MIME type
+          example: "application/pdf"
+        fileSize:
+          type: integer
+          format: int64
+          description: File size in bytes
+          example: 204800
+        objectKey:
+          type: string
+          description: Object store key path (within the bucket); opaque to clients
+          example: "acme-corp/pi-99a2b/task-aa1b2/att-uuid-0001/invoice-2025-11-01.pdf"
+        uploadedBy:
+          type: string
+          description: Keycloak user UUID of the uploader
+          example: "user-uuid-5678"
+        uploadedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the upload was confirmed in object storage
+          example: "2025-11-01T15:05:30Z"
+
+    # ── Error ─────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:05:00Z"
+        status:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "Attachment att-uuid-9999 not found for tenant acme-corp"
+        path:
+          type: string
+          example: "/api/v1/attachments/presigned-download/att-uuid-9999"

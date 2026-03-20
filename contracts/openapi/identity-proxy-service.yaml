@@ -1,0 +1,464 @@
+openapi: 3.1.0
+info:
+  title: Identity Proxy Service API
+  version: 1.0.0
+  description: >
+    Thin proxy over the Keycloak Admin REST API. Exposes a simplified, tenant-scoped
+    view of users and groups for use by other platform services (task assignment,
+    candidate resolution, notifications). Responses are cached in Redis; the
+    cache can be invalidated via the internal webhook endpoint that Keycloak calls
+    on user/group change events.
+  contact:
+    name: Platform Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://identity-proxy-service:8080
+    description: Internal Kubernetes service endpoint
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: users
+    description: User lookup and search
+  - name: groups
+    description: Group listing and membership
+  - name: cache
+    description: Internal cache management (service-to-service only)
+
+paths:
+
+  # ─── Users ──────────────────────────────────────────────────────────────────
+
+  /api/v1/users:
+    get:
+      tags: [users]
+      operationId: searchUsers
+      summary: Search for users within the current tenant realm
+      description: >
+        Delegates to the Keycloak Admin `/users` endpoint with an implicit
+        realm filter derived from the JWT `tenant_id` claim. Results are cached
+        per query string for 60 seconds.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >
+            Full-text search string matched against username, email, firstName,
+            and lastName (Keycloak `search` parameter).
+          example: "alice"
+        - name: groupId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Return only members of this Keycloak group UUID
+          example: "grp-finance-uuid"
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of users
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/v1/users/{userId}:
+    get:
+      tags: [users]
+      operationId: getUser
+      summary: Get a user by Keycloak UUID
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: User detail including group and role memberships
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/v1/users/{userId}/roles:
+    get:
+      tags: [users]
+      operationId: getUserRoles
+      summary: Get the effective realm roles assigned to a user
+      description: >
+        Returns the flattened list of realm-level role names (including roles
+        inherited from group membership). Client roles are excluded.
+      parameters:
+        - $ref: '#/components/parameters/UserIdPath'
+      responses:
+        '200':
+          description: List of role names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["order-reviewer", "finance", "user"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  # ─── Groups ─────────────────────────────────────────────────────────────────
+
+  /api/v1/groups:
+    get:
+      tags: [groups]
+      operationId: listGroups
+      summary: List all groups in the current tenant realm
+      description: >
+        Returns a flat list of groups (top-level and sub-groups) with their
+        member counts. Full member lists are available via the
+        `/api/v1/groups/{groupId}/members` endpoint.
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter groups whose name contains this string (case-insensitive)
+          example: "finance"
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of groups
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GroupDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  /api/v1/groups/{groupId}/members:
+    get:
+      tags: [groups]
+      operationId: getGroupMembers
+      summary: List members of a group
+      parameters:
+        - $ref: '#/components/parameters/GroupIdPath'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Paged list of group members
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PagedResponse'
+                  - type: object
+                    properties:
+                      content:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/BadGateway'
+
+  # ─── Cache ───────────────────────────────────────────────────────────────────
+
+  /api/v1/cache/invalidate:
+    post:
+      tags: [cache]
+      operationId: invalidateCache
+      summary: Invalidate the identity cache (Keycloak event webhook)
+      description: >
+        Internal endpoint invoked by a Keycloak event listener plugin when user
+        or group data changes. Requires the service-to-service API key header
+        rather than a user JWT. Callers outside the cluster mesh will receive
+        401.
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CacheInvalidateRequest'
+      responses:
+        '204':
+          description: Cache entries invalidated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT issued by Keycloak. Must include `tenant_id` and standard `sub` claims.
+
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+      description: >
+        Shared secret for service-to-service calls. Only valid from within the
+        cluster network.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Zero-based page index
+
+    SizeParam:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+      description: Number of items per page
+
+    UserIdPath:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Keycloak user UUID
+      example: "user-uuid-1234"
+
+    GroupIdPath:
+      name: groupId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Keycloak group UUID
+      example: "grp-finance-uuid"
+
+  responses:
+    BadRequest:
+      description: Request body or query parameters failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Missing or invalid authentication credential
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Caller lacks permission for this resource or endpoint
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: User or group not found in the Keycloak realm
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    BadGateway:
+      description: Upstream Keycloak Admin API returned an error or is unreachable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    # ── Pagination ────────────────────────────────────────────────────────────
+    PagedResponse:
+      type: object
+      required: [content, totalElements, totalPages, page, size]
+      properties:
+        content:
+          type: array
+          items: {}
+        totalElements:
+          type: integer
+          format: int64
+          example: 47
+        totalPages:
+          type: integer
+          example: 3
+        page:
+          type: integer
+          example: 0
+        size:
+          type: integer
+          example: 20
+
+    # ── User ──────────────────────────────────────────────────────────────────
+    UserDto:
+      type: object
+      required: [id, username, email, firstName, lastName, groups, roles]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Keycloak user UUID
+          example: "user-uuid-1234"
+        username:
+          type: string
+          example: "alice.smith"
+        email:
+          type: string
+          format: email
+          example: "alice.smith@acme-corp.example"
+        firstName:
+          type: string
+          example: "Alice"
+        lastName:
+          type: string
+          example: "Smith"
+        groups:
+          type: array
+          description: Names of groups the user belongs to
+          items:
+            type: string
+          example: ["order-reviewers", "finance"]
+        roles:
+          type: array
+          description: Effective realm role names (flattened, including group-inherited roles)
+          items:
+            type: string
+          example: ["order-reviewer", "finance", "user"]
+
+    # ── Group ─────────────────────────────────────────────────────────────────
+    GroupDto:
+      type: object
+      required: [id, name, path, memberCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Keycloak group UUID
+          example: "grp-finance-uuid"
+        name:
+          type: string
+          description: Group display name
+          example: "Finance"
+        path:
+          type: string
+          description: Full Keycloak group path (slash-separated hierarchy)
+          example: "/acme-corp/Finance"
+        memberCount:
+          type: integer
+          description: Number of users directly in this group (not including sub-groups)
+          minimum: 0
+          example: 12
+
+    # ── Cache Invalidation Request ─────────────────────────────────────────────
+    CacheInvalidateRequest:
+      type: object
+      required: [eventType, realmId]
+      properties:
+        eventType:
+          type: string
+          enum:
+            - USER_CREATED
+            - USER_UPDATED
+            - USER_DELETED
+            - GROUP_MEMBERSHIP_CHANGED
+            - ROLE_MAPPING_CHANGED
+          description: Keycloak event type that triggered the invalidation
+          example: "USER_UPDATED"
+        realmId:
+          type: string
+          description: Keycloak realm ID (maps to tenantId)
+          example: "acme-corp"
+        resourceId:
+          type: string
+          description: Keycloak user or group UUID that changed; if omitted the entire tenant cache is flushed
+          example: "user-uuid-1234"
+
+    # ── Error ─────────────────────────────────────────────────────────────────
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, error, message, path]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:05:00Z"
+        status:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: "Not Found"
+        message:
+          type: string
+          example: "User user-uuid-9999 not found in realm acme-corp"
+        path:
+          type: string
+          example: "/api/v1/users/user-uuid-9999"
