@@ -1,0 +1,178 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wfp-postgres
+    environment:
+      POSTGRES_USER: wfp
+      POSTGRES_PASSWORD: wfp_secret
+      POSTGRES_DB: wfp
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wfp"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: wfp-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: wfp
+      RABBITMQ_DEFAULT_PASS: wfp_secret
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.6
+    container_name: wfp-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/wfp
+      KC_DB_SCHEMA: keycloak
+      KC_DB_USERNAME: wfp
+      KC_DB_PASSWORD: wfp_secret
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: services/gateway/Dockerfile
+    container_name: wfp-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+      SPRING_CLOUD_GATEWAY_MVC_ROUTES_0_URI: http://workflow-service:8081
+      SPRING_CLOUD_GATEWAY_MVC_ROUTES_1_URI: http://custom-fields-service:8082
+      SPRING_CLOUD_GATEWAY_MVC_ROUTES_2_URI: http://notification-service:8083
+      SPRING_CLOUD_GATEWAY_MVC_ROUTES_3_URI: http://audit-service:8084
+    depends_on:
+      - keycloak
+
+  workflow-service:
+    build:
+      context: ..
+      dockerfile: services/workflow-service/Dockerfile
+    container_name: wfp-workflow
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=workflow
+      SPRING_DATASOURCE_USERNAME: wfp
+      SPRING_DATASOURCE_PASSWORD: wfp_secret
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: wfp
+      SPRING_RABBITMQ_PASSWORD: wfp_secret
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  custom-fields-service:
+    build:
+      context: ..
+      dockerfile: services/custom-fields-service/Dockerfile
+    container_name: wfp-custom-fields
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=custom_fields
+      SPRING_DATASOURCE_USERNAME: wfp
+      SPRING_DATASOURCE_PASSWORD: wfp_secret
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: wfp
+      SPRING_RABBITMQ_PASSWORD: wfp_secret
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: ..
+      dockerfile: services/notification-service/Dockerfile
+    container_name: wfp-notification
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=notification
+      SPRING_DATASOURCE_USERNAME: wfp
+      SPRING_DATASOURCE_PASSWORD: wfp_secret
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: wfp
+      SPRING_RABBITMQ_PASSWORD: wfp_secret
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  audit-service:
+    build:
+      context: ..
+      dockerfile: services/audit-service/Dockerfile
+    container_name: wfp-audit
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=audit
+      SPRING_DATASOURCE_USERNAME: wfp
+      SPRING_DATASOURCE_PASSWORD: wfp_secret
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: wfp
+      SPRING_RABBITMQ_PASSWORD: wfp_secret
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  admin-portal:
+    build:
+      context: ..
+      dockerfile: frontend/apps/admin-portal/Dockerfile
+    container_name: wfp-admin-portal
+    ports:
+      - "5173:80"
+    depends_on:
+      - gateway
+
+  user-portal:
+    build:
+      context: ..
+      dockerfile: frontend/apps/user-portal/Dockerfile
+    container_name: wfp-user-portal
+    ports:
+      - "5174:80"
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:

@@ -1,0 +1,31 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: custom-fields-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/wfp?currentSchema=custom_fields
+    username: wfp
+    password: wfp_secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: custom_fields
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    schemas: custom_fields
+    default-schema: custom_fields
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: wfp
+    password: wfp_secret
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/workflow-platform

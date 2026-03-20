@@ -1,0 +1,18 @@
+{
+  "name": "wfp-frontend",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:admin": "npm run dev -w apps/admin-portal",
+    "dev:user": "npm run dev -w apps/user-portal",
+    "build": "npm run build -w packages/shared-ui && npm run build -w packages/bpmn-editor && npm run build -w apps/admin-portal && npm run build -w apps/user-portal",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

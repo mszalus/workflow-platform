@@ -1,0 +1,28 @@
+rootProject.name = "workflow-platform"
+
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        mavenCentral()
+    }
+}
+
+// Shared libraries
+include("libs:wfp-common")
+include("libs:wfp-events")
+include("libs:wfp-security")
+include("libs:wfp-test-support")
+
+// Backend services
+include("services:gateway")
+include("services:workflow-service")
+include("services:custom-fields-service")
+include("services:notification-service")
+include("services:audit-service")

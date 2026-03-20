@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: workflow-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/wfp?currentSchema=workflow
+    username: wfp
+    password: wfp_secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: workflow
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    schemas: workflow
+    default-schema: workflow
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: wfp
+    password: wfp_secret
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/workflow-platform
+
+flowable:
+  database-schema-update: true
+  async-executor-activate: true

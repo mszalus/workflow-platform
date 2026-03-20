@@ -1,0 +1,16 @@
+plugins {
+    java
+    idea
+}
+
+group = "com.wfp"
+version = "0.1.0-SNAPSHOT"
+
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+
+    repositories {
+        mavenCentral()
+    }
+}

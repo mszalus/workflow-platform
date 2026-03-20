@@ -1,0 +1,41 @@
+apiVersion: v2
+name: workflow-platform
+description: WFP Umbrella Helm Chart
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  - name: gateway
+    version: 0.1.0
+    repository: file://../charts/gateway
+  - name: workflow-service
+    version: 0.1.0
+    repository: file://../charts/workflow-service
+  - name: custom-fields-service
+    version: 0.1.0
+    repository: file://../charts/custom-fields-service
+  - name: notification-service
+    version: 0.1.0
+    repository: file://../charts/notification-service
+  - name: audit-service
+    version: 0.1.0
+    repository: file://../charts/audit-service
+  - name: admin-portal
+    version: 0.1.0
+    repository: file://../charts/admin-portal
+  - name: user-portal
+    version: 0.1.0
+    repository: file://../charts/user-portal
+  - name: postgresql
+    version: 16.2.1
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: rabbitmq
+    version: 14.7.0
+    repository: https://charts.bitnami.com/bitnami
+    condition: rabbitmq.enabled
+  - name: keycloak
+    version: 22.2.5
+    repository: https://charts.bitnami.com/bitnami
+    condition: keycloak.enabled

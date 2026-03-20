@@ -1,0 +1,25 @@
+plugins {
+    id("wfp.spring-boot-app")
+}
+
+dependencies {
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
+
+    implementation("org.flowable:flowable-spring-boot-starter-process:${property("flowableVersion")}")
+
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+    runtimeOnly("org.postgresql:postgresql")
+
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:${property("springDocVersion")}")
+
+    implementation(project(":libs:wfp-common"))
+    implementation(project(":libs:wfp-security"))
+    implementation(project(":libs:wfp-events"))
+
+    testImplementation(project(":libs:wfp-test-support"))
+    testRuntimeOnly("com.h2database:h2")
+}

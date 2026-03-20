@@ -1,0 +1,17 @@
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY ../../gradlew .
+COPY ../../gradle gradle
+COPY ../../build.gradle.kts .
+COPY ../../settings.gradle.kts .
+COPY ../../gradle.properties .
+COPY ../../buildSrc buildSrc
+COPY ../../libs libs
+COPY services/custom-fields-service services/custom-fields-service
+RUN chmod +x gradlew && ./gradlew :services:custom-fields-service:bootJar -x test --no-daemon
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/services/custom-fields-service/build/libs/*.jar app.jar
+EXPOSE 8082
+ENTRYPOINT ["java", "-jar", "app.jar"]

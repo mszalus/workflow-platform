@@ -1,0 +1,34 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: notification-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/wfp?currentSchema=notification
+    username: wfp
+    password: wfp_secret
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notification
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    schemas: notification
+    default-schema: notification
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: wfp
+    password: wfp_secret
+  mail:
+    host: localhost
+    port: 1025
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/workflow-platform

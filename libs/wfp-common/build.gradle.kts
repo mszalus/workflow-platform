@@ -1,0 +1,9 @@
+plugins {
+    id("wfp.library-conventions")
+}
+
+dependencies {
+    api("org.springframework.boot:spring-boot-starter-web:3.3.5")
+    api("org.springframework.boot:spring-boot-starter-validation:3.3.5")
+    api("com.fasterxml.jackson.core:jackson-annotations:2.18.1")
+}
