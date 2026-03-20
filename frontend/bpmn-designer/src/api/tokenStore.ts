@@ -1,7 +1,13 @@
-let _token: string | null = null;
+const TOKEN_KEY = "access_token";
 
-export const setToken = (t: string | null): void => {
-  _token = t;
-};
+export function setToken(token: string | null): void {
+  if (token) {
+    sessionStorage.setItem(TOKEN_KEY, token);
+  } else {
+    sessionStorage.removeItem(TOKEN_KEY);
+  }
+}
 
-export const getToken = (): string | null => _token;
+export function getToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY);
+}

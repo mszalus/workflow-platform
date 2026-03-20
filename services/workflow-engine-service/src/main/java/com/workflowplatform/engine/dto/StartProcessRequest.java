@@ -1,6 +1,6 @@
 package com.workflowplatform.engine.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.AssertTrue;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,7 +14,6 @@ import java.util.Map;
 @AllArgsConstructor
 public class StartProcessRequest {
 
-    @NotBlank(message = "processDefinitionKey is required")
     private String processDefinitionKey;
 
     private String businessKey;
@@ -25,4 +24,10 @@ public class StartProcessRequest {
 
     /** Optional: pin to a specific process definition version */
     private String processDefinitionId;
+
+    @AssertTrue(message = "Either processDefinitionKey or processDefinitionId must be provided")
+    private boolean isProcessDefinitionValid() {
+        return (processDefinitionKey != null && !processDefinitionKey.isBlank())
+            || (processDefinitionId != null && !processDefinitionId.isBlank());
+    }
 }

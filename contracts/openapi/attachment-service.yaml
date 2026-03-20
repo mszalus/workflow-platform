@@ -9,15 +9,15 @@ info:
     that the client uses to upload to or download from the object store.
 
     Upload flow:
-      1. Client calls POST /api/v1/attachments/presigned-upload to register
+      1. Client calls POST /api/v1/attachments/upload-url to register
          the attachment metadata and receive a presigned PUT URL.
       2. Client PUTs the file bytes directly to the object store using the
          presigned URL (no Authorization header needed for that PUT).
-      3. The attachment record is marked CONFIRMED automatically when the
-         object store fires a completion event, or on the next metadata query.
+      3. Client calls POST /api/v1/attachments/{id}/confirm to mark the
+         attachment as confirmed.
 
     Download flow:
-      1. Client calls POST /api/v1/attachments/presigned-download/{attachmentId}
+      1. Client calls GET /api/v1/attachments/download-url/{id}
          to receive a time-limited presigned GET URL.
       2. Client GETs the file from the object store using that URL.
   contact:
@@ -44,10 +44,10 @@ paths:
 
   # ─── Presigned Upload ─────────────────────────────────────────────────────
 
-  /api/v1/attachments/presigned-upload:
+  /api/v1/attachments/upload-url:
     post:
       tags: [upload]
-      operationId: getPresignedUploadUrl
+      operationId: generateUploadUrl
       summary: Register an attachment and obtain a presigned upload URL
       description: >
         Creates a pending attachment record and returns a presigned S3 PUT URL.
@@ -59,9 +59,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PresignedUploadRequest'
+              $ref: '#/components/schemas/UploadUrlRequest'
       responses:
-        '200':
+        '201':
           description: Attachment record created and presigned upload URL generated
           content:
             application/json:
@@ -82,12 +82,38 @@ paths:
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
 
+  # ─── Confirm Upload ─────────────────────────────────────────────────────
+
+  /api/v1/attachments/{id}/confirm:
+    post:
+      tags: [upload]
+      operationId: confirmUpload
+      summary: Confirm that a file has been uploaded to object storage
+      description: >
+        After the client PUTs the file to the presigned URL, it calls this
+        endpoint to mark the attachment metadata record as confirmed.
+      parameters:
+        - $ref: '#/components/parameters/AttachmentIdPath'
+      responses:
+        '200':
+          description: Attachment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ─── Presigned Download ───────────────────────────────────────────────────
 
-  /api/v1/attachments/presigned-download/{attachmentId}:
-    post:
+  /api/v1/attachments/download-url/{id}:
+    get:
       tags: [download]
-      operationId: getPresignedDownloadUrl
+      operationId: generateDownloadUrl
       summary: Obtain a presigned download URL for an attachment
       description: >
         Generates a time-limited presigned S3 GET URL for the specified
@@ -168,7 +194,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/v1/attachments/{attachmentId}:
+  /api/v1/attachments/{id}:
     delete:
       tags: [attachments]
       operationId: deleteAttachment
@@ -209,7 +235,7 @@ components:
 
   parameters:
     AttachmentIdPath:
-      name: attachmentId
+      name: id
       in: path
       required: true
       schema:
@@ -255,8 +281,8 @@ components:
 
   schemas:
 
-    # ── Presigned Upload ──────────────────────────────────────────────────────
-    PresignedUploadRequest:
+    # ── Upload URL Request ──────────────────────────────────────────────────────
+    UploadUrlRequest:
       type: object
       required: [processInstanceId, fileName, contentType, fileSize]
       properties:
@@ -412,4 +438,4 @@ components:
           example: "Attachment att-uuid-9999 not found for tenant acme-corp"
         path:
           type: string
-          example: "/api/v1/attachments/presigned-download/att-uuid-9999"
+          example: "/api/v1/attachments/download-url/att-uuid-9999"

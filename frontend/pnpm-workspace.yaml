@@ -1,0 +1,4 @@
+packages:
+  - "packages/*"
+  - "bpmn-designer"
+  - "task-inbox"

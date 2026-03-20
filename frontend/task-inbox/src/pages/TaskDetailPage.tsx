@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, type FieldValues } from "react-hook-form";
 import {
@@ -284,15 +284,15 @@ export default function TaskDetailPage() {
                 <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Process
                 </p>
-                <Link
-                  to={`/processes/${task.processInstanceId}`}
+                <a
+                  href={`${import.meta.env.VITE_BPMN_DESIGNER_URL ?? "http://localhost:5173"}/processes/${task.processInstanceId}`}
                   className="mt-1 flex items-center gap-1 text-sm text-primary hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   {task.processDefinitionName || task.processDefinitionKey}
                   <ExternalLink className="h-3 w-3" />
-                </Link>
+                </a>
               </div>
 
               {task.dueDate && (
@@ -393,6 +393,7 @@ export default function TaskDetailPage() {
                     userSearchResults={userSearchResults}
                     onSelectChange={handleSelectChange}
                     selectValues={selectValues}
+                    setValue={setValue}
                   />
 
                   {submitError && (

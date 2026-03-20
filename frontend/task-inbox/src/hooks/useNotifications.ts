@@ -49,6 +49,9 @@ export function useNotifications(): UseNotificationsReturn {
     fetchNotifications();
   }, [fetchNotifications]);
 
+  // Track reconnect attempt count for exponential backoff
+  const reconnectAttemptRef = useRef(0);
+
   // WebSocket / STOMP connection
   useEffect(() => {
     if (!isAuthenticated || !user?.accessToken) return;
@@ -58,10 +61,12 @@ export function useNotifications(): UseNotificationsReturn {
       connectHeaders: {
         Authorization: `Bearer ${user.accessToken}`,
       },
-      reconnectDelay: 5000,
+      // Use exponential backoff: 1s, 2s, 4s, 8s, 16s, capped at 30s
+      reconnectDelay: 0, // Disable built-in constant reconnect
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
+        reconnectAttemptRef.current = 0;
         setIsConnected(true);
 
         // Subscribe to personal notification queue
@@ -83,6 +88,25 @@ export function useNotifications(): UseNotificationsReturn {
       onStompError: (frame) => {
         console.error("STOMP error:", frame);
         setIsConnected(false);
+        // Schedule reconnect with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000);
+        reconnectAttemptRef.current += 1;
+        setTimeout(() => {
+          if (stompClientRef.current) {
+            stompClientRef.current.activate();
+          }
+        }, delay);
+      },
+      onWebSocketClose: () => {
+        setIsConnected(false);
+        // Schedule reconnect with exponential backoff
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000);
+        reconnectAttemptRef.current += 1;
+        setTimeout(() => {
+          if (stompClientRef.current) {
+            stompClientRef.current.activate();
+          }
+        }, delay);
       },
     });
 

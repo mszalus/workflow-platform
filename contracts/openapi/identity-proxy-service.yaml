@@ -215,12 +215,10 @@ paths:
       operationId: invalidateCache
       summary: Invalidate the identity cache (Keycloak event webhook)
       description: >
-        Internal endpoint invoked by a Keycloak event listener plugin when user
-        or group data changes. Requires the service-to-service API key header
-        rather than a user JWT. Callers outside the cluster mesh will receive
-        401.
+        Internal endpoint for invalidating the identity cache. Requires a JWT
+        with WORKFLOW_ADMIN or SYSTEM role (enforced via @PreAuthorize).
       security:
-        - apiKeyAuth: []
+        - bearerAuth: []
       requestBody:
         required: true
         content:

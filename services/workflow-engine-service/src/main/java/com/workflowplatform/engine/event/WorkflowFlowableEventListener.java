@@ -73,7 +73,7 @@ public class WorkflowFlowableEventListener implements FlowableEventListener {
             eventPublisher.publishProcessInstanceCancelled(
                 processEvent.getProcessInstanceId(),
                 TenantContext.getTenantId(),
-                TenantContext.getTenantId()
+                null
             );
         }
     }
@@ -100,7 +100,7 @@ public class WorkflowFlowableEventListener implements FlowableEventListener {
                 task.getProcessInstanceId(),
                 task.getAssignee(),
                 task.getTenantId(),
-                TenantContext.getTenantId()
+                null
             );
         }
     }
@@ -113,7 +113,7 @@ public class WorkflowFlowableEventListener implements FlowableEventListener {
                 task.getName(),
                 task.getProcessInstanceId(),
                 task.getTenantId(),
-                TenantContext.getTenantId(),
+                null,
                 null
             );
         }

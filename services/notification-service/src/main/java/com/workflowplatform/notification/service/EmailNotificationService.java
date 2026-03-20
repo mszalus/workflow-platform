@@ -7,12 +7,14 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -21,9 +23,13 @@ public class EmailNotificationService {
 
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
+    private final RestTemplate restTemplate;
 
     @Value("${notification.from-address:noreply@workflow.local}")
     private String fromAddress;
+
+    @Value("${identity-proxy.base-url:http://localhost:8084}")
+    private String identityProxyBaseUrl;
 
     @Async
     public void sendTaskAssignedEmail(String recipientId,
@@ -31,9 +37,13 @@ public class EmailNotificationService {
                                       String taskId,
                                       String processInstanceId,
                                       String actionUrl) {
-        // In production, resolve recipientEmail from identity-proxy-service
-        // For skeleton purposes, we log and skip if no email available
         log.info("Sending task-assigned email to userId={} taskId={}", recipientId, taskId);
+
+        String recipientEmail = resolveEmailFromIdentityService(recipientId);
+        if (recipientEmail == null) {
+            log.warn("Could not resolve email for userId={}, skipping task-assigned email for taskId={}", recipientId, taskId);
+            return;
+        }
 
         Context context = new Context();
         context.setVariable("taskName", taskName);
@@ -42,7 +52,7 @@ public class EmailNotificationService {
         context.setVariable("actionUrl", actionUrl);
 
         sendHtmlEmail(
-            null, // placeholder - real impl resolves from identity service
+            recipientEmail,
             "Task Assigned: " + taskName,
             "emails/task-assigned",
             context,
@@ -57,12 +67,18 @@ public class EmailNotificationService {
         log.info("Sending process-completed email to userId={} processInstanceId={}",
             recipientId, processInstanceId);
 
+        String recipientEmail = resolveEmailFromIdentityService(recipientId);
+        if (recipientEmail == null) {
+            log.warn("Could not resolve email for userId={}, skipping process-completed email for processInstanceId={}", recipientId, processInstanceId);
+            return;
+        }
+
         Context context = new Context();
         context.setVariable("processInstanceId", processInstanceId);
         context.setVariable("processDefinitionKey", processDefinitionKey);
 
         sendHtmlEmail(
-            null,
+            recipientEmail,
             "Process Completed: " + processDefinitionKey,
             "emails/process-completed",
             context,
@@ -92,6 +108,24 @@ public class EmailNotificationService {
             context,
             recipientId
         );
+    }
+
+    @SuppressWarnings("unchecked")
+    private String resolveEmailFromIdentityService(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        try {
+            String url = identityProxyBaseUrl + "/api/v1/users/" + userId;
+            Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+            if (response != null && response.get("email") instanceof String email && !email.isBlank()) {
+                return email;
+            }
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to resolve email for userId={} from identity-proxy-service: {}", userId, e.getMessage());
+            return null;
+        }
     }
 
     private void sendHtmlEmail(String recipientEmail,
