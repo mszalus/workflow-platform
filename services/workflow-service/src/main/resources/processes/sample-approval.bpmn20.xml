@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://wfp.com/processes">
+
+  <process id="approvalProcess" name="Approval Process" isExecutable="true">
+
+    <startEvent id="start" name="Start"/>
+
+    <userTask id="submitRequest" name="Submit Request"
+              flowable:assignee="${initiator}">
+    </userTask>
+
+    <userTask id="managerApproval" name="Manager Approval"
+              flowable:candidateGroups="managers">
+    </userTask>
+
+    <exclusiveGateway id="approvalDecision" name="Approved?"/>
+
+    <userTask id="reviseRequest" name="Revise Request"
+              flowable:assignee="${initiator}">
+    </userTask>
+
+    <endEvent id="approvedEnd" name="Approved"/>
+    <endEvent id="rejectedEnd" name="Rejected"/>
+
+    <sequenceFlow sourceRef="start" targetRef="submitRequest"/>
+    <sequenceFlow sourceRef="submitRequest" targetRef="managerApproval"/>
+    <sequenceFlow sourceRef="managerApproval" targetRef="approvalDecision"/>
+    <sequenceFlow sourceRef="approvalDecision" targetRef="approvedEnd">
+      <conditionExpression>${approved == true}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow sourceRef="approvalDecision" targetRef="reviseRequest">
+      <conditionExpression>${approved == false}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow sourceRef="reviseRequest" targetRef="managerApproval"/>
+
+  </process>
+</definitions>

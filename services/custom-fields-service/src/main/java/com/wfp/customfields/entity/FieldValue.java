@@ -3,8 +3,6 @@ package com.wfp.customfields.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -12,7 +10,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "field_value")
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
-@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class FieldValue {
 
