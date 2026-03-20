@@ -15,7 +15,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConditionalOnBean(ConnectionFactory.class)
 public class RabbitMQConfig {
 
     @Bean
@@ -34,6 +33,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    @ConditionalOnBean(ConnectionFactory.class)
     public Binding notificationBinding(Queue notificationQueue, TopicExchange wfpEventsExchange) {
         return BindingBuilder.bind(notificationQueue)
                 .to(wfpEventsExchange)
@@ -41,6 +41,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    @ConditionalOnBean(ConnectionFactory.class)
     public Binding auditBinding(Queue auditQueue, TopicExchange wfpEventsExchange) {
         return BindingBuilder.bind(auditQueue)
                 .to(wfpEventsExchange)
@@ -53,6 +54,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    @ConditionalOnBean(ConnectionFactory.class)
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
                                          MessageConverter messageConverter) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);
