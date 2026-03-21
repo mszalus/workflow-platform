@@ -24,7 +24,8 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && getToken?.()) {
+      // Only reload if we had a token (it expired) — avoid loop when token isn't set yet
       window.location.reload();
     }
     return Promise.reject(error);

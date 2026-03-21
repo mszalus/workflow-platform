@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import Keycloak from 'keycloak-js';
+import { setTokenProvider } from '../api/apiClient';
 
 interface AuthContextType {
   keycloak: Keycloak | null;
@@ -45,10 +46,15 @@ export function AuthProvider({ children, keycloakUrl, realm, clientId }: AuthPro
       .then((auth) => {
         setAuthenticated(auth);
         setInitialized(true);
+        if (auth) {
+          setTokenProvider(() => keycloak.token);
+        }
       });
 
     keycloak.onTokenExpired = () => {
-      keycloak.updateToken(30).catch(() => keycloak.login());
+      keycloak.updateToken(30).then(() => {
+        setTokenProvider(() => keycloak.token);
+      }).catch(() => keycloak.login());
     };
   }, [keycloak]);
 

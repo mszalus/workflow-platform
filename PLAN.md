@@ -133,6 +133,27 @@ Created `README.md` at project root with:
 
 ---
 
+## Step 10: BPMN Import/Export — TODO
+
+Add upload (import) and download (export) functionality to the Process Designer.
+
+**Import (upload .bpmn file):**
+- Add a file input / "Import BPMN" button to the Process Designer toolbar
+- Use `FileReader` to read the uploaded `.bpmn` file as XML
+- Call `modeler.importXML(xml)` to load it into the bpmn-js editor
+- User can then edit and deploy as usual
+
+**Export (download .bpmn file):**
+- Add a "Download BPMN" button to the Process Designer toolbar
+- Call `modeler.saveXML({ format: true })` to get the current diagram XML
+- Create a `Blob` and trigger a browser download with `.bpmn` extension
+
+**Files to modify:**
+- `frontend/packages/bpmn-editor/src/BpmnEditor.tsx` — expose import/export methods or callbacks
+- `frontend/apps/admin-portal/src/pages/ProcessDesigner.tsx` — add Import/Export buttons to toolbar
+
+---
+
 ## Step 6: Helm deployment — BLOCKED (no helm binary)
 
 Helm is not installed on this machine. Sub-chart lint passes in CI (GitHub Actions installs helm via `azure/setup-helm@v4`).
