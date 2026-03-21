@@ -10,23 +10,24 @@ test.describe('Workflow Platform E2E', () => {
 
   test('RabbitMQ management accessible', async ({ page }) => {
     await page.goto('http://localhost:15672/');
-    await page.fill('#username', 'wfp');
-    await page.fill('#password', 'wfp_secret');
-    await page.click('[type="submit"]');
-    await expect(page.locator('text=Overview')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('textbox').first().fill('wfp');
+    await page.getByRole('textbox').nth(1).fill('wfp_secret');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible({ timeout: 10000 });
   });
 
-  test('Admin Portal loads', async ({ page }) => {
+  test('Admin Portal loads and redirects to Keycloak', async ({ page }) => {
     await page.goto('http://localhost:5173/');
-    await expect(page).toHaveTitle(/.*/);
-    // App shell should render
-    await expect(page.locator('#root')).toBeAttached();
+    // OIDC-protected app redirects to Keycloak login
+    await expect(page).toHaveURL(/realms\/workflow-platform.*client_id=wfp-admin-portal/);
+    await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
   });
 
-  test('User Portal loads', async ({ page }) => {
+  test('User Portal loads and redirects to Keycloak', async ({ page }) => {
     await page.goto('http://localhost:5174/');
-    await expect(page).toHaveTitle(/.*/);
-    await expect(page.locator('#root')).toBeAttached();
+    // OIDC-protected app redirects to Keycloak login
+    await expect(page).toHaveURL(/realms\/workflow-platform.*client_id=wfp-user-portal/);
+    await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
   });
 
   test('Gateway health check', async ({ request }) => {

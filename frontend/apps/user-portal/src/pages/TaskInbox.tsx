@@ -8,7 +8,7 @@ export default function TaskInbox() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', username],
-    queryFn: () => apiClient.get(`/api/workflow/tasks?assignee=${username}`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/workflow/tasks?assignee=${username}`).then((r) => r.data),
   });
 
   return (

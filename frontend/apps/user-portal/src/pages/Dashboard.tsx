@@ -7,12 +7,12 @@ export default function Dashboard() {
 
   const { data: tasks } = useQuery({
     queryKey: ['my-tasks'],
-    queryFn: () => apiClient.get(`/api/workflow/tasks?assignee=${username}&size=5`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/workflow/tasks?assignee=${username}&size=5`).then((r) => r.data),
   });
 
   const { data: unread } = useQuery({
     queryKey: ['unread-count'],
-    queryFn: () => apiClient.get('/api/notifications/notifications/unread-count').then((r) => r.data),
+    queryFn: () => apiClient.get('/notifications/unread-count').then((r) => r.data),
   });
 
   return (

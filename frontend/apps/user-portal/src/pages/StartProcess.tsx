@@ -7,11 +7,11 @@ export default function StartProcess() {
 
   const { data: processes = [] } = useQuery({
     queryKey: ['available-processes'],
-    queryFn: () => apiClient.get('/api/workflow/deployments').then((r) => r.data),
+    queryFn: () => apiClient.get('/workflow/deployments').then((r) => r.data),
   });
 
   const startMutation = useMutation({
-    mutationFn: (key: string) => apiClient.post('/api/workflow/processes', { processDefinitionKey: key }),
+    mutationFn: (key: string) => apiClient.post('/workflow/processes', { processDefinitionKey: key }),
     onSuccess: () => navigate('/my-processes'),
   });
 

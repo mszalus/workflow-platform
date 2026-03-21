@@ -13,23 +13,23 @@ export default function TaskDetail() {
 
   const { data: task } = useQuery({
     queryKey: ['task', id],
-    queryFn: () => apiClient.get(`/api/workflow/tasks/${id}`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/workflow/tasks/${id}`).then((r) => r.data),
   });
 
   const { data: comments = [] } = useQuery({
     queryKey: ['comments', task?.processInstanceId],
-    queryFn: () => apiClient.get(`/api/workflow/processes/${task.processInstanceId}/comments`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/workflow/processes/${task.processInstanceId}/comments`).then((r) => r.data),
     enabled: !!task?.processInstanceId,
   });
 
   const completeMutation = useMutation({
-    mutationFn: () => apiClient.post(`/api/workflow/tasks/${id}/complete`, {}),
+    mutationFn: () => apiClient.post(`/workflow/tasks/${id}/complete`, {}),
     onSuccess: () => navigate('/tasks'),
   });
 
   const addCommentMutation = useMutation({
     mutationFn: (content: string) =>
-      apiClient.post(`/api/workflow/processes/${task.processInstanceId}/comments`, { content }),
+      apiClient.post(`/workflow/processes/${task.processInstanceId}/comments`, { content }),
     onSuccess: () => {
       setComment('');
       queryClient.invalidateQueries({ queryKey: ['comments', task?.processInstanceId] });

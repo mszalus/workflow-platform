@@ -6,11 +6,11 @@ export default function ProcessList() {
   const queryClient = useQueryClient();
   const { data: processes = [], isLoading } = useQuery({
     queryKey: ['process-definitions'],
-    queryFn: () => apiClient.get('/api/workflow/deployments').then((r) => r.data),
+    queryFn: () => apiClient.get('/workflow/deployments').then((r) => r.data),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (deploymentId: string) => apiClient.delete(`/api/workflow/deployments/${deploymentId}`),
+    mutationFn: (deploymentId: string) => apiClient.delete(`/workflow/deployments/${deploymentId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['process-definitions'] }),
   });
 

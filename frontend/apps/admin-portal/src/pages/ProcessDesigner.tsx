@@ -11,7 +11,7 @@ export default function ProcessDesigner() {
 
   const deployMutation = useMutation({
     mutationFn: (data: { name: string; bpmnXml: string }) =>
-      apiClient.post('/api/workflow/deployments', data),
+      apiClient.post('/workflow/deployments', data),
     onSuccess: () => navigate('/processes'),
   });
 

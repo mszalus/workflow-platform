@@ -7,11 +7,11 @@ export default function Notifications() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['notifications'],
-    queryFn: () => apiClient.get('/api/notifications/notifications').then((r) => r.data),
+    queryFn: () => apiClient.get('/notifications').then((r) => r.data),
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: () => apiClient.put('/api/notifications/notifications/mark-all-read'),
+    mutationFn: () => apiClient.put('/notifications/mark-all-read'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 

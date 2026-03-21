@@ -13,7 +13,7 @@ export default function DynamicFieldForm({ processInstanceId, taskId }: Props) {
 
   const { data: values = [] } = useQuery({
     queryKey: ['field-values', processInstanceId, taskId],
-    queryFn: () => apiClient.get(`/api/fields/values?${params}`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/fields/values?${params}`).then((r) => r.data),
   });
 
   if (values.length === 0) return <p style={{ color: '#999' }}>No custom fields configured.</p>;

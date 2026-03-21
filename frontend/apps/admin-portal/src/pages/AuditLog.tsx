@@ -14,7 +14,7 @@ export default function AuditLog() {
       if (filters.userId) params.set('userId', filters.userId);
       params.set('page', String(filters.page));
       params.set('size', '20');
-      return apiClient.get(`/api/audit/audit?${params}`).then((r) => r.data);
+      return apiClient.get(`/audit?${params}`).then((r) => r.data);
     },
   });
 

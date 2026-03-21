@@ -12,17 +12,17 @@ export default function CustomFieldEditor() {
 
   const { data: processes = [] } = useQuery({
     queryKey: ['process-defs'],
-    queryFn: () => apiClient.get('/api/workflow/deployments').then((r) => r.data),
+    queryFn: () => apiClient.get('/workflow/deployments').then((r) => r.data),
   });
 
   const { data: schemas = [] } = useQuery({
     queryKey: ['field-schemas', selectedProcess],
-    queryFn: () => apiClient.get(`/api/fields/schemas?processDefinitionKey=${selectedProcess}`).then((r) => r.data),
+    queryFn: () => apiClient.get(`/fields/schemas?processDefinitionKey=${selectedProcess}`).then((r) => r.data),
     enabled: !!selectedProcess,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => apiClient.post('/api/fields/schemas', data),
+    mutationFn: (data: any) => apiClient.post('/fields/schemas', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['field-schemas', selectedProcess] });
       setNewField({ fieldKey: '', label: '', fieldType: 'TEXT', required: false });
@@ -30,7 +30,7 @@ export default function CustomFieldEditor() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/api/fields/schemas/${id}`),
+    mutationFn: (id: string) => apiClient.delete(`/fields/schemas/${id}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['field-schemas', selectedProcess] }),
   });
 

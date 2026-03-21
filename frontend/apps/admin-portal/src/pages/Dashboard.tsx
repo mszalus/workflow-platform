@@ -4,7 +4,7 @@ import { apiClient } from '@wfp/shared-ui';
 export default function Dashboard() {
   const { data: processes } = useQuery({
     queryKey: ['admin-processes'],
-    queryFn: () => apiClient.get('/api/workflow/deployments').then((r) => r.data),
+    queryFn: () => apiClient.get('/workflow/deployments').then((r) => r.data),
   });
 
   return (

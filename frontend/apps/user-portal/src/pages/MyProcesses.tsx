@@ -5,7 +5,7 @@ import type { ProcessInstance } from '@wfp/shared-ui';
 export default function MyProcesses() {
   const { data, isLoading } = useQuery({
     queryKey: ['my-processes'],
-    queryFn: () => apiClient.get('/api/workflow/processes').then((r) => r.data),
+    queryFn: () => apiClient.get('/workflow/processes').then((r) => r.data),
   });
 
   return (
