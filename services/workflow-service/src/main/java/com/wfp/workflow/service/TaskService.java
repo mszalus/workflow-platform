@@ -87,6 +87,12 @@ public class TaskService {
         eventPublisher.publish(EventConstants.TASK_DELEGATED, event);
     }
 
+    private String extractProcessDefinitionKey(String processDefinitionId) {
+        if (processDefinitionId == null) return null;
+        int colonIdx = processDefinitionId.indexOf(':');
+        return colonIdx > 0 ? processDefinitionId.substring(0, colonIdx) : processDefinitionId;
+    }
+
     private TaskDto toDto(Task task) {
         Date dueDate = task.getDueDate();
         Date createTime = task.getCreateTime();
@@ -98,6 +104,7 @@ public class TaskService {
                 .owner(task.getOwner())
                 .processInstanceId(task.getProcessInstanceId())
                 .processDefinitionId(task.getProcessDefinitionId())
+                .processDefinitionKey(extractProcessDefinitionKey(task.getProcessDefinitionId()))
                 .taskDefinitionKey(task.getTaskDefinitionKey())
                 .createTime(createTime != null ? createTime.toInstant() : null)
                 .dueDate(dueDate != null ? dueDate.toInstant() : null)

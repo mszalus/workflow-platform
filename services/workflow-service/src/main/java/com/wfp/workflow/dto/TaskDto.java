@@ -15,6 +15,7 @@ public class TaskDto {
     private String owner;
     private String processInstanceId;
     private String processDefinitionId;
+    private String processDefinitionKey;
     private String taskDefinitionKey;
     private Instant createTime;
     private Instant dueDate;

@@ -7,6 +7,7 @@ import com.wfp.events.ProcessStartedEvent;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.ProcessInstanceDto;
 import lombok.RequiredArgsConstructor;
+import org.flowable.engine.IdentityService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.runtime.ProcessInstanceQuery;
@@ -21,30 +22,37 @@ import java.util.Map;
 public class ProcessService {
 
     private final RuntimeService runtimeService;
+    private final IdentityService identityService;
     private final EventPublisher eventPublisher;
 
     public ProcessInstanceDto startProcess(String processDefinitionKey, String businessKey,
                                             Map<String, Object> variables, String userId) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        ProcessInstance pi = runtimeService.createProcessInstanceBuilder()
-                .processDefinitionKey(processDefinitionKey)
-                .businessKey(businessKey)
-                .variables(variables != null ? variables : Map.of())
-                .tenantId(tenantId)
-                .start();
+        // Set authenticated user so Flowable resolves ${initiator} in BPMN expressions
+        identityService.setAuthenticatedUserId(userId);
+        try {
+            ProcessInstance pi = runtimeService.createProcessInstanceBuilder()
+                    .processDefinitionKey(processDefinitionKey)
+                    .businessKey(businessKey)
+                    .variables(variables != null ? variables : Map.of())
+                    .tenantId(tenantId)
+                    .start();
 
-        ProcessStartedEvent event = ProcessStartedEvent.builder()
-                .processInstanceId(pi.getId())
-                .processDefinitionId(pi.getProcessDefinitionId())
-                .processDefinitionKey(pi.getProcessDefinitionKey())
-                .processName(pi.getProcessDefinitionName())
-                .businessKey(businessKey)
-                .variables(variables)
-                .build();
-        event.initDefaults(EventConstants.PROCESS_STARTED, tenantId, userId);
-        eventPublisher.publish(EventConstants.PROCESS_STARTED, event);
+            ProcessStartedEvent event = ProcessStartedEvent.builder()
+                    .processInstanceId(pi.getId())
+                    .processDefinitionId(pi.getProcessDefinitionId())
+                    .processDefinitionKey(pi.getProcessDefinitionKey())
+                    .processName(pi.getProcessDefinitionName())
+                    .businessKey(businessKey)
+                    .variables(variables)
+                    .build();
+            event.initDefaults(EventConstants.PROCESS_STARTED, tenantId, userId);
+            eventPublisher.publish(EventConstants.PROCESS_STARTED, event);
 
-        return toDto(pi);
+            return toDto(pi);
+        } finally {
+            identityService.setAuthenticatedUserId(null);
+        }
     }
 
     public PagedResponse<ProcessInstanceDto> listInstances(int page, int size) {

@@ -9,6 +9,7 @@ import java.util.UUID;
 
 public interface FieldSchemaRepository extends JpaRepository<FieldSchema, UUID> {
     List<FieldSchema> findByProcessDefinitionKeyAndTenantIdOrderBySortOrder(String key, String tenantId);
+    List<FieldSchema> findByTenantIdOrderBySortOrder(String tenantId);
     Optional<FieldSchema> findByIdAndTenantId(UUID id, String tenantId);
     Optional<FieldSchema> findByProcessDefinitionKeyAndFieldKeyAndTenantId(String pdKey, String fieldKey, String tenantId);
 }

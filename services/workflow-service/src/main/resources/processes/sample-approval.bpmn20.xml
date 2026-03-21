@@ -5,7 +5,7 @@
 
   <process id="approvalProcess" name="Approval Process" isExecutable="true">
 
-    <startEvent id="start" name="Start"/>
+    <startEvent id="start" name="Start" flowable:initiator="initiator"/>
 
     <userTask id="submitRequest" name="Submit Request"
               flowable:assignee="${initiator}">

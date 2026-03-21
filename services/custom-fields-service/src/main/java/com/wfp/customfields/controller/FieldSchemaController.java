@@ -30,8 +30,11 @@ public class FieldSchemaController {
     }
 
     @GetMapping
-    public List<FieldSchemaDto> list(@RequestParam String processDefinitionKey) {
-        return schemaService.listByProcessDefinition(processDefinitionKey);
+    public List<FieldSchemaDto> list(@RequestParam(required = false) String processDefinitionKey) {
+        if (processDefinitionKey != null && !processDefinitionKey.isEmpty()) {
+            return schemaService.listByProcessDefinition(processDefinitionKey);
+        }
+        return schemaService.listAll();
     }
 
     @DeleteMapping("/{id}")

@@ -64,6 +64,12 @@ public class ProcessHistoryService {
                 .build();
     }
 
+    private String extractProcessDefinitionKey(String processDefinitionId) {
+        if (processDefinitionId == null) return null;
+        int colonIdx = processDefinitionId.indexOf(':');
+        return colonIdx > 0 ? processDefinitionId.substring(0, colonIdx) : processDefinitionId;
+    }
+
     private TaskDto toTaskDto(HistoricTaskInstance hti) {
         return TaskDto.builder()
                 .id(hti.getId())
@@ -72,6 +78,7 @@ public class ProcessHistoryService {
                 .assignee(hti.getAssignee())
                 .processInstanceId(hti.getProcessInstanceId())
                 .processDefinitionId(hti.getProcessDefinitionId())
+                .processDefinitionKey(extractProcessDefinitionKey(hti.getProcessDefinitionId()))
                 .taskDefinitionKey(hti.getTaskDefinitionKey())
                 .createTime(hti.getCreateTime() != null ? hti.getCreateTime().toInstant() : null)
                 .dueDate(hti.getDueDate() != null ? hti.getDueDate().toInstant() : null)

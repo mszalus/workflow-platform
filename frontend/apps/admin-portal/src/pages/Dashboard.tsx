@@ -7,6 +7,16 @@ export default function Dashboard() {
     queryFn: () => apiClient.get('/workflow/deployments').then((r) => r.data),
   });
 
+  const { data: instances } = useQuery({
+    queryKey: ['admin-instances'],
+    queryFn: () => apiClient.get('/workflow/processes').then((r) => r.data),
+  });
+
+  const { data: schemas } = useQuery({
+    queryKey: ['admin-schemas'],
+    queryFn: () => apiClient.get('/fields/schemas').then((r) => r.data),
+  });
+
   return (
     <div>
       <h1 style={{ marginBottom: '1.5rem' }}>Dashboard</h1>
@@ -17,11 +27,11 @@ export default function Dashboard() {
         </div>
         <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase' }}>Active Instances</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>--</div>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{instances?.totalElements ?? 0}</div>
         </div>
         <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase' }}>Custom Field Schemas</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>--</div>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{schemas?.length ?? 0}</div>
         </div>
       </div>
     </div>

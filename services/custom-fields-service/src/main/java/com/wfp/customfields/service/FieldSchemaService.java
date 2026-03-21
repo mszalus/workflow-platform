@@ -63,6 +63,12 @@ public class FieldSchemaService {
                 .stream().map(this::toDto).toList();
     }
 
+    public List<FieldSchemaDto> listAll() {
+        String tenantId = TenantContext.requireCurrentTenantId();
+        return schemaRepository.findByTenantIdOrderBySortOrder(tenantId)
+                .stream().map(this::toDto).toList();
+    }
+
     @Transactional
     public void deleteSchema(UUID id) {
         String tenantId = TenantContext.requireCurrentTenantId();
