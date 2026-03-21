@@ -8,6 +8,8 @@ import org.flowable.engine.repository.Deployment;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Service
@@ -43,6 +45,18 @@ public class DeploymentService {
                 .singleResult();
         if (pd == null) throw new NotFoundException("ProcessDefinition", processDefinitionId);
         return pd;
+    }
+
+    public String getProcessDefinitionBpmnXml(String processDefinitionId) {
+        ProcessDefinition pd = getProcessDefinition(processDefinitionId);
+        InputStream is = repositoryService.getResourceAsStream(
+                pd.getDeploymentId(), pd.getResourceName());
+        if (is == null) throw new NotFoundException("BPMN resource", processDefinitionId);
+        try {
+            return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read BPMN XML", e);
+        }
     }
 
     public void deleteDeployment(String deploymentId) {

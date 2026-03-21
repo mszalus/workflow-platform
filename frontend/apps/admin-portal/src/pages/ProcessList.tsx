@@ -39,6 +39,7 @@ export default function ProcessList() {
                 <td style={{ padding: '0.75rem' }}>{p.key}</td>
                 <td style={{ padding: '0.75rem' }}>{p.version}</td>
                 <td style={{ padding: '0.75rem' }}>
+                  <Link to={`/processes/designer/${p.id}`} style={{ color: '#1976d2', marginRight: '1rem' }}>Edit</Link>
                   <button onClick={() => deleteMutation.mutate(p.deploymentId)} style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer' }}>
                     Delete
                   </button>

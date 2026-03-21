@@ -133,24 +133,24 @@ Created `README.md` at project root with:
 
 ---
 
-## Step 10: BPMN Import/Export — TODO
+## Step 10: BPMN Import/Export — DONE
 
-Add upload (import) and download (export) functionality to the Process Designer.
+Added upload (import), download (export), and edit-existing functionality to the Process Designer.
 
-**Import (upload .bpmn file):**
-- Add a file input / "Import BPMN" button to the Process Designer toolbar
-- Use `FileReader` to read the uploaded `.bpmn` file as XML
-- Call `modeler.importXML(xml)` to load it into the bpmn-js editor
-- User can then edit and deploy as usual
+**Backend:**
+- `DeploymentController.java` — added `GET /api/deployments/{processDefinitionId}/bpmn` endpoint
+- `DeploymentService.java` — added `getProcessDefinitionBpmnXml()` method using Flowable `RepositoryService.getResourceAsStream()`
 
-**Export (download .bpmn file):**
-- Add a "Download BPMN" button to the Process Designer toolbar
-- Call `modeler.saveXML({ format: true })` to get the current diagram XML
-- Create a `Blob` and trigger a browser download with `.bpmn` extension
+**Frontend:**
+- `ProcessDesigner.tsx` — complete rewrite with Import (file upload via FileReader), Export (Blob download), and Edit (load existing BPMN from Flowable when URL has `:id` param). Auto-fills process name from filename on import.
+- `ProcessList.tsx` — added Edit link for each process definition, linking to `/processes/designer/:id`
 
-**Files to modify:**
-- `frontend/packages/bpmn-editor/src/BpmnEditor.tsx` — expose import/export methods or callbacks
-- `frontend/apps/admin-portal/src/pages/ProcessDesigner.tsx` — add Import/Export buttons to toolbar
+**Round-trip verification (all PASS):**
+1. Deploy BPMN with 6 Flowable properties via curl → retrieve XML → all properties preserved
+2. Re-deploy retrieved XML → retrieve again → all properties still intact
+3. Browser: open existing process via Edit → Flowable properties panel shows all values correctly (assignee, candidateGroups, formKey, priority, async, class)
+4. Browser: export XML from editor → all `flowable:*` attributes present in output
+5. Browser: import exported file into fresh designer → all Flowable properties visible in panel
 
 ---
 

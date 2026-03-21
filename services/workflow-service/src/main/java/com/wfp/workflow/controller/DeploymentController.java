@@ -39,6 +39,12 @@ public class DeploymentController {
                 )).toList();
     }
 
+    @GetMapping("/{processDefinitionId}/bpmn")
+    public Map<String, String> getBpmnXml(@PathVariable String processDefinitionId) {
+        String xml = deploymentService.getProcessDefinitionBpmnXml(processDefinitionId);
+        return Map.of("bpmnXml", xml);
+    }
+
     @DeleteMapping("/{deploymentId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDeployment(@PathVariable String deploymentId) {
