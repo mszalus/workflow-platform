@@ -249,6 +249,42 @@ Added native Flowable support to bpmn-js editor. Produces `flowable:*` XML attri
 
 ---
 
+## Step 11: Comprehensive E2E Testing & Bug Fixes — DONE (2026-03-21)
+
+Extensive API and UI testing with Playwright MCP and curl. Found and fixed multiple critical bugs.
+
+**Bugs found and fixed:**
+
+1. **Flowable initiator resolution (500 on POST /api/processes):**
+   - Root cause: ProcessService didn't call `identityService.setAuthenticatedUserId()` before starting process, and BPMN startEvent lacked `flowable:initiator="initiator"` attribute
+   - Fix: Inject IdentityService with try/finally cleanup, add flowable:initiator to sample-approval.bpmn20.xml
+
+2. **TaskDto missing processDefinitionKey:**
+   - Frontend `Task` type expected it but backend didn't provide it
+   - Fix: Added field to TaskDto, extract key from processDefinitionId (format: `key:version:uuid`) in TaskService and ProcessHistoryService
+
+3. **FieldSchemaController 500 without processDefinitionKey:**
+   - `@RequestParam` was required by default; admin Dashboard called without parameter
+   - Fix: Made param optional, added `listAll()` to FieldSchemaService, added repository query
+
+4. **Admin Dashboard hardcoded metrics:**
+   - "Active Instances" and "Custom Field Schemas" showed "--"
+   - Fix: Added real API calls to fetch data
+
+5. **TaskInbox only showed assigned tasks:**
+   - No way to see/claim candidate tasks
+   - Fix: Added "Available to Claim" section with unassigned tasks and Claim button
+
+6. **Error handling: Flowable exceptions returned 500:**
+   - FlowableException (invalid BPMN), FlowableObjectNotFoundException, HttpMediaTypeNotSupportedException, MissingServletRequestParameterException all fell through to generic 500
+   - Fix: Added FlowableExceptionHandler in workflow-service (400/404), added handlers in GlobalExceptionHandler for MissingParam, IllegalArgument, HttpMediaType
+
+**Comprehensive E2E test suite:** `e2e/comprehensive.test.ts` — 71 tests across 13 categories covering health checks, auth, process lifecycle, approval flow, comments, custom fields, notifications, audit trail, multi-tenant isolation, negative tests, BPMN import/export, admin portal UI, and user portal UI.
+
+**CI:** All 4 jobs pass (backend-build, frontend-build, docker-build, helm-lint).
+
+---
+
 ## Verification
 
 After each step, verify before moving to the next:
