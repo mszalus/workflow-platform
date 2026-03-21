@@ -108,6 +108,32 @@ Created `README.md` at project root with:
 
 ---
 
+## Step 9: Documentation — User Manual & Admin Manual — TODO
+
+Create comprehensive documentation with screenshots (captured via Playwright MCP).
+
+**User Manual** (`docs/user-manual.md`):
+- Getting started / login flow (Keycloak OIDC)
+- Task inbox: viewing, claiming, completing tasks
+- Starting a new process
+- Notifications: viewing, marking as read
+- Process history
+- Screenshots of each workflow step
+
+**Admin Manual** (`docs/admin-manual.md`):
+- Process Designer: creating BPMN diagrams with Flowable properties panel
+- Deploying processes
+- Custom field schemas: creating, editing
+- Audit log: querying by entity, user, time range
+- Keycloak administration: users, roles, tenants
+- RabbitMQ monitoring: exchanges, queues, dead letters
+- Docker deployment and troubleshooting
+- Screenshots of admin console, process designer, audit log
+
+**Prerequisites:** Playwright MCP for automated screenshot capture. Docker stack must be running.
+
+---
+
 ## Step 6: Helm deployment — BLOCKED (no helm binary)
 
 Helm is not installed on this machine. Sub-chart lint passes in CI (GitHub Actions installs helm via `azure/setup-helm@v4`).
@@ -130,17 +156,30 @@ Two issues causing CI failures on every push to `main`:
 
 ---
 
-## Step 7: Browser-based E2E testing (Playwright MCP) — DONE (curl-based)
+## Step 7: Playwright E2E Tests — IN PROGRESS
 
-Playwright MCP not available in CLI session. Verified all endpoints via curl instead.
+Playwright test suite created in `e2e/` directory. Covers:
+- Keycloak realm verification
+- RabbitMQ management login
+- Admin Portal and User Portal load
+- Gateway and service health checks
+- Full workflow E2E through gateway (deploy → start → complete → audit → notifications)
+- Multi-tenant isolation (tenant-a vs tenant-b data separation)
 
-**Results (2026-03-21):**
-1. **Keycloak** — `http://localhost:8180/realms/workflow-platform/.well-known/openid-configuration`: 200 OK
-2. **RabbitMQ management** — `http://localhost:15672/api/overview`: 200 OK. Verified: `wfp.events` exchange (topic), `wfp.audit` queue (`#`), `wfp.notification` queue (`task.*`, `process.completed`)
-3. **Admin Portal** — `http://localhost:5173/`: 200 OK
-4. **User Portal** — `http://localhost:5174/`: 200 OK
-5. **Gateway health** — `http://localhost:9080/actuator/health`: `{"status":"UP"}`
-6. **Service health checks** — all 4 services (8081-8084): `{"status":"UP"}`
+**Files:**
+- `e2e/playwright.config.ts` — config (baseURL: localhost:9080, 30s timeout)
+- `e2e/playwright.test.ts` — 7 test cases
+- `e2e/package.json` — standalone package with `@playwright/test`
+
+**curl-based verification results (2026-03-21):**
+1. Keycloak OIDC config: 200 OK
+2. RabbitMQ management: 200 OK (wfp.events exchange, wfp.audit + wfp.notification queues)
+3. Admin Portal: 200 OK
+4. User Portal: 200 OK
+5. Gateway health: UP
+6. All services (8081-8084): UP
+
+**TODO:** Run `cd e2e && npm install && npx playwright install && npx playwright test` with Docker stack running. Playwright MCP server is configured but requires session restart to load.
 
 ---
 
