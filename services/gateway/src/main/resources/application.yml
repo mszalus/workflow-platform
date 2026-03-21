@@ -9,31 +9,27 @@ spring:
       mvc:
         routes:
           - id: workflow-service
-            uri: http://localhost:8081
+            uri: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
             predicates:
               - Path=/api/workflow/**
             filters:
-              - StripPrefix=2
+              - RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}
           - id: custom-fields-service
-            uri: http://localhost:8082
+            uri: ${CUSTOM_FIELDS_SERVICE_URL:http://localhost:8082}
             predicates:
               - Path=/api/fields/**
             filters:
-              - StripPrefix=2
+              - RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}
           - id: notification-service
-            uri: http://localhost:8083
+            uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
             predicates:
               - Path=/api/notifications/**
-            filters:
-              - StripPrefix=2
           - id: audit-service
-            uri: http://localhost:8084
+            uri: ${AUDIT_SERVICE_URL:http://localhost:8084}
             predicates:
               - Path=/api/audit/**
-            filters:
-              - StripPrefix=2
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://localhost:8180/realms/workflow-platform
+          issuer-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:http://localhost:8180/realms/workflow-platform}

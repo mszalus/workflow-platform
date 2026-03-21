@@ -47,16 +47,21 @@ public class WorkflowEventListener {
     }
 
     private void handleTaskCompleted(TaskCompletedEvent e) {
-        notificationService.createNotification(e.getUserId(), e.getTenantId(),
-                "Task Completed: " + e.getTaskName(),
-                "Task '" + e.getTaskName() + "' has been completed",
-                NotificationType.TASK_COMPLETED, e.getTaskId(), "TASK");
+        String userId = e.getCompletedBy() != null ? e.getCompletedBy() : e.getUserId();
+        if (userId != null) {
+            notificationService.createNotification(userId, e.getTenantId(),
+                    "Task Completed: " + e.getTaskName(),
+                    "Task '" + e.getTaskName() + "' has been completed",
+                    NotificationType.TASK_COMPLETED, e.getTaskId(), "TASK");
+        }
     }
 
     private void handleProcessCompleted(ProcessCompletedEvent e) {
-        notificationService.createNotification(e.getUserId(), e.getTenantId(),
-                "Process Completed: " + e.getProcessName(),
-                "Process '" + e.getProcessName() + "' has been completed",
-                NotificationType.PROCESS_COMPLETED, e.getProcessInstanceId(), "PROCESS");
+        if (e.getUserId() != null) {
+            notificationService.createNotification(e.getUserId(), e.getTenantId(),
+                    "Process Completed: " + e.getProcessName(),
+                    "Process '" + e.getProcessName() + "' has been completed",
+                    NotificationType.PROCESS_COMPLETED, e.getProcessInstanceId(), "PROCESS");
+        }
     }
 }

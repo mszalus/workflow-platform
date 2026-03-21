@@ -11,6 +11,5 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "include": ["src"],
-  "references": [{ "path": "../../packages/shared-ui" }]
+  "include": ["src"]
 }

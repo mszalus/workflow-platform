@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: wfp_secret
       POSTGRES_DB: wfp
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -42,6 +42,8 @@ services:
       KC_DB_SCHEMA: keycloak
       KC_DB_USERNAME: wfp
       KC_DB_PASSWORD: wfp_secret
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: 8180
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports:
@@ -58,13 +60,14 @@ services:
       dockerfile: services/gateway/Dockerfile
     container_name: wfp-gateway
     ports:
-      - "8080:8080"
+      - "9080:8080"
     environment:
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
-      SPRING_CLOUD_GATEWAY_MVC_ROUTES_0_URI: http://workflow-service:8081
-      SPRING_CLOUD_GATEWAY_MVC_ROUTES_1_URI: http://custom-fields-service:8082
-      SPRING_CLOUD_GATEWAY_MVC_ROUTES_2_URI: http://notification-service:8083
-      SPRING_CLOUD_GATEWAY_MVC_ROUTES_3_URI: http://audit-service:8084
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
+      WORKFLOW_SERVICE_URL: http://workflow-service:8081
+      CUSTOM_FIELDS_SERVICE_URL: http://custom-fields-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8083
+      AUDIT_SERVICE_URL: http://audit-service:8084
     depends_on:
       - keycloak
 
@@ -82,7 +85,8 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: wfp
       SPRING_RABBITMQ_PASSWORD: wfp_secret
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,7 +109,8 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: wfp
       SPRING_RABBITMQ_PASSWORD: wfp_secret
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
     depends_on:
       postgres:
         condition: service_healthy
@@ -126,7 +131,8 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: wfp
       SPRING_RABBITMQ_PASSWORD: wfp_secret
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,7 +153,8 @@ services:
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: wfp
       SPRING_RABBITMQ_PASSWORD: wfp_secret
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://keycloak:8080/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
     depends_on:
       postgres:
         condition: service_healthy

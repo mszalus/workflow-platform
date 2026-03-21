@@ -1,25 +1,24 @@
-FROM eclipse-temurin:21-jdk AS build
-
-WORKDIR /workspace
-
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
+COPY gradlew .
 COPY gradle/ gradle/
-COPY gradlew settings.gradle.kts build.gradle.kts ./
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
+COPY gradle.properties .
+COPY buildSrc/ buildSrc/
 COPY libs/ libs/
-COPY services/gateway/ services/gateway/
+COPY services/ services/
+RUN chmod +x gradlew && ./gradlew :services:gateway:bootJar -x test --no-daemon
 
-RUN ./gradlew :services:gateway:bootJar --no-daemon -x test
+FROM eclipse-temurin:21-jre-alpine
 
-FROM eclipse-temurin:21-jre
-
-RUN groupadd --system appuser && useradd --system --gid appuser appuser
+RUN addgroup -S appuser && adduser -S appuser -G appuser
 
 WORKDIR /app
-
-COPY --from=build /workspace/services/gateway/build/libs/*.jar app.jar
+COPY --from=build /app/services/gateway/build/libs/*.jar app.jar
 
 RUN chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
