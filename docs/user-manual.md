@@ -64,21 +64,27 @@ The dashboard gives you a quick overview of your workload at a glance.
 
 ## Task Inbox
 
-Navigate to **Tasks** in the sidebar to view your task inbox.
+Navigate to **My Tasks** in the sidebar to view your task inbox.
 
-The task inbox displays all tasks assigned to you in a table with columns:
+The task inbox has two sections:
+
+### My Tasks
+
+Tasks currently assigned to you. Each row shows:
 
 | Column    | Description                              |
 |-----------|------------------------------------------|
 | Task      | Task name (clickable link to task detail) |
-| Process   | The process definition this task belongs to |
+| Process   | The process definition key               |
 | Created   | Date the task was created                |
 | Priority  | Task priority level                      |
 | Actions   | Link to open the task                    |
 
-### Filtering
+### Available to Claim
 
-Tasks are automatically filtered to show only tasks assigned to your username.
+Tasks not yet assigned to anyone, but available to your user group (e.g., `managers`). These are created by workflows that use `candidateGroups` instead of a direct assignee.
+
+Click **Claim** to assign the task to yourself. Once claimed, it moves to the "My Tasks" section and you can open and complete it.
 
 ---
 

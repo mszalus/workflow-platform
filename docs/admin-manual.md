@@ -156,9 +156,38 @@ The properties panel includes Flowable-specific configuration:
 | Async After  | Execute after the element asynchronously  |
 | Exclusive    | Exclusive async execution (no parallel)   |
 
+### Importing BPMN Files
+
+You can import existing BPMN 2.0 XML files into the visual editor:
+
+1. Click **Import** in the top-right toolbar
+2. Select a `.bpmn` or `.bpmn20.xml` file from your computer
+3. The diagram renders in the canvas and the process name auto-fills from the filename
+4. Review and edit the process in the visual editor
+5. Click **Deploy** to deploy it to the Flowable engine
+
+Compatible sources for BPMN files include:
+- [Flowable GitHub repo](https://github.com/flowable/flowable-engine) — official samples (Vacation Request, Helpdesk, Review Sales Lead, etc.)
+- Any BPMN 2.0 compliant modeler (Camunda Modeler, Signavio, etc.)
+- Exported files from this platform's **Export** button
+
+> **Note:** Files using the legacy `activiti:` namespace are supported by Flowable but `flowable:` is recommended. The process must have `isExecutable="true"`.
+
+Sample BPMN files are included in `e2e/samples/` for testing:
+- `vacation-request.bpmn20.xml` — multi-step vacation approval with manager review, approval/rejection gateway, and resubmission loop
+- `review-sales-lead.bpmn20.xml` — complex workflow with embedded subprocess, parallel gateway, error boundary events, and CRM integration task
+
+### Exporting BPMN Files
+
+Click **Export** to download the current diagram as a `.bpmn` XML file. This preserves all Flowable-specific properties (assignee, candidateGroups, formKey, async settings, etc.).
+
+### Editing Existing Processes
+
+From the Process Definitions list, click **Edit** on any process to load its BPMN XML into the visual editor. You can modify the diagram and redeploy — Flowable auto-increments the version number.
+
 ### Deploying from the Designer
 
-1. Create your BPMN diagram in the editor
+1. Create or import your BPMN diagram in the editor
 2. Enter a **process name** in the top-right input
 3. Click **Deploy**
 4. The process is sent to the workflow-service and deployed to the Flowable engine
@@ -179,7 +208,7 @@ The table shows all deployed process definitions with:
 | Name    | Process display name                 |
 | Key     | Process definition key (unique ID)   |
 | Version | Deployment version (auto-incremented)|
-| Actions | Delete button                        |
+| Actions | Edit (open in designer), Delete      |
 
 ### Deleting a Process
 
