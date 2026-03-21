@@ -1,5 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
+import { BpmnPropertiesPanelModule, BpmnPropertiesProviderModule } from 'bpmn-js-properties-panel';
+import flowableModdle from './flowable.json';
+import FlowablePropertiesProviderModule from './FlowablePropertiesProvider';
+
+import 'bpmn-js/dist/assets/diagram-js.css';
+import 'bpmn-js/dist/assets/bpmn-js.css';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
+import '@bpmn-io/properties-panel/assets/properties-panel.css';
 
 export interface BpmnEditorProps {
   xml?: string;
@@ -11,13 +19,25 @@ export interface BpmnEditorProps {
 
 export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height = '100%' }: BpmnEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || !propertiesPanelRef.current) return;
 
     const modeler = new BpmnModeler({
       container: containerRef.current,
+      propertiesPanel: {
+        parent: propertiesPanelRef.current,
+      },
+      additionalModules: [
+        BpmnPropertiesPanelModule,
+        BpmnPropertiesProviderModule,
+        FlowablePropertiesProviderModule,
+      ],
+      moddleExtensions: {
+        flowable: flowableModdle,
+      },
     });
 
     modelerRef.current = modeler;
@@ -61,13 +81,23 @@ export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height
   }, [xml, importXml]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        height: typeof height === 'number' ? `${height}px` : height,
-        width: '100%',
-        border: '1px solid #ccc',
-      }}
-    />
+    <div style={{ display: 'flex', height: typeof height === 'number' ? `${height}px` : height, width: '100%' }}>
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1,
+          border: '1px solid #ccc',
+        }}
+      />
+      <div
+        ref={propertiesPanelRef}
+        style={{
+          width: 320,
+          borderLeft: '1px solid #ccc',
+          overflowY: 'auto',
+          background: '#f8f8f8',
+        }}
+      />
+    </div>
   );
 }
