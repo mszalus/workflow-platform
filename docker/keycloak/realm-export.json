@@ -10,9 +10,18 @@
   "bruteForceProtected": true,
   "roles": {
     "realm": [
-      { "name": "admin", "description": "Platform administrator" },
-      { "name": "manager", "description": "Workflow manager" },
-      { "name": "user", "description": "Regular user" }
+      {
+        "name": "admin",
+        "description": "Platform administrator"
+      },
+      {
+        "name": "manager",
+        "description": "Workflow manager"
+      },
+      {
+        "name": "user",
+        "description": "Regular user"
+      }
     ]
   },
   "clients": [
@@ -22,7 +31,13 @@
       "publicClient": false,
       "bearerOnly": true,
       "protocol": "openid-connect",
-      "defaultClientScopes": ["openid", "profile", "email", "roles", "tenant"]
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles",
+        "tenant"
+      ]
     },
     {
       "clientId": "wfp-admin-portal",
@@ -32,9 +47,21 @@
       "directAccessGrantsEnabled": true,
       "protocol": "openid-connect",
       "rootUrl": "http://localhost:5173",
-      "redirectUris": ["http://localhost:5173/*"],
-      "webOrigins": ["http://localhost:5173"],
-      "defaultClientScopes": ["openid", "profile", "email", "roles", "tenant"]
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "*"
+      ],
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles",
+        "tenant"
+      ]
     },
     {
       "clientId": "wfp-user-portal",
@@ -44,9 +71,21 @@
       "directAccessGrantsEnabled": true,
       "protocol": "openid-connect",
       "rootUrl": "http://localhost:5174",
-      "redirectUris": ["http://localhost:5174/*"],
-      "webOrigins": ["http://localhost:5174"],
-      "defaultClientScopes": ["openid", "profile", "email", "roles", "tenant"]
+      "redirectUris": [
+        "http://localhost:5174/*",
+        "*"
+      ],
+      "webOrigins": [
+        "http://localhost:5174",
+        "*"
+      ],
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles",
+        "tenant"
+      ]
     }
   ],
   "clientScopes": [
@@ -174,9 +213,21 @@
       "email": "admin-a@tenant-a.example.com",
       "firstName": "Admin",
       "lastName": "TenantA",
-      "credentials": [{ "type": "password", "value": "password", "temporary": false }],
-      "realmRoles": ["admin"],
-      "attributes": { "tenant_id": ["tenant-a"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ],
+      "attributes": {
+        "tenant_id": [
+          "tenant-a"
+        ]
+      }
     },
     {
       "username": "user-a",
@@ -184,9 +235,21 @@
       "email": "user-a@tenant-a.example.com",
       "firstName": "User",
       "lastName": "TenantA",
-      "credentials": [{ "type": "password", "value": "password", "temporary": false }],
-      "realmRoles": ["user"],
-      "attributes": { "tenant_id": ["tenant-a"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ],
+      "attributes": {
+        "tenant_id": [
+          "tenant-a"
+        ]
+      }
     },
     {
       "username": "admin-b",
@@ -194,9 +257,21 @@
       "email": "admin-b@tenant-b.example.com",
       "firstName": "Admin",
       "lastName": "TenantB",
-      "credentials": [{ "type": "password", "value": "password", "temporary": false }],
-      "realmRoles": ["admin"],
-      "attributes": { "tenant_id": ["tenant-b"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin"
+      ],
+      "attributes": {
+        "tenant_id": [
+          "tenant-b"
+        ]
+      }
     },
     {
       "username": "user-b",
@@ -204,9 +279,21 @@
       "email": "user-b@tenant-b.example.com",
       "firstName": "User",
       "lastName": "TenantB",
-      "credentials": [{ "type": "password", "value": "password", "temporary": false }],
-      "realmRoles": ["user"],
-      "attributes": { "tenant_id": ["tenant-b"] }
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "user"
+      ],
+      "attributes": {
+        "tenant_id": [
+          "tenant-b"
+        ]
+      }
     }
   ]
 }
