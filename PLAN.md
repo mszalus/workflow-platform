@@ -18,7 +18,7 @@ The workflow platform (Phase 1 + Phase 2) is built and verified with basic E2E t
 - `services/gateway/Dockerfile` (also fixed: was missing `buildSrc/` and `gradle.properties`)
 
 **Additional fixes discovered during build:**
-- All Dockerfiles must `COPY services/ services/` (not just target service) because `settings.gradle.kts` includes all modules and Gradle requires all project directories to exist
+- All Dockerfiles must `COPY services/ services/` (not just target service) because `settings.gradle` includes all modules and Gradle requires all project directories to exist
 - Gateway Dockerfile switched to alpine images for consistency
 - Gateway Dockerfile: `groupadd`/`useradd` → `addgroup`/`adduser` (alpine)
 

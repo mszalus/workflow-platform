@@ -21,7 +21,7 @@ Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), 
 - **RabbitMQ 3.13** — async events between services (topic exchange `wfp.events`)
 - **Keycloak 25** — OIDC/JWT identity provider, single realm with Organizations for tenants
 - **React 18 + TypeScript + Vite** — two frontend apps (admin-portal, user-portal)
-- **Gradle 9.2 (Kotlin DSL)** — multi-module build with convention plugins in `buildSrc/`
+- **Gradle 9.2 (Groovy DSL)** — multi-module build with convention plugins in `buildSrc/`
 - **npm workspaces** — frontend monorepo under `frontend/`
 - **Docker Compose** — full local stack (10 containers)
 - **Helm** — Kubernetes deployment (umbrella chart + per-service sub-charts)
@@ -31,10 +31,10 @@ Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), 
 ```
 workflow-platform/
 ├── buildSrc/                    # Gradle convention plugins
-│   └── src/main/kotlin/
-│       ├── wfp.java-conventions.gradle.kts    # Java 21, UTF-8, JUnit 5
-│       ├── wfp.library-conventions.gradle.kts # For shared libs (java-library + Lombok)
-│       └── wfp.spring-boot-app.gradle.kts     # For services (Boot + Lombok + Spring Cloud BOM)
+│   └── src/main/groovy/
+│       ├── wfp.java-conventions.gradle    # Java 21, UTF-8, JUnit 5
+│       ├── wfp.library-conventions.gradle # For shared libs (java-library + Lombok)
+│       └── wfp.spring-boot-app.gradle     # For services (Boot + Lombok + Spring Cloud BOM)
 ├── libs/                        # Shared libraries (not independently deployable)
 │   ├── wfp-common/              # ErrorResponse, PagedResponse, GlobalExceptionHandler
 │   ├── wfp-events/              # BaseEvent, EventConstants, all event types (polymorphic Jackson)
@@ -129,7 +129,7 @@ In Docker, URIs are overridden via env vars (`SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_
 
 ## Known Pitfalls
 
-1. **Gradle requires all project directories**: `settings.gradle.kts` includes all modules — Dockerfiles must copy the entire `services/` directory, not just the target service
+1. **Gradle requires all project directories**: `settings.gradle` includes all modules — Dockerfiles must copy the entire `services/` directory, not just the target service
 2. **Port conflicts**: Local PostgreSQL on 5432 conflicts with Docker. Docker compose maps PG to `5433` externally
 3. **Hibernate @FilterDef**: Only one per persistence unit, not per entity. Second entity → use `@Filter` only
 4. **RabbitMQ Jackson**: Messages need `Jackson2JsonMessageConverter` bean in the RabbitMQ config

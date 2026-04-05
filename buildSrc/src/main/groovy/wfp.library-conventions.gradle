@@ -1,0 +1,15 @@
+plugins {
+    id 'wfp.java-conventions'
+    id 'java-library'
+}
+
+dependencies {
+    compileOnly "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+    annotationProcessor "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+
+    testCompileOnly "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+    testAnnotationProcessor "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}

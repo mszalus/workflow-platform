@@ -49,7 +49,7 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot microserv
 | Messaging | RabbitMQ 3.13 (topic exchange) |
 | Identity | Keycloak 25 (OIDC/JWT, Organizations for tenants) |
 | Frontend | React 18, TypeScript, Vite, bpmn-js |
-| Build | Gradle 9.2 (Kotlin DSL), npm workspaces |
+| Build | Gradle 9.2 (Groovy DSL), npm workspaces |
 | Deployment | Docker Compose, Helm/Kubernetes |
 
 ## Prerequisites

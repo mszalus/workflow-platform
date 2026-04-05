@@ -1,0 +1,24 @@
+plugins {
+    id 'wfp.java-conventions'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+dependencies {
+    compileOnly "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+    annotationProcessor "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+
+    testCompileOnly "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+    testAnnotationProcessor "org.projectlombok:lombok:${findProperty('lombokVersion')}"
+
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${findProperty('springCloudVersion')}"
+    }
+}
