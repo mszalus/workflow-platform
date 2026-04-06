@@ -9,6 +9,7 @@ import java.util.Map;
 @Data
 public class SaveFieldValuesRequest {
     @NotBlank private String processInstanceId;
+    @NotBlank private String processDefinitionKey;
     private String taskId;
     @NotEmpty private Map<String, String> values;
 }

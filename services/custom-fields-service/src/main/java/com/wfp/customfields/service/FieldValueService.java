@@ -24,7 +24,7 @@ public class FieldValueService {
     @Transactional
     public void saveValues(SaveFieldValuesRequest req) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        String pdKey = inferProcessDefinitionKey(req.getProcessInstanceId());
+        String pdKey = req.getProcessDefinitionKey();
 
         List<FieldSchema> schemas = schemaRepository
                 .findByProcessDefinitionKeyAndTenantIdOrderBySortOrder(pdKey, tenantId);
@@ -85,9 +85,4 @@ public class FieldValueService {
         }).toList();
     }
 
-    private String inferProcessDefinitionKey(String processInstanceId) {
-        // In a real implementation, this would call the workflow service
-        // For now, we rely on the schemas being queried by the caller
-        return "";
-    }
 }
