@@ -104,7 +104,7 @@ Displays task metadata:
 - **Due Date** — deadline (if set)
 
 #### Custom Fields
-Shows any custom fields configured for this process. Custom fields are dynamic form fields defined by administrators. If no custom fields are configured, you'll see "No custom fields configured."
+Shows any custom fields configured for this process. Custom fields are dynamic form fields defined by administrators and are scoped to the process instance — values entered on one task are visible on every subsequent task in the same process. Click **Edit Fields** to enter or update values, then **Save**. If no custom fields are configured, you'll see "No custom fields configured."
 
 #### Comments
 A comment thread for collaboration:

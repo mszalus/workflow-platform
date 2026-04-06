@@ -46,10 +46,8 @@ public class FieldValueService {
                 throw new BadRequestException("Field '" + entry.getKey() + "' failed validation");
             }
 
-            Optional<FieldValue> existing = req.getTaskId() != null
-                    ? valueRepository.findByFieldSchemaIdAndProcessInstanceIdAndTaskIdAndTenantId(
-                            schema.getId(), req.getProcessInstanceId(), req.getTaskId(), tenantId)
-                    : valueRepository.findByFieldSchemaIdAndProcessInstanceIdAndTaskIdIsNullAndTenantId(
+            Optional<FieldValue> existing = valueRepository
+                    .findByFieldSchemaIdAndProcessInstanceIdAndTenantId(
                             schema.getId(), req.getProcessInstanceId(), tenantId);
 
             if (existing.isPresent()) {
@@ -59,7 +57,6 @@ public class FieldValueService {
                 valueRepository.save(FieldValue.builder()
                         .fieldSchemaId(schema.getId())
                         .processInstanceId(req.getProcessInstanceId())
-                        .taskId(req.getTaskId())
                         .value(entry.getValue())
                         .tenantId(tenantId)
                         .build());
@@ -67,11 +64,10 @@ public class FieldValueService {
         }
     }
 
-    public List<FieldValueDto> getValues(String processInstanceId, String taskId) {
+    public List<FieldValueDto> getValues(String processInstanceId) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        List<FieldValue> values = taskId != null
-                ? valueRepository.findByProcessInstanceIdAndTaskIdAndTenantId(processInstanceId, taskId, tenantId)
-                : valueRepository.findByProcessInstanceIdAndTenantId(processInstanceId, tenantId);
+        List<FieldValue> values = valueRepository
+                .findByProcessInstanceIdAndTenantId(processInstanceId, tenantId);
 
         return values.stream().map(v -> {
             FieldSchema schema = schemaRepository.findById(v.getFieldSchemaId()).orElse(null);
@@ -84,5 +80,4 @@ public class FieldValueService {
                     .build();
         }).toList();
     }
-
 }

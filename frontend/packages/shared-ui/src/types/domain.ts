@@ -113,6 +113,5 @@ export interface FieldValue {
   id: string;
   fieldSchemaId: string;
   processInstanceId: string;
-  taskId?: string;
   value: string;
 }

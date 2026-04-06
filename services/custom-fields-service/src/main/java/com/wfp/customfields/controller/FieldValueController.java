@@ -24,8 +24,7 @@ public class FieldValueController {
     }
 
     @GetMapping
-    public List<FieldValueDto> get(@RequestParam String processInstanceId,
-                                    @RequestParam(required = false) String taskId) {
-        return valueService.getValues(processInstanceId, taskId);
+    public List<FieldValueDto> get(@RequestParam String processInstanceId) {
+        return valueService.getValues(processInstanceId);
     }
 }

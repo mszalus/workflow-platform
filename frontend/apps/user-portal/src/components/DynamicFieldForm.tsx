@@ -24,10 +24,9 @@ interface FieldValueDto {
 interface Props {
   processInstanceId: string;
   processDefinitionKey: string;
-  taskId?: string;
 }
 
-export default function DynamicFieldForm({ processInstanceId, processDefinitionKey, taskId }: Props) {
+export default function DynamicFieldForm({ processInstanceId, processDefinitionKey }: Props) {
   const queryClient = useQueryClient();
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState(false);
@@ -38,12 +37,9 @@ export default function DynamicFieldForm({ processInstanceId, processDefinitionK
     enabled: !!processDefinitionKey,
   });
 
-  const valuesParams = new URLSearchParams({ processInstanceId });
-  if (taskId) valuesParams.set('taskId', taskId);
-
   const { data: savedValues = [] } = useQuery<FieldValueDto[]>({
-    queryKey: ['field-values', processInstanceId, taskId],
-    queryFn: () => apiClient.get(`/fields/values?${valuesParams}`).then((r) => r.data),
+    queryKey: ['field-values', processInstanceId],
+    queryFn: () => apiClient.get(`/fields/values?processInstanceId=${processInstanceId}`).then((r) => r.data),
   });
 
   useEffect(() => {
@@ -57,10 +53,10 @@ export default function DynamicFieldForm({ processInstanceId, processDefinitionK
 
   const saveMutation = useMutation({
     mutationFn: (values: Record<string, string>) =>
-      apiClient.post('/fields/values', { processInstanceId, processDefinitionKey, taskId, values }),
+      apiClient.post('/fields/values', { processInstanceId, processDefinitionKey, values }),
     onSuccess: () => {
       setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ['field-values', processInstanceId, taskId] });
+      queryClient.invalidateQueries({ queryKey: ['field-values', processInstanceId] });
     },
   });
 

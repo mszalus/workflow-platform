@@ -51,7 +51,7 @@ export default function TaskDetail() {
         </div>
         <div style={{ background: '#fff', padding: '1rem', borderRadius: 8 }}>
           <h3 style={{ marginBottom: '0.5rem' }}>Custom Fields</h3>
-          <DynamicFieldForm processInstanceId={task.processInstanceId} processDefinitionKey={task.processDefinitionKey} taskId={task.id} />
+          <DynamicFieldForm processInstanceId={task.processInstanceId} processDefinitionKey={task.processDefinitionKey} />
         </div>
       </div>
 

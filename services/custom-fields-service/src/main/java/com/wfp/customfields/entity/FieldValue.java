@@ -23,9 +23,6 @@ public class FieldValue {
     @Column(name = "process_instance_id", nullable = false)
     private String processInstanceId;
 
-    @Column(name = "task_id")
-    private String taskId;
-
     @Column(columnDefinition = "TEXT")
     private String value;
 

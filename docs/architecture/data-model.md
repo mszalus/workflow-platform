@@ -138,7 +138,6 @@ erDiagram
         uuid id PK
         uuid field_schema_id "NOT NULL (logical FK)"
         string process_instance_id "NOT NULL"
-        string task_id "nullable"
         text value
         string tenant_id "NOT NULL, filtered"
         instant created_at "immutable"
