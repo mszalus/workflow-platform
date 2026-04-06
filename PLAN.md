@@ -299,6 +299,24 @@ After each step, verify before moving to the next:
 - CI fixes: typecheck passes without dist/ — VERIFIED
 - Frontend API path fix: all proxy paths verified via curl — VERIFIED
 
+## Step 12: Architecture Diagrams & Data Model — DONE (2026-04-05)
+
+Created C4 model diagrams and data model documentation in `docs/architecture/` using Mermaid format (editable, version-controlled, GitHub-rendered).
+
+**Files created:**
+- `docs/architecture/README.md` — Index of all diagrams with viewing/editing instructions
+- `docs/architecture/c4-context.md` — C4 Level 1: System Context (users, external systems, platform boundary)
+- `docs/architecture/c4-container.md` — C4 Level 2: All containers (10 services, DB, MQ, gateway routing table, event flows)
+- `docs/architecture/c4-component-workflow-service.md` — C4 Level 3: Workflow service internals (controllers, services, Flowable engine, event publisher)
+- `docs/architecture/c4-component-notification-service.md` — C4 Level 3: Notification service (event listener, CRUD, event-to-notification mapping)
+- `docs/architecture/c4-component-gateway.md` — C4 Level 3: Gateway (JWT validation, tenant propagation, routing)
+- `docs/architecture/c4-deployment.md` — C4 Level 4: Docker Compose topology, GCP VM deployment, Kubernetes/Helm with resource allocation
+- `docs/architecture/data-model.md` — ER diagram: 9 JPA entities + key Flowable tables, enumerations, cross-schema references, multi-tenancy pattern
+
+Each diagram includes a "Notes for Editors" section explaining how to extend it for common changes (add service, add entity, add route, etc.).
+
+---
+
 ## Commit strategy
 
 One commit after steps 1-4 (fixes + verified Docker stack), one commit for README, one for Helm fixes if any.

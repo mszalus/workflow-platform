@@ -20,10 +20,12 @@ public class DeploymentService {
 
     public Deployment deploy(String name, String category, String bpmnXml) {
         String tenantId = TenantContext.requireCurrentTenantId();
+        // Ensure process definitions are marked executable (Flowable requires this)
+        String fixedXml = bpmnXml.replace("isExecutable=\"false\"", "isExecutable=\"true\"");
         return repositoryService.createDeployment()
                 .name(name)
                 .category(category)
-                .addString(name + ".bpmn20.xml", bpmnXml)
+                .addString(name + ".bpmn20.xml", fixedXml)
                 .tenantId(tenantId)
                 .deploy();
     }

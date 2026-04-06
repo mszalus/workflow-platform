@@ -13,24 +13,29 @@ services:
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wfp"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
 
   rabbitmq:
-    image: rabbitmq:3.13-management-alpine
+    image: rabbitmq:3.13-management
     container_name: wfp-rabbitmq
+    hostname: wfp-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: wfp
       RABBITMQ_DEFAULT_PASS: wfp_secret
     ports:
       - "5672:5672"
       - "15672:15672"
+    tmpfs:
+      - /var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 20
+      start_period: 30s
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.6

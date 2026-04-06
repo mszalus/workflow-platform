@@ -9,6 +9,24 @@ import 'bpmn-js/dist/assets/bpmn-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import '@bpmn-io/properties-panel/assets/properties-panel.css';
 
+const DEFAULT_DIAGRAM = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+  xmlns:flowable="http://flowable.org/bpmn"
+  targetNamespace="http://flowable.org/bpmn">
+  <process id="Process_1" name="New Process" isExecutable="true">
+    <startEvent id="StartEvent_1" />
+  </process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
+        <dc:Bounds x="180" y="160" width="36" height="36" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>`;
+
 export interface BpmnEditorProps {
   xml?: string;
   onXmlChange?: (xml: string) => void;
@@ -42,15 +60,16 @@ export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height
 
     modelerRef.current = modeler;
 
-    if (xml) {
-      modeler.importXML(xml).catch((err: Error) => {
-        onError?.(err);
-      });
-    } else {
-      modeler.createDiagram().catch((err: Error) => {
-        onError?.(err);
-      });
-    }
+    const initialXml = xml || DEFAULT_DIAGRAM;
+    modeler.importXML(initialXml).then(() => {
+      if (!xml) {
+        modeler.saveXML({ format: true }).then((result) => {
+          if (result.xml) onXmlChange?.(result.xml);
+        });
+      }
+    }).catch((err: Error) => {
+      onError?.(err);
+    });
 
     modeler.on('commandStack.changed', async () => {
       try {
