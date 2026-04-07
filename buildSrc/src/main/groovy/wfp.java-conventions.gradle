@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'checkstyle'
+    id 'jacoco'
     id 'org.owasp.dependencycheck'
 }
 
@@ -29,6 +30,24 @@ checkstyle {
 
 // Only lint main sources; test code has different conventions
 checkstyleTest.enabled = false
+
+// JaCoCo coverage — generates HTML + XML reports after every test run.
+// No thresholds enforced yet; use these to understand coverage trends.
+// Reports: build/reports/jacoco/test/html/index.html
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true   // for CI parsing / coverage badges
+        html.required = true  // for local browsing
+    }
+}
+
+// Auto-generate coverage report whenever tests run
+test.finalizedBy jacocoTestReport
 
 // OWASP Dependency-Check — scans for known CVEs in dependencies.
 // NOT part of the normal build lifecycle to keep builds fast.
