@@ -28,6 +28,9 @@ public class SecurityConfig implements WebMvcConfigurer {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // CSRF disabled intentionally: all clients are SPAs that authenticate via Bearer tokens
+            // in the Authorization header, not via cookies. Stateless JWT auth is inherently safe
+            // against CSRF because cross-origin requests cannot read or forge the Authorization header.
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
