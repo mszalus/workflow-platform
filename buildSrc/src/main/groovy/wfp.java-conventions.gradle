@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'checkstyle'
 }
 
 java {
@@ -15,3 +16,15 @@ tasks.withType(JavaCompile).configureEach {
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
+
+checkstyle {
+    toolVersion = '10.21.4'
+    configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+    // Allow Checkstyle to resolve its bundled DTD (needed for configuration_1_3.dtd)
+    enableExternalDtdLoad = true
+    // Treat all checkstyle warnings as errors once existing suppressions are removed
+    maxWarnings = 0
+}
+
+// Only lint main sources; test code has different conventions
+checkstyleTest.enabled = false

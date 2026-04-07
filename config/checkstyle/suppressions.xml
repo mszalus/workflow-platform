@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!--
+  Bootstrap suppressions for existing code.
+  These suppress Checkstyle violations in all pre-existing source files so
+  that the build passes immediately. Remove suppressions package-by-package
+  as code is cleaned up.
+
+  TO ENFORCE A PACKAGE: delete its <suppress> entry and fix the violations.
+  TO ENFORCE EVERYTHING: delete this file's contents and fix all violations.
+-->
+<suppressions>
+
+    <!-- Existing libs — remove one at a time as code is cleaned up -->
+    <suppress files="libs[/\\]wfp-common[/\\]" checks=".*"/>
+    <suppress files="libs[/\\]wfp-events[/\\]" checks=".*"/>
+    <suppress files="libs[/\\]wfp-security[/\\]" checks=".*"/>
+    <suppress files="libs[/\\]wfp-test-support[/\\]" checks=".*"/>
+
+    <!-- Existing services — remove one at a time as code is cleaned up -->
+    <suppress files="services[/\\]gateway[/\\]" checks=".*"/>
+    <suppress files="services[/\\]workflow-service[/\\]" checks=".*"/>
+    <suppress files="services[/\\]custom-fields-service[/\\]" checks=".*"/>
+    <suppress files="services[/\\]notification-service[/\\]" checks=".*"/>
+    <suppress files="services[/\\]audit-service[/\\]" checks=".*"/>
+
+</suppressions>
