@@ -67,7 +67,8 @@ export default function DynamicFieldForm({ processInstanceId, processDefinitionK
       {schemas.map((s) => (
         <div key={s.id} style={{ marginBottom: '0.5rem' }}>
           <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '0.2rem' }}>
-            {s.label}{s.required && ' *'}
+            {s.label}
+            {s.required && ' *'}
           </label>
           {editing ? (
             s.fieldType === 'SELECT' && s.options.length > 0 ? (
@@ -77,7 +78,11 @@ export default function DynamicFieldForm({ processInstanceId, processDefinitionK
                 style={{ width: '100%', padding: '0.3rem' }}
               >
                 <option value="">-- Select --</option>
-                {s.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                {s.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
               </select>
             ) : s.fieldType === 'BOOLEAN' ? (
               <select
@@ -111,7 +116,14 @@ export default function DynamicFieldForm({ processInstanceId, processDefinitionK
             <button
               onClick={() => saveMutation.mutate(formValues)}
               disabled={saveMutation.isPending}
-              style={{ background: '#1976d2', color: '#fff', padding: '0.3rem 0.8rem', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+              style={{
+                background: '#1976d2',
+                color: '#fff',
+                padding: '0.3rem 0.8rem',
+                border: 'none',
+                borderRadius: 4,
+                cursor: 'pointer',
+              }}
             >
               {saveMutation.isPending ? 'Saving...' : 'Save'}
             </button>
@@ -125,7 +137,14 @@ export default function DynamicFieldForm({ processInstanceId, processDefinitionK
         ) : (
           <button
             onClick={() => setEditing(true)}
-            style={{ background: '#fff', color: '#333', padding: '0.3rem 0.8rem', border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer' }}
+            style={{
+              background: '#fff',
+              color: '#333',
+              padding: '0.3rem 0.8rem',
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
           >
             Edit Fields
           </button>

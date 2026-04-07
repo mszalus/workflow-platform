@@ -1,4 +1,9 @@
-import { TextFieldEntry, isTextFieldEntryEdited, CheckboxEntry, isCheckboxEntryEdited } from '@bpmn-io/properties-panel';
+import {
+  TextFieldEntry,
+  isTextFieldEntryEdited,
+  CheckboxEntry,
+  isCheckboxEntryEdited,
+} from '@bpmn-io/properties-panel';
 import { useService } from 'bpmn-js-properties-panel';
 import { is } from 'bpmn-js/lib/util/ModelUtil';
 

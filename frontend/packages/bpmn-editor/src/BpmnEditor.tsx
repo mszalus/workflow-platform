@@ -48,11 +48,7 @@ export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height
       propertiesPanel: {
         parent: propertiesPanelRef.current,
       },
-      additionalModules: [
-        BpmnPropertiesPanelModule,
-        BpmnPropertiesProviderModule,
-        FlowablePropertiesProviderModule,
-      ],
+      additionalModules: [BpmnPropertiesPanelModule, BpmnPropertiesProviderModule, FlowablePropertiesProviderModule],
       moddleExtensions: {
         flowable: flowableModdle,
       },
@@ -61,15 +57,18 @@ export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height
     modelerRef.current = modeler;
 
     const initialXml = xml || DEFAULT_DIAGRAM;
-    modeler.importXML(initialXml).then(() => {
-      if (!xml) {
-        modeler.saveXML({ format: true }).then((result) => {
-          if (result.xml) onXmlChange?.(result.xml);
-        });
-      }
-    }).catch((err: Error) => {
-      onError?.(err);
-    });
+    modeler
+      .importXML(initialXml)
+      .then(() => {
+        if (!xml) {
+          modeler.saveXML({ format: true }).then((result) => {
+            if (result.xml) onXmlChange?.(result.xml);
+          });
+        }
+      })
+      .catch((err: Error) => {
+        onError?.(err);
+      });
 
     modeler.on('commandStack.changed', async () => {
       try {

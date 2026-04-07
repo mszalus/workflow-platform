@@ -19,18 +19,25 @@ export default function Notifications() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>Notifications</h1>
-        <button onClick={() => markAllReadMutation.mutate()} style={{ padding: '0.4rem 1rem', cursor: 'pointer' }}>Mark All Read</button>
+        <button onClick={() => markAllReadMutation.mutate()} style={{ padding: '0.4rem 1rem', cursor: 'pointer' }}>
+          Mark All Read
+        </button>
       </div>
-      {isLoading ? <p>Loading...</p> : (
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
         <div>
           {(data?.content ?? []).map((n: Notification) => (
-            <div key={n.id} style={{
-              background: n.read ? '#fff' : '#e3f2fd',
-              padding: '1rem',
-              marginBottom: '0.5rem',
-              borderRadius: 8,
-              borderLeft: `4px solid ${n.read ? '#ccc' : '#1976d2'}`,
-            }}>
+            <div
+              key={n.id}
+              style={{
+                background: n.read ? '#fff' : '#e3f2fd',
+                padding: '1rem',
+                marginBottom: '0.5rem',
+                borderRadius: 8,
+                borderLeft: `4px solid ${n.read ? '#ccc' : '#1976d2'}`,
+              }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <strong>{n.title}</strong>
                 <span style={{ color: '#999', fontSize: '0.85rem' }}>{new Date(n.createdAt).toLocaleString()}</span>

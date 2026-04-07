@@ -27,7 +27,9 @@ export default function Dashboard() {
         </div>
         <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase' }}>Active Instances</h3>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{instances?.totalElements ?? 0}</div>
+          <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>
+            {instances?.totalElements ?? 0}
+          </div>
         </div>
         <div style={{ background: '#fff', padding: '1.5rem', borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <h3 style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase' }}>Custom Field Schemas</h3>

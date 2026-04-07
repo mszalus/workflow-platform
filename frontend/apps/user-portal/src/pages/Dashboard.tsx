@@ -27,7 +27,20 @@ export default function Dashboard() {
           <h3 style={{ color: '#666', fontSize: '0.85rem', textTransform: 'uppercase' }}>Unread Notifications</h3>
           <div style={{ fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem' }}>{unread?.count ?? 0}</div>
         </div>
-        <Link to="/start-process" style={{ background: '#1976d2', color: '#fff', padding: '1.5rem', borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
+        <Link
+          to="/start-process"
+          style={{
+            background: '#1976d2',
+            color: '#fff',
+            padding: '1.5rem',
+            borderRadius: 8,
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.1rem',
+          }}
+        >
           Start New Process
         </Link>
       </div>

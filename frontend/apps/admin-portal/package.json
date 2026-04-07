@@ -7,7 +7,9 @@
     "dev": "vite --port 5173",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "format:check": "prettier --check src/"
   },
   "dependencies": {
     "@wfp/shared-ui": "*",

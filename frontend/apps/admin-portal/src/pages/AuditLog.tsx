@@ -22,14 +22,25 @@ export default function AuditLog() {
     <div>
       <h1 style={{ marginBottom: '1rem' }}>Audit Log</h1>
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-        <select value={filters.entityType} onChange={(e) => setFilters({ ...filters, entityType: e.target.value, page: 0 })} style={{ padding: '0.4rem' }}>
+        <select
+          value={filters.entityType}
+          onChange={(e) => setFilters({ ...filters, entityType: e.target.value, page: 0 })}
+          style={{ padding: '0.4rem' }}
+        >
           <option value="">All Types</option>
           <option value="PROCESS">Process</option>
           <option value="TASK">Task</option>
         </select>
-        <input placeholder="User ID" value={filters.userId} onChange={(e) => setFilters({ ...filters, userId: e.target.value, page: 0 })} style={{ padding: '0.4rem' }} />
+        <input
+          placeholder="User ID"
+          value={filters.userId}
+          onChange={(e) => setFilters({ ...filters, userId: e.target.value, page: 0 })}
+          style={{ padding: '0.4rem' }}
+        />
       </div>
-      {isLoading ? <p>Loading...</p> : (
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
         <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse', borderRadius: 8 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee' }}>
@@ -55,9 +66,23 @@ export default function AuditLog() {
       )}
       {data && (
         <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', justifyContent: 'center' }}>
-          <button disabled={filters.page === 0} onClick={() => setFilters({ ...filters, page: filters.page - 1 })} style={{ padding: '0.3rem 0.8rem' }}>Prev</button>
-          <span style={{ padding: '0.3rem' }}>Page {filters.page + 1} of {data.totalPages || 1}</span>
-          <button disabled={data.last} onClick={() => setFilters({ ...filters, page: filters.page + 1 })} style={{ padding: '0.3rem 0.8rem' }}>Next</button>
+          <button
+            disabled={filters.page === 0}
+            onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
+            style={{ padding: '0.3rem 0.8rem' }}
+          >
+            Prev
+          </button>
+          <span style={{ padding: '0.3rem' }}>
+            Page {filters.page + 1} of {data.totalPages || 1}
+          </span>
+          <button
+            disabled={data.last}
+            onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
+            style={{ padding: '0.3rem 0.8rem' }}
+          >
+            Next
+          </button>
         </div>
       )}
     </div>

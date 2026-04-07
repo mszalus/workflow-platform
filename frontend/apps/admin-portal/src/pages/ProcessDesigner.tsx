@@ -25,8 +25,7 @@ export default function ProcessDesigner() {
   }, [bpmnData]);
 
   const deployMutation = useMutation({
-    mutationFn: (data: { name: string; bpmnXml: string }) =>
-      apiClient.post('/workflow/deployments', data),
+    mutationFn: (data: { name: string; bpmnXml: string }) => apiClient.post('/workflow/deployments', data),
     onSuccess: () => navigate('/processes'),
   });
 
@@ -71,14 +70,28 @@ export default function ProcessDesigner() {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            style={{ background: '#fff', color: '#333', padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer' }}
+            style={{
+              background: '#fff',
+              color: '#333',
+              padding: '0.5rem 1rem',
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
           >
             Import
           </button>
           <button
             onClick={handleExport}
             disabled={!xml}
-            style={{ background: '#fff', color: '#333', padding: '0.5rem 1rem', border: '1px solid #ccc', borderRadius: 4, cursor: 'pointer' }}
+            style={{
+              background: '#fff',
+              color: '#333',
+              padding: '0.5rem 1rem',
+              border: '1px solid #ccc',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
           >
             Export
           </button>
@@ -91,7 +104,14 @@ export default function ProcessDesigner() {
           <button
             onClick={() => xml && name && deployMutation.mutate({ name, bpmnXml: xml })}
             disabled={!xml || !name || deployMutation.isPending}
-            style={{ background: '#1976d2', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+            style={{
+              background: '#1976d2',
+              color: '#fff',
+              padding: '0.5rem 1rem',
+              border: 'none',
+              borderRadius: 4,
+              cursor: 'pointer',
+            }}
           >
             {deployMutation.isPending ? 'Deploying...' : 'Deploy'}
           </button>

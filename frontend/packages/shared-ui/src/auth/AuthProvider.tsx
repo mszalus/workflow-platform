@@ -31,7 +31,7 @@ export function AuthProvider({ children, keycloakUrl, realm, clientId }: AuthPro
         url: keycloakUrl,
         realm,
         clientId,
-      })
+      }),
   );
   const [initialized, setInitialized] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
@@ -52,9 +52,12 @@ export function AuthProvider({ children, keycloakUrl, realm, clientId }: AuthPro
       });
 
     keycloak.onTokenExpired = () => {
-      keycloak.updateToken(30).then(() => {
-        setTokenProvider(() => keycloak.token);
-      }).catch(() => keycloak.login());
+      keycloak
+        .updateToken(30)
+        .then(() => {
+          setTokenProvider(() => keycloak.token);
+        })
+        .catch(() => keycloak.login());
     };
   }, [keycloak]);
 

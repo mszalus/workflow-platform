@@ -18,11 +18,22 @@ export default function ProcessList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h1>Process Definitions</h1>
-        <Link to="/processes/designer" style={{ background: '#1976d2', color: '#fff', padding: '0.5rem 1rem', borderRadius: 4, textDecoration: 'none' }}>
+        <Link
+          to="/processes/designer"
+          style={{
+            background: '#1976d2',
+            color: '#fff',
+            padding: '0.5rem 1rem',
+            borderRadius: 4,
+            textDecoration: 'none',
+          }}
+        >
           New Process
         </Link>
       </div>
-      {isLoading ? <p>Loading...</p> : (
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
         <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse', borderRadius: 8 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee' }}>
@@ -39,8 +50,13 @@ export default function ProcessList() {
                 <td style={{ padding: '0.75rem' }}>{p.key}</td>
                 <td style={{ padding: '0.75rem' }}>{p.version}</td>
                 <td style={{ padding: '0.75rem' }}>
-                  <Link to={`/processes/designer/${p.id}`} style={{ color: '#1976d2', marginRight: '1rem' }}>Edit</Link>
-                  <button onClick={() => deleteMutation.mutate(p.deploymentId)} style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <Link to={`/processes/designer/${p.id}`} style={{ color: '#1976d2', marginRight: '1rem' }}>
+                    Edit
+                  </Link>
+                  <button
+                    onClick={() => deleteMutation.mutate(p.deploymentId)}
+                    style={{ color: '#d32f2f', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
                     Delete
                   </button>
                 </td>

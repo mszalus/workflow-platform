@@ -11,7 +11,9 @@ export default function MyProcesses() {
   return (
     <div>
       <h1 style={{ marginBottom: '1rem' }}>My Processes</h1>
-      {isLoading ? <p>Loading...</p> : (
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
         <table style={{ width: '100%', background: '#fff', borderCollapse: 'collapse', borderRadius: 8 }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee' }}>
@@ -28,7 +30,17 @@ export default function MyProcesses() {
                 <td style={{ padding: '0.75rem' }}>{p.businessKey || '--'}</td>
                 <td style={{ padding: '0.75rem', fontSize: '0.85rem' }}>{new Date(p.startTime).toLocaleString()}</td>
                 <td style={{ padding: '0.75rem' }}>
-                  <span style={{ background: '#e8f5e9', color: '#2e7d32', padding: '0.2rem 0.5rem', borderRadius: 4, fontSize: '0.85rem' }}>Running</span>
+                  <span
+                    style={{
+                      background: '#e8f5e9',
+                      color: '#2e7d32',
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: 4,
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    Running
+                  </span>
                 </td>
               </tr>
             ))}

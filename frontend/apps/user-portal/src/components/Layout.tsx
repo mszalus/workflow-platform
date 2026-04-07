@@ -15,7 +15,16 @@ export default function Layout() {
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
-      <nav style={{ width: 220, background: '#0d47a1', color: '#fff', padding: '1rem 0', display: 'flex', flexDirection: 'column' }}>
+      <nav
+        style={{
+          width: 220,
+          background: '#0d47a1',
+          color: '#fff',
+          padding: '1rem 0',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <h2 style={{ padding: '0 1rem', marginBottom: '2rem', fontSize: '1.2rem' }}>WFP Portal</h2>
         {navItems.map((item) => (
           <Link
@@ -33,7 +42,17 @@ export default function Layout() {
         ))}
         <div style={{ marginTop: 'auto', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
           <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>{username}</div>
-          <button onClick={logout} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.4)', color: '#ccc', padding: '0.3rem 0.8rem', cursor: 'pointer', borderRadius: 4 }}>
+          <button
+            onClick={logout}
+            style={{
+              background: 'none',
+              border: '1px solid rgba(255,255,255,0.4)',
+              color: '#ccc',
+              padding: '0.3rem 0.8rem',
+              cursor: 'pointer',
+              borderRadius: 4,
+            }}
+          >
             Logout
           </button>
         </div>

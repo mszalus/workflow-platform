@@ -10,9 +10,17 @@
     "dev:user": "npm run dev -w apps/user-portal",
     "build": "npm run build -w packages/shared-ui && npm run build -w packages/bpmn-editor && npm run build -w apps/admin-portal && npm run build -w apps/user-portal",
     "lint": "npm run lint --workspaces --if-present",
+    "format:check": "npm run format:check --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
-    "typescript": "^5.6.3"
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.26",
+    "prettier": "^3.8.1",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.58.0"
   }
 }
