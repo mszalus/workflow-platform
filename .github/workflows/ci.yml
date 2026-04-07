@@ -71,6 +71,27 @@ jobs:
       - name: Validate docker-compose
         run: docker compose -f docker/docker-compose.yml config --quiet
 
+      - name: Build service images
+        run: docker compose -f docker/docker-compose.yml build workflow-service custom-fields-service notification-service audit-service gateway
+
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.60.0
+
+      - name: Scan images for CRITICAL CVEs
+        run: |
+          IMAGES=(
+            workflow-platform-workflow-service
+            workflow-platform-custom-fields-service
+            workflow-platform-notification-service
+            workflow-platform-audit-service
+            workflow-platform-gateway
+          )
+          for image in "${IMAGES[@]}"; do
+            echo "=== Scanning $image ==="
+            trivy image --exit-code 1 --severity CRITICAL --no-progress "$image"
+          done
+
   helm-lint:
     runs-on: ubuntu-latest
     steps:
