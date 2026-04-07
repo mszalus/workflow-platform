@@ -11,7 +11,10 @@ COPY services/ services/
 RUN chmod +x gradlew && ./gradlew :services:custom-fields-service:bootJar -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
+RUN addgroup -S appuser && adduser -S appuser -G appuser
 WORKDIR /app
 COPY --from=build /app/services/custom-fields-service/build/libs/*.jar app.jar
+RUN chown -R appuser:appuser /app
+USER appuser
 EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "app.jar"]

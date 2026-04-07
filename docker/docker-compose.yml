@@ -172,7 +172,7 @@ services:
       dockerfile: frontend/apps/admin-portal/Dockerfile
     container_name: wfp-admin-portal
     ports:
-      - "5173:80"
+      - "5173:8080"
     depends_on:
       - gateway
 
@@ -182,7 +182,7 @@ services:
       dockerfile: frontend/apps/user-portal/Dockerfile
     container_name: wfp-user-portal
     ports:
-      - "5174:80"
+      - "5174:8080"
     depends_on:
       - gateway
 

@@ -6,7 +6,7 @@ COPY frontend/apps/admin-portal apps/admin-portal
 RUN npm install --workspace=apps/admin-portal
 RUN npm run build --workspace=packages/shared-ui && npm run build --workspace=packages/bpmn-editor && npm run build --workspace=apps/admin-portal
 
-FROM nginx:alpine
+FROM nginxinc/nginx-unprivileged:alpine
 COPY --from=build /app/apps/admin-portal/dist /usr/share/nginx/html
 COPY frontend/apps/admin-portal/nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+EXPOSE 8080
