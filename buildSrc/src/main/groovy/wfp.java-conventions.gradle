@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'checkstyle'
+    id 'org.owasp.dependencycheck'
 }
 
 java {
@@ -28,3 +29,21 @@ checkstyle {
 
 // Only lint main sources; test code has different conventions
 checkstyleTest.enabled = false
+
+// OWASP Dependency-Check — scans for known CVEs in dependencies.
+// NOT part of the normal build lifecycle to keep builds fast.
+// Run on demand:  ./gradlew dependencyCheckAnalyze
+// Or via CI:     .github/workflows/security.yml (scheduled weekly)
+dependencyCheck {
+    // Fail if any dependency has CVSS score >= 7 (HIGH or CRITICAL)
+    failBuildOnCVSS = 7.0f
+    // Scan runtime classpath including transitive dependencies
+    scanConfigurations = ['runtimeClasspath']
+    // HTML for humans, JSON for CI parsing
+    formats = ['HTML', 'JSON']
+    // NVD API key speeds up initial database downloads significantly.
+    // Set NVD_API_KEY env var (free key at https://nvd.nist.gov/developers/request-an-api-key)
+    nvd {
+        apiKey = System.getenv('NVD_API_KEY') ?: ''
+    }
+}
