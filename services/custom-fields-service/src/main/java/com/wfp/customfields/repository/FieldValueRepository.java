@@ -9,5 +9,6 @@ import java.util.UUID;
 
 public interface FieldValueRepository extends JpaRepository<FieldValue, UUID> {
     List<FieldValue> findByProcessInstanceIdAndTenantId(String processInstanceId, String tenantId);
-    Optional<FieldValue> findByFieldSchemaIdAndProcessInstanceIdAndTenantId(UUID schemaId, String processInstanceId, String tenantId);
+    Optional<FieldValue> findByFieldSchemaIdAndProcessInstanceIdAndTenantId(
+            UUID schemaId, String processInstanceId, String tenantId);
 }
