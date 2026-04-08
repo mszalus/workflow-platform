@@ -5,7 +5,6 @@ import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.ProcessInstanceDto;
 import com.wfp.workflow.dto.TaskDto;
 import lombok.RequiredArgsConstructor;
-import org.flowable.engine.HistoryService;
 import org.flowable.engine.history.HistoricProcessInstance;
 import org.flowable.engine.history.HistoricProcessInstanceQuery;
 import org.flowable.task.api.history.HistoricTaskInstance;
@@ -65,7 +64,9 @@ public class ProcessHistoryService {
     }
 
     private String extractProcessDefinitionKey(String processDefinitionId) {
-        if (processDefinitionId == null) return null;
+        if (processDefinitionId == null) {
+            return null;
+        }
         int colonIdx = processDefinitionId.indexOf(':');
         return colonIdx > 0 ? processDefinitionId.substring(0, colonIdx) : processDefinitionId;
     }

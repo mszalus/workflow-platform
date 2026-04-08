@@ -45,7 +45,9 @@ public class DeploymentService {
                 .processDefinitionId(processDefinitionId)
                 .processDefinitionTenantId(TenantContext.requireCurrentTenantId())
                 .singleResult();
-        if (pd == null) throw new NotFoundException("ProcessDefinition", processDefinitionId);
+        if (pd == null) {
+            throw new NotFoundException("ProcessDefinition", processDefinitionId);
+        }
         return pd;
     }
 
@@ -53,7 +55,9 @@ public class DeploymentService {
         ProcessDefinition pd = getProcessDefinition(processDefinitionId);
         InputStream is = repositoryService.getResourceAsStream(
                 pd.getDeploymentId(), pd.getResourceName());
-        if (is == null) throw new NotFoundException("BPMN resource", processDefinitionId);
+        if (is == null) {
+            throw new NotFoundException("BPMN resource", processDefinitionId);
+        }
         try {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (Exception e) {
