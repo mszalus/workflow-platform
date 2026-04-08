@@ -20,6 +20,9 @@ include 'libs:wfp-events'
 include 'libs:wfp-security'
 include 'libs:wfp-test-support'
 
+// BDD acceptance tests (require live Docker stack on localhost)
+include 'tests:bdd-acceptance'
+
 // Backend services
 include 'services:gateway'
 include 'services:workflow-service'
