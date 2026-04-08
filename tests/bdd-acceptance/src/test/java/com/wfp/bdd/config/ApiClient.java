@@ -111,6 +111,64 @@ public class ApiClient {
     }
 
     // -------------------------------------------------------------------------
+    // Custom fields
+    // -------------------------------------------------------------------------
+
+    public Response createFieldSchema(String processDefinitionKey, String fieldKey, String fieldType) {
+        return auth()
+                .body(Map.of(
+                        "processDefinitionKey", processDefinitionKey,
+                        "fieldKey", fieldKey,
+                        "label", fieldKey,
+                        "fieldType", fieldType,
+                        "required", false,
+                        "sortOrder", 0
+                ))
+                .when()
+                .post(GATEWAY + "/api/fields/schemas");
+    }
+
+    public Response listFieldSchemas(String processDefinitionKey) {
+        return auth().when()
+                .get(GATEWAY + "/api/fields/schemas?processDefinitionKey=" + processDefinitionKey);
+    }
+
+    public Response saveFieldValues(String processInstanceId, String processDefinitionKey,
+                                    Map<String, String> values) {
+        return auth()
+                .body(Map.of(
+                        "processInstanceId", processInstanceId,
+                        "processDefinitionKey", processDefinitionKey,
+                        "values", values
+                ))
+                .when()
+                .post(GATEWAY + "/api/fields/values");
+    }
+
+    public Response getFieldValues(String processInstanceId) {
+        return auth().when()
+                .get(GATEWAY + "/api/fields/values?processInstanceId=" + processInstanceId);
+    }
+
+    // -------------------------------------------------------------------------
+    // Notifications
+    // -------------------------------------------------------------------------
+
+    public Response listNotifications() {
+        return auth().when().get(GATEWAY + "/api/notifications?size=100");
+    }
+
+    public long getUnreadCount() {
+        return auth().when()
+                .get(GATEWAY + "/api/notifications/unread-count")
+                .jsonPath().getLong("count");
+    }
+
+    public Response markAllNotificationsRead() {
+        return auth().when().put(GATEWAY + "/api/notifications/mark-all-read");
+    }
+
+    // -------------------------------------------------------------------------
     // Audit
     // -------------------------------------------------------------------------
 
