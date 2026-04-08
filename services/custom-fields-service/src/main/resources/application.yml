@@ -19,6 +19,7 @@ spring:
   flyway:
     schemas: custom_fields
     default-schema: custom_fields
+    repair-on-migrate: true
   rabbitmq:
     host: localhost
     port: 5672
