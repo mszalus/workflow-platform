@@ -8,17 +8,11 @@
     - LineLength 120 (matches .editorconfig)
     - Javadoc checks disabled
     - AbbreviationAsWordInName allows common abbreviations (DTO, URL, ID, etc.)
-  Existing code is suppressed via suppressions.xml; new code is checked.
 -->
 <module name="Checker">
     <property name="charset" value="UTF-8"/>
     <property name="severity" value="warning"/>
     <property name="fileExtensions" value="java"/>
-
-    <module name="SuppressionFilter">
-        <property name="file" value="${config_loc}/suppressions.xml"/>
-        <property name="optional" value="false"/>
-    </module>
 
     <module name="NewlineAtEndOfFile"/>
 

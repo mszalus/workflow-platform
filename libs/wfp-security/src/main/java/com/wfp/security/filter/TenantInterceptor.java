@@ -21,7 +21,9 @@ public class TenantInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String tenantId = request.getHeader(TENANT_HEADER);
 
-        if ((tenantId == null || tenantId.isBlank()) && SecurityContextHolder.getContext().getAuthentication() instanceof JwtAuthenticationToken jwtAuth) {
+        if ((tenantId == null || tenantId.isBlank())
+                && SecurityContextHolder.getContext().getAuthentication()
+                instanceof JwtAuthenticationToken jwtAuth) {
             Jwt jwt = jwtAuth.getToken();
             tenantId = jwt.getClaimAsString(TENANT_CLAIM);
         }
