@@ -317,6 +317,29 @@ Each diagram includes a "Notes for Editors" section explaining how to extend it 
 
 ---
 
+## Step 13: SDLC Improvements — DONE (2026-04-06)
+
+All 9 phases of the SDLC improvements plan implemented and committed.
+
+**Phases 1–8 (previously committed):**
+- Phase 1: ESLint 9 (flat config) + Prettier 3 — frontend linting and formatting
+- Phase 2: Checkstyle 10 — Java style enforcement across all modules
+- Phase 3: Husky + lint-staged — pre-commit hooks
+- Phase 4: Commitlint — conventional commit message enforcement
+- Phase 5a: OWASP dependency-check + npm audit — security scanning
+- Phase 5b: Trivy — container image CVE scanning in CI
+- Phase 6: Docker hardening — all containers run as non-root (appuser / nginx-unprivileged)
+- Phase 7: JaCoCo — test coverage reporting (XML + HTML)
+- Phase 8: CSRF comment in SecurityConfig, branch protection documented
+
+**Phase 9 (committed 2026-04-06, 5 commits):**
+- Removed all Checkstyle suppressions one service at a time
+- Fixed every violation: star imports → explicit imports, LeftCurly, NeedBraces, unused imports, long lines
+- Deleted `config/checkstyle/suppressions.xml` and removed SuppressionFilter from `checkstyle.xml`
+- All 30 `checkstyleMain` tasks pass with zero violations
+
+---
+
 ## Commit strategy
 
 One commit after steps 1-4 (fixes + verified Docker stack), one commit for README, one for Helm fixes if any.
