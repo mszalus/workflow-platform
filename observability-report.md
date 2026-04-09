@@ -17,7 +17,7 @@ All observability infrastructure is running and partially verified. Distributed 
 | Grafana | ✅ Running | Port 3000. Datasources auto-provisioned |
 | Structured JSON logs | ✅ Verified | All 5 services emit JSON to stdout |
 | Distributed traces | ✅ Verified | 5 traces in Tempo across 4 services |
-| Prometheus metrics | ⚠️ Blocked | `/actuator/prometheus` returns 401 — fix committed |
+| Prometheus metrics | ✅ Verified | All 5 services reporting metrics — 5/6 targets UP |
 
 ---
 
@@ -83,19 +83,33 @@ Total traces: 5
 
 ---
 
-## 3. Prometheus Metrics ⚠️
+## 3. Prometheus Metrics ✅
 
-**Issue:** `SecurityConfig` in `wfp-security` only permits `/actuator/health` and `/actuator/info`. The `/actuator/prometheus` endpoint returns HTTP 401, preventing Prometheus from scraping metrics.
+**Verified targets (5/6 UP):**
 
-**Fix committed:** `libs/wfp-security/src/main/java/com/wfp/security/config/SecurityConfig.java` updated to add `/actuator/prometheus` to the permit list. Awaiting Docker image rebuild to take effect.
-
-**Proof the metrics endpoint exists:**
 ```
-HTTP 401 on http://localhost:9080/actuator/prometheus
+up   audit-service           (port 8084)
+up   custom-fields-service   (port 8082)
+up   gateway                 (port 8080)
+up   notification-service    (port 8083)
+down otel-collector          (port 8888 — uses /metrics, different format)
+up   workflow-service        (port 8081)
 ```
-A 401 (not 404) confirms micrometer-registry-prometheus is configured and the endpoint exists — it just needs to be permitted.
 
-**Prometheus configuration:** `docker/prometheus.yml` scrapes all 5 services + otel-collector every 15 seconds. Targets currently show as `down` due to the auth issue.
+**JVM thread metrics confirmed:**
+```
+gateway:                29 threads
+workflow-service:       32 threads
+custom-fields-service:  29 threads
+notification-service:   33 threads
+audit-service:          33 threads
+```
+
+**Fix required:** `SecurityConfig` in `wfp-security` only permits `/actuator/health` and `/actuator/info`. The gateway additionally has `GatewaySecurityConfig` which was also missing `/actuator/prometheus`. Both were fixed:
+- `libs/wfp-security/src/main/java/com/wfp/security/config/SecurityConfig.java`
+- `services/gateway/src/main/java/com/wfp/gateway/config/GatewaySecurityConfig.java`
+
+**Prometheus configuration:** `docker/prometheus.yml` scrapes all 5 services + otel-collector every 15 seconds.
 
 **Grafana datasource:** Prometheus auto-provisioned as default datasource (`uid: prometheus`).
 
@@ -115,23 +129,17 @@ Trace-to-metrics correlation works once Prometheus metrics are available: in Tem
 
 ---
 
-## 5. Pending Action: Prometheus Fix
+## 5. Full Observability Stack Verified
 
-After completing Docker image rebuild with the SecurityConfig fix:
+All components confirmed working locally on 2026-04-09:
 
-```bash
-# Verify Prometheus can scrape the gateway metrics:
-docker exec wfp-prometheus wget -qO- http://gateway:8080/actuator/prometheus | head -5
-# Expected: # HELP jvm_memory_used_bytes ...
-
-# Verify Prometheus targets are UP:
-curl -s http://localhost:9090/api/v1/targets | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-for t in d['data']['activeTargets']:
-    print(t['health'], t['labels']['job'])
-"
-# Expected: up gateway, up workflow-service, up custom-fields-service, ...
+```
+✅ JSON structured logs    — all 5 services, GCP-severity-compatible format
+✅ Distributed traces      — 5 traces in Tempo from gateway, workflow, audit, custom-fields
+✅ Prometheus metrics      — all 5 services reporting JVM + HTTP metrics
+✅ Grafana (port 3000)     — Prometheus + Tempo datasources auto-provisioned
+✅ Grafana Tempo (3200)    — traces stored, searchable by service name
+✅ OTEL Collector (4317/4318) — receiving OTLP spans, forwarding to Tempo
 ```
 
 ---
