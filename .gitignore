@@ -36,3 +36,12 @@ Thumbs.db
 
 # Docker
 docker/data/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/terraform.tfvars
+terraform/environments/**/*.tfvars
+!terraform/environments/**/*.tfvars.example
+terraform/.terraform.lock.hcl
