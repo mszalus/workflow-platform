@@ -340,6 +340,440 @@ All 9 phases of the SDLC improvements plan implemented and committed.
 
 ---
 
+## Step 14: Observability & BDD Acceptance Tests — DONE (2026-04-09)
+
+**Observability (commits 45349b8, 02052a6):**
+
+Structured JSON logging, distributed tracing via OpenTelemetry, and Prometheus metrics added to all five services. Ready for GCP Cloud Logging, Cloud Trace, and Google Managed Prometheus without code changes — only env-var overrides.
+
+- `logstash-logback-encoder` + `logback-spring.xml` on all services: JSON to stdout (`!local` profile), colored console for `local` profile
+- `GcpLoggingJsonProvider` (wfp-common): maps WARN→WARNING for GCP severity; adds `logging.googleapis.com/trace` + span fields when `GOOGLE_CLOUD_PROJECT` is set
+- `TenantInterceptor` writes `tenantId` and `userId` to MDC on every request
+- `micrometer-registry-prometheus`: `/actuator/prometheus` on all services
+- `micrometer-tracing-bridge-otel` + `opentelemetry-exporter-otlp`: traces sent to `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://localhost:4318`)
+- Local stack added to docker-compose: OTEL Collector (4317/4318) → Tempo → Grafana (3000); Prometheus (9090) → Grafana; both datasources auto-provisioned
+- Helm deployment templates: `prometheus.io/scrape` annotations on all pods; `OTEL_EXPORTER_OTLP_ENDPOINT` and `MANAGEMENT_TRACING_SAMPLING_PROBABILITY=0.1` in per-service values
+- `values-gcp.yaml`: documents Cloud Trace (OTLP collector swap), GMP (annotations already present), Cloud Logging (set `GOOGLE_CLOUD_PROJECT`)
+
+**BDD Acceptance Tests (commits 1f4f822, 30de72d, 6cc3f4e, 0f1cc94):**
+
+20 Cucumber scenarios across 4 phases, all passing:
+- Phase A: process management + task lifecycle (8 scenarios)
+- Phase B: multi-tenancy isolation, audit trail, API security (8 scenarios)
+- Phase C: custom fields, notifications via RabbitMQ (4 scenarios)
+- Phase D: `acceptance-tests` CI job (builds images, starts stack, runs BDD, uploads report)
+
+---
+
+## Step 15: Local Observability Verification
+
+**Goal:** Verify that traces appear in Tempo, metrics appear in Prometheus, and structured logs contain the right fields — all running locally via docker-compose.
+
+### Prerequisites
+
+- Full stack running: `docker compose -f docker/docker-compose.yml up -d`
+- Wait for all services to be healthy (gateway health: `curl http://localhost:9080/actuator/health`)
+- New containers added: `wfp-otel-collector`, `wfp-tempo`, `wfp-prometheus`, `wfp-grafana`
+- Note: backend service images must be rebuilt after the observability commit to pick up new JARs:
+  ```bash
+  docker compose -f docker/docker-compose.yml build \
+    gateway workflow-service custom-fields-service notification-service audit-service
+  docker compose -f docker/docker-compose.yml up -d
+  ```
+
+### 15.1 Verify Prometheus scraping
+
+1. Open `http://localhost:9090/targets` — all 5 services + `otel-collector` must show **State: UP**
+2. If any show DOWN, check `docker logs wfp-prometheus` and verify the service container is running
+3. Spot-check a metric in the Prometheus query UI:
+   ```promql
+   http_server_requests_seconds_count{application="workflow-service"}
+   ```
+4. Generate traffic first if needed:
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token \
+     -d "grant_type=password&client_id=wfp-admin-portal&username=admin-a&password=password" \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+   curl -s -H "Authorization: Bearer $TOKEN" http://localhost:9080/api/workflow/deployments | python3 -m json.tool
+   ```
+5. Query JVM metrics: `jvm_memory_used_bytes{application="workflow-service"}`
+
+### 15.2 Verify distributed tracing in Grafana + Tempo
+
+1. Open `http://localhost:3000` (anonymous access, no login required)
+2. Go to **Explore** → select **Tempo** datasource
+3. Set **Query type: Search**, click **Run query** — traces from all services should appear
+4. Click any trace to see the span waterfall: gateway → workflow-service (or whichever service handled the request)
+5. Verify span attributes include `tenantId` (set via MDC) and `http.route`
+6. In the **Grafana Explore** panel, switch to **Prometheus** datasource and verify `up` metric shows all targets
+
+### 15.3 Verify structured logs
+
+1. Inspect a backend service container's stdout:
+   ```bash
+   docker logs wfp-workflow --tail 20
+   ```
+   Each line should be a single JSON object with fields: `time`, `severity`, `message`, `logger`, `thread`, `service`, `traceId`, `spanId`, `tenantId`, `userId`
+
+2. Verify `severity` uses GCP values (INFO, WARNING, ERROR — not WARN):
+   ```bash
+   docker logs wfp-workflow 2>&1 | python3 -c "
+   import sys, json
+   for line in sys.stdin:
+       try:
+           obj = json.loads(line)
+           print(obj.get('severity'), '|', obj.get('tenantId'), '|', obj.get('message','')[:60])
+       except: pass
+   " | head -20
+   ```
+
+3. Trigger a WARN-level log by making an unauthenticated request and verify `severity: WARNING` appears (not WARN):
+   ```bash
+   curl -s http://localhost:9080/api/workflow/deployments  # no token → 401
+   docker logs wfp-gateway --tail 5
+   ```
+
+4. Verify `tenantId` appears on authenticated requests:
+   ```bash
+   curl -s -H "Authorization: Bearer $TOKEN" http://localhost:9080/api/workflow/deployments > /dev/null
+   docker logs wfp-workflow --tail 5 | python3 -c "import sys,json; [print(json.loads(l).get('tenantId','(none)')) for l in sys.stdin if l.strip()]"
+   ```
+
+### 15.4 Verify trace–log correlation (manual)
+
+1. Make an API call and note the `traceId` from the response log:
+   ```bash
+   curl -s -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"processDefinitionKey":"test"}' \
+     http://localhost:9080/api/workflow/processes
+   docker logs wfp-workflow --tail 3 | python3 -c "import sys,json; [print(json.loads(l).get('traceId')) for l in sys.stdin if l.strip()]"
+   ```
+2. Take the `traceId`, open Grafana Explore → Tempo → **TraceQL** → `{ .traceId = "<id>" }` — the full trace should appear
+
+### 15.5 Run BDD acceptance tests to confirm nothing regressed
+
+```bash
+JAVA_HOME='C:\Program Files\JetBrains\IntelliJ IDEA 2025.3.4\jbr' \
+  ./gradlew :tests:bdd-acceptance:test --no-daemon
+```
+All 20 scenarios must pass.
+
+**Verification checklist:**
+- [ ] Prometheus shows all 6 scrape targets as UP
+- [ ] Grafana Tempo shows traces with multi-span waterfalls
+- [ ] Container logs are JSON with `severity`, `traceId`, `tenantId`, `userId`
+- [ ] `severity` uses GCP values (WARNING not WARN)
+- [ ] All 20 BDD scenarios pass
+
+---
+
+## Step 16: GCP Infrastructure — Terraform + Helm Preparation
+
+**Goal:** Create all GCP infrastructure as code so the platform can be deployed to GCP with a single `terraform apply` + `helm install`. No deployment happens in this step — only code is written and reviewed.
+
+### 16.1 GCP APIs to enable (one-time, per project)
+
+```bash
+gcloud services enable \
+  container.googleapis.com \
+  sqladmin.googleapis.com \
+  secretmanager.googleapis.com \
+  artifactregistry.googleapis.com \
+  cloudtrace.googleapis.com \
+  monitoring.googleapis.com \
+  logging.googleapis.com \
+  dns.googleapis.com \
+  certificatemanager.googleapis.com
+```
+
+### 16.2 Terraform structure to create
+
+```
+terraform/
+├── modules/
+│   ├── gke/           # GKE cluster + node pools
+│   ├── cloudsql/      # PostgreSQL 16 instance + databases + users
+│   ├── artifact-registry/   # Docker image repository
+│   ├── secrets/       # Secret Manager entries (DB password, RabbitMQ creds, Keycloak admin)
+│   ├── iam/           # Service accounts + Workload Identity bindings
+│   └── networking/    # VPC, subnets, Cloud NAT, firewall rules
+├── environments/
+│   ├── dev/           # dev tfvars + state backend config
+│   └── prod/          # prod tfvars + state backend config
+├── main.tf
+├── variables.tf
+└── outputs.tf         # Outputs: cluster name, SQL connection name, registry URL
+```
+
+**Key Terraform resources:**
+
+| Resource | Type | Notes |
+|---|---|---|
+| GKE cluster | `google_container_cluster` | Autopilot for dev; Standard n2-standard-4 for prod |
+| Cloud SQL | `google_sql_database_instance` | PostgreSQL 16, private IP via VPC peering |
+| Artifact Registry | `google_artifact_registry_repository` | Docker format, region-specific |
+| Secret Manager | `google_secret_manager_secret` | DB password, RabbitMQ password, Keycloak admin, JWT secret |
+| Workload Identity | `google_service_account` + `google_iam_binding` | Pods write to Cloud Trace + Cloud Logging without key files |
+| VPC | `google_compute_network` | Private cluster, no public node IPs |
+| Cloud NAT | `google_compute_router_nat` | Outbound internet for pods (pull images, reach Keycloak) |
+| Managed cert | `google_compute_managed_ssl_certificate` | TLS for the gateway ingress |
+
+### 16.3 Helm changes required before GCP deployment
+
+**a) External Secrets Operator (ESO)**
+
+Install ESO to bridge Secret Manager → K8s Secrets. Add `ExternalSecret` CRDs for:
+- `wfp-db-credentials` (DB username/password)
+- `wfp-rabbitmq-credentials`
+- `wfp-keycloak-admin`
+
+Services reference these as `envFrom.secretRef` instead of plaintext env vars.
+
+**b) cert-manager + Ingress**
+
+Install `cert-manager` (via Helm) with `ClusterIssuer` pointing to Let's Encrypt (or Google CA). Update gateway Helm chart to add:
+```yaml
+ingress:
+  enabled: true
+  className: gce           # GKE Ingress controller
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: wfp-gateway-ip
+    networking.gke.io/managed-certificates: wfp-tls-cert
+  hosts:
+    - host: api.yourdomain.com
+      paths: [{path: /, pathType: Prefix}]
+```
+
+**c) OTEL Collector for Cloud Trace**
+
+Add a `wfp-otel-collector` Deployment (or DaemonSet) to the Helm umbrella chart with:
+```yaml
+config:
+  exporters:
+    googlecloud:
+      project: ${GOOGLE_CLOUD_PROJECT}
+  service:
+    pipelines:
+      traces:
+        exporters: [googlecloud]
+```
+All backend service pods set `OTEL_EXPORTER_OTLP_ENDPOINT: http://wfp-otel-collector:4318`.
+
+**d) Keycloak production mode**
+
+The current docker-compose uses `start-dev`. For GCP, Keycloak must use `start --optimized` with a pre-built image. Add a `keycloak` sub-chart to the Helm umbrella (or use Bitnami Keycloak chart) with:
+- `KC_DB`: Cloud SQL PostgreSQL via Cloud SQL Auth Proxy sidecar
+- `KC_HOSTNAME`: the public Keycloak hostname (e.g., `auth.yourdomain.com`)
+- Realm import via init container or import job
+
+**e) RabbitMQ with persistence**
+
+Replace `tmpfs` with persistent volumes. Use Bitnami RabbitMQ Helm chart with quorum queues enabled. Or consider GCP-managed alternatives (Google Cloud Pub/Sub with a bridge if scale demands it — this is a larger architectural change).
+
+**f) Values files**
+
+Update `helm/workflow-platform/values-gcp.yaml` with:
+- `GOOGLE_CLOUD_PROJECT` env var on all services (enables Cloud Logging trace linking)
+- `OTEL_EXPORTER_OTLP_ENDPOINT: http://wfp-otel-collector:4318`
+- Image tags pointing to Artifact Registry (`europe-west1-docker.pkg.dev/<project>/wfp/<service>:<tag>`)
+- `replicaCount: 2` minimum on all stateless services
+- Resource requests/limits tuned to actual load test results
+
+### 16.4 CI/CD pipeline additions
+
+1. **Image build + push job**: On merge to `main`, build Docker images and push to Artifact Registry with commit SHA as tag
+2. **Helm diff job**: On PR, run `helm diff upgrade` against the dev cluster (read-only) to show what would change
+3. **Deploy to dev job**: On merge to `main`, `helm upgrade --install wfp ... --set image.tag=$SHA`
+4. **Deploy to prod job**: Manual trigger or tag-based, with approval gate
+
+**Verification checklist for this step:**
+- [ ] `terraform validate` passes on all modules
+- [ ] `terraform plan` against an empty GCP project produces the expected resource list
+- [ ] `helm lint helm/workflow-platform/ -f helm/workflow-platform/values-gcp.yaml` passes
+- [ ] ESO ExternalSecrets manifests validated with `kubectl apply --dry-run=server`
+- [ ] `helm template` output reviewed for any hardcoded localhost references
+
+---
+
+## Step 17: GCP Deployment and Acceptance Testing
+
+**Goal:** Deploy the full platform to GCP, run the BDD acceptance tests against it, and verify observability (Cloud Logging, Cloud Trace, Cloud Monitoring).
+
+### 17.1 One-time infrastructure bootstrap
+
+```bash
+# Authenticate
+gcloud auth application-default login
+gcloud config set project YOUR_PROJECT_ID
+
+# Provision infrastructure (~5 min)
+cd terraform/environments/dev
+terraform init
+terraform apply -var-file=dev.tfvars
+
+# Configure kubectl
+gcloud container clusters get-credentials wfp-dev \
+  --region europe-west1 --project YOUR_PROJECT_ID
+
+# Verify nodes are ready
+kubectl get nodes
+```
+
+### 17.2 Build and push images to Artifact Registry
+
+```bash
+# Authenticate Docker to Artifact Registry
+gcloud auth configure-docker europe-west1-docker.pkg.dev
+
+# Build and push (or use CI — see Step 16.4)
+REGISTRY=europe-west1-docker.pkg.dev/YOUR_PROJECT/wfp
+TAG=$(git rev-parse --short HEAD)
+
+for svc in gateway workflow-service custom-fields-service notification-service audit-service; do
+  docker build -f services/$svc/Dockerfile -t $REGISTRY/$svc:$TAG .
+  docker push $REGISTRY/$svc:$TAG
+done
+```
+
+### 17.3 Install prerequisites
+
+```bash
+# cert-manager
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager --create-namespace \
+  --set crds.enabled=true
+
+# External Secrets Operator
+helm install external-secrets external-secrets/external-secrets \
+  --namespace external-secrets --create-namespace
+
+# Create ClusterSecretStore pointing at Secret Manager
+kubectl apply -f helm/cluster-secret-store.yaml
+```
+
+### 17.4 Deploy the platform
+
+```bash
+# Update Helm dependencies (Bitnami PostgreSQL, RabbitMQ, Keycloak sub-charts)
+helm dependency update helm/workflow-platform/
+
+# Deploy (first time)
+helm install wfp helm/workflow-platform/ \
+  -f helm/workflow-platform/values-gcp.yaml \
+  --set-string "workflow-service.image.tag=$TAG" \
+  --set-string "custom-fields-service.image.tag=$TAG" \
+  --set-string "notification-service.image.tag=$TAG" \
+  --set-string "audit-service.image.tag=$TAG" \
+  --set-string "gateway.image.tag=$TAG" \
+  --namespace wfp --create-namespace \
+  --timeout 10m --wait
+
+# Verify all pods are Running
+kubectl get pods -n wfp
+```
+
+### 17.5 Run BDD acceptance tests against GCP
+
+The existing BDD test suite runs against configurable endpoints. Point it at GCP:
+
+```bash
+JAVA_HOME='C:\Program Files\JetBrains\IntelliJ IDEA 2025.3.4\jbr' \
+  ./gradlew :tests:bdd-acceptance:test --no-daemon \
+  -DGATEWAY_URL=https://api.yourdomain.com \
+  -DKEYCLOAK_URL=https://auth.yourdomain.com
+```
+
+This requires updating `ApiClient.java` to read `GATEWAY_URL` and `KEYCLOAK_URL` from system properties (currently hardcoded to `http://localhost:9080`). That's a 2-line change.
+
+Expected result: all 20 scenarios pass against GCP.
+
+### 17.6 Verify observability on GCP
+
+**Cloud Logging:**
+1. GCP Console → Logging → Log Explorer
+2. Filter: `resource.type="k8s_container" resource.labels.namespace_name="wfp"`
+3. Verify JSON structure: `severity`, `message`, `service`, `traceId`, `tenantId`, `userId` fields
+4. Click the Cloud Trace link on any log entry with a trace ID → opens the full trace
+
+**Cloud Trace:**
+1. GCP Console → Cloud Trace → Trace List
+2. Filter by service name — you should see traces from gateway, workflow-service, etc.
+3. Click any trace → span waterfall with latency breakdown per service
+4. Verify tenant context propagates correctly across spans
+
+**Cloud Monitoring (Google Managed Prometheus):**
+1. GCP Console → Monitoring → Metrics Explorer
+2. Select metric `prometheus.googleapis.com/http_server_requests_seconds_count/counter`
+3. Filter by `application` label — one line per service
+4. Create dashboards for RED metrics (Rate, Errors, Duration) per service
+
+### 17.7 Teardown (after testing)
+
+```bash
+# Remove application
+helm uninstall wfp --namespace wfp
+
+# Destroy infrastructure (saves ~$5-8/day on dev)
+cd terraform/environments/dev
+terraform destroy -var-file=dev.tfvars
+```
+
+---
+
+## GCP Cost Estimate
+
+All prices approximate, us-central1 / europe-west1 regions, on-demand pricing (2026).
+
+### Dev / Staging environment (minimal, one-shot testing)
+
+| Resource | Spec | Monthly cost |
+|---|---|---|
+| GKE cluster management fee | 1 cluster (waived for first cluster per billing account) | $0–$73 |
+| GKE nodes | 2 × e2-standard-2 (2 vCPU, 8 GB), Spot/preemptible | ~$25 |
+| Cloud SQL | PostgreSQL 16, `db-f1-micro` (1 vCPU, 614 MB), no HA | ~$7 |
+| Artifact Registry | ~5 GB image storage | ~$0.50 |
+| Cloud Load Balancer | 1 L7 HTTP(S) LB | ~$18 |
+| Cloud DNS | 1 managed zone | ~$0.50 |
+| Cloud Logging | First 50 GB/month free | ~$0 |
+| Cloud Trace | First 2.5M spans/month free | ~$0 |
+| Cloud Monitoring | Free for GKE metrics | ~$0 |
+| Network egress | ~10 GB/month | ~$1 |
+| **Total (with free GKE mgmt)** | | **~$52/month** |
+| **Total (without free tier)** | | **~$125/month** |
+
+> **Note:** GCP gives new accounts $300 free credit (~3–6 months of dev environment).
+
+### Production environment (minimal, 2 replicas, HA)
+
+| Resource | Spec | Monthly cost |
+|---|---|---|
+| GKE cluster management | 1 cluster | ~$73 |
+| GKE nodes | 3 × n2-standard-4 (4 vCPU, 16 GB), regular | ~$360 |
+| Cloud SQL | PostgreSQL 16, `db-n1-standard-2` (2 vCPU, 7.5 GB), HA | ~$185 |
+| Artifact Registry | ~20 GB | ~$0.40 |
+| Cloud Load Balancer | 1 L7 HTTPS LB | ~$18 |
+| Cloud Armor (WAF) | Basic tier | ~$5 |
+| Cloud DNS | 1 zone | ~$0.50 |
+| Cloud Logging | ~100 GB/month at scale | ~$25 |
+| Cloud Trace | ~50M spans at moderate traffic | ~$25 |
+| Cloud Monitoring | Custom metrics beyond free tier | ~$10 |
+| Network egress | ~50 GB/month | ~$5 |
+| **Total** | | **~$707/month** |
+
+### Cost reduction levers
+
+| Action | Saving |
+|---|---|
+| Use GKE Autopilot instead of Standard (for lower traffic) | 30–40% on node cost |
+| Spot/preemptible nodes for non-prod workloads | 60–80% on node cost |
+| Committed Use Discounts (1-year) | 37% on compute |
+| Cloud SQL shared-core (`f1-micro`) in non-prod | Saves ~$175/month vs `n1-standard-2` |
+| Scale down non-prod overnight (node pool min=0) | Saves ~60% on node cost |
+| Use Cloud Run instead of GKE for stateless services | Pay only for requests, near-zero idle cost |
+
+---
+
 ## Commit strategy
 
 One commit after steps 1-4 (fixes + verified Docker stack), one commit for README, one for Helm fixes if any.
