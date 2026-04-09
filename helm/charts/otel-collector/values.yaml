@@ -1,0 +1,53 @@
+replicaCount: 1
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: "0.113.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  grpcPort: 4317
+  httpPort: 4318
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# GCP project ID — required when exporting to Cloud Trace
+gcpProjectId: ""
+
+# Config is rendered from the template below; override individual sections if needed.
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+  processors:
+    batch:
+      timeout: 5s
+      send_batch_size: 512
+    memory_limiter:
+      check_interval: 1s
+      limit_mib: 400
+      spike_limit_mib: 100
+
+  exporters:
+    # GCP Cloud Trace exporter (requires roles/cloudtrace.agent on the workload SA)
+    googlecloud:
+      project: ""   # populated from gcpProjectId via config template
+
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [googlecloud]
