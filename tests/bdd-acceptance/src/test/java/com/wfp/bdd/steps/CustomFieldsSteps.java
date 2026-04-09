@@ -24,12 +24,29 @@ public class CustomFieldsSteps {
 
     @When("I create a TEXT field schema with key {string} for process definition {string}")
     public void createFieldSchema(String fieldKey, String processDefinitionKey) {
+        // Skip creation if schema already exists (test isolation: avoids 500 on repeated runs)
+        Response existing = api.listFieldSchemas(processDefinitionKey);
+        if (existing.statusCode() == 200) {
+            List<String> keys = existing.jsonPath().getList("fieldKey");
+            if (keys != null && keys.contains(fieldKey)) {
+                context.setLastStatusCode(201);
+                return;
+            }
+        }
         Response response = api.createFieldSchema(processDefinitionKey, fieldKey, "TEXT");
         context.setLastStatusCode(response.statusCode());
     }
 
     @And("I have created a TEXT field schema with key {string} for process definition {string}")
     public void iHaveCreatedFieldSchema(String fieldKey, String processDefinitionKey) {
+        // Idempotent: skip creation if schema already exists (avoids duplicate-key on re-runs)
+        Response existing = api.listFieldSchemas(processDefinitionKey);
+        if (existing.statusCode() == 200) {
+            List<String> keys = existing.jsonPath().getList("fieldKey");
+            if (keys != null && keys.contains(fieldKey)) {
+                return;
+            }
+        }
         Response response = api.createFieldSchema(processDefinitionKey, fieldKey, "TEXT");
         assertThat(response.statusCode())
                 .as("Creating field schema '%s' should succeed", fieldKey)

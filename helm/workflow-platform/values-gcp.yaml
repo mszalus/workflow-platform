@@ -19,6 +19,32 @@ gateway:
   ingress:
     enabled: true
 
+# ---------------------------------------------------------------------------
+# Observability — GCP Cloud Operations
+#
+# Traces:
+#   Deploy the OpenTelemetry Collector as a DaemonSet or sidecar using the
+#   google/cloud-ops-agent or otel/opentelemetry-collector-contrib image with
+#   the googlecloud exporter configured:
+#
+#     exporters:
+#       googlecloud:
+#         project: ${GOOGLE_CLOUD_PROJECT}
+#
+#   Then point each service at that collector:
+#     OTEL_EXPORTER_OTLP_ENDPOINT: http://<collector-service>:4318
+#
+# Metrics:
+#   Enable Google Managed Prometheus (GMP) on your GKE cluster.
+#   The prometheus.io/scrape annotations on each pod are already in place —
+#   GMP's PodMonitoring CRD will pick them up automatically.
+#
+# Logs:
+#   GKE routes stdout JSON logs to Cloud Logging automatically.
+#   Set GOOGLE_CLOUD_PROJECT in each pod's env to enable Cloud Trace linking
+#   in log entries (adds logging.googleapis.com/trace field).
+# ---------------------------------------------------------------------------
+
 workflow-service:
   replicaCount: 2
   autoscaling:
@@ -30,6 +56,9 @@ workflow-service:
     limits: { cpu: 1000m, memory: 1Gi }
   env:
     SPRING_DATASOURCE_URL: jdbc:postgresql://cloudsql-proxy:5432/wfp?currentSchema=workflow
+    # Set OTEL_EXPORTER_OTLP_ENDPOINT to your collector's ClusterIP service
+    # Set GOOGLE_CLOUD_PROJECT to enable Cloud Trace log correlation
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
 
 custom-fields-service:
   replicaCount: 2
@@ -40,6 +69,8 @@ custom-fields-service:
   resources:
     requests: { cpu: 250m, memory: 512Mi }
     limits: { cpu: 500m, memory: 1Gi }
+  env:
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
 
 notification-service:
   replicaCount: 2
@@ -50,6 +81,8 @@ notification-service:
   resources:
     requests: { cpu: 250m, memory: 512Mi }
     limits: { cpu: 500m, memory: 1Gi }
+  env:
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
 
 audit-service:
   replicaCount: 2
@@ -60,6 +93,8 @@ audit-service:
   resources:
     requests: { cpu: 250m, memory: 512Mi }
     limits: { cpu: 500m, memory: 1Gi }
+  env:
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
 
 admin-portal:
   replicaCount: 2

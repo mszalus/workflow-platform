@@ -26,4 +26,6 @@ autoscaling:
   maxReplicas: 5
   targetCPUUtilization: 70
 
-env: {}
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
