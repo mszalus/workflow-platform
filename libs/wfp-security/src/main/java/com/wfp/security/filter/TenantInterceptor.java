@@ -4,6 +4,7 @@ import com.wfp.security.context.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -30,8 +31,19 @@ public class TenantInterceptor implements HandlerInterceptor {
 
         if (tenantId != null && !tenantId.isBlank()) {
             TenantContext.setCurrentTenantId(tenantId);
+            MDC.put("tenantId", tenantId);
             log.debug("Set tenant context to: {}", tenantId);
         }
+
+        // Populate userId MDC field for log correlation
+        if (SecurityContextHolder.getContext().getAuthentication()
+                instanceof JwtAuthenticationToken jwtAuth) {
+            String userId = jwtAuth.getToken().getClaimAsString("preferred_username");
+            if (userId != null) {
+                MDC.put("userId", userId);
+            }
+        }
+
         return true;
     }
 
@@ -39,5 +51,7 @@ public class TenantInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                  Object handler, Exception ex) {
         TenantContext.clear();
+        MDC.remove("tenantId");
+        MDC.remove("userId");
     }
 }
