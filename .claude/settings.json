@@ -81,8 +81,6 @@
       "Bash(env *)",
       "Bash(which *)",
       "Bash(type *)",
-      "Bash(source *)",
-      "Bash(. *)",
 
       "Bash(ps *)",
       "Bash(kill *)",
@@ -97,6 +95,11 @@
       "Bash(sleep *)",
       "Bash(time *)",
       "Bash(timeout *)",
+      "Bash(for *)",
+      "Bash(seq *)",
+      "Bash(until *)",
+      "Bash(disown)",
+      "Bash(disown *)",
 
       "Bash(python3 *)",
       "Bash(python *)",
@@ -119,10 +122,26 @@
     ],
     "deny": [
       "Bash(git push --force origin main*)",
+      "Bash(git push --force origin HEAD:main*)",
       "Bash(git push -f origin main*)",
+      "Bash(git push -f origin HEAD:main*)",
+      "Bash(git push origin main --force*)",
+      "Bash(git push origin main -f*)",
+      "Bash(git push origin HEAD:main --force*)",
+      "Bash(git push origin HEAD:main -f*)",
+      "Bash(git push --force-with-lease origin main*)",
+      "Bash(git push --force-with-lease origin HEAD:main*)",
+      "Bash(git push origin main --force-with-lease*)",
       "Bash(git reset --hard*)",
       "Bash(git clean -fd*)",
       "Bash(rm -rf /*)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(rm -rf \"$HOME\"*)",
+      "Bash(rm -rf .)",
+      "Bash(rm -rf .*)",
+      "Bash(rm -rf ..*)",
       "Bash(docker system prune -a*)",
       "Bash(kubectl delete namespace*)",
       "Bash(kubectl delete --all*)"
@@ -135,14 +154,14 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git *)",
+            "if": "Bash(git commit*)",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-commit-tests.sh\"",
             "timeout": 600,
             "statusMessage": "Running unit tests before commit..."
           },
           {
             "type": "command",
-            "if": "Bash(git *)",
+            "if": "Bash(git push*)",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-push-tests.sh\"",
             "timeout": 1800,
             "statusMessage": "Running full suite + Playwright before push..."

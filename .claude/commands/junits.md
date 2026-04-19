@@ -1,8 +1,7 @@
 Run all backend JUnit tests across every Gradle module and report results.
 
 ```bash
-JAVA_HOME='C:\Program Files\JetBrains\IntelliJ IDEA 2025.3.4\jbr' \
-  ./gradlew test --no-daemon 2>&1
+./gradlew test --no-daemon 2>&1
 ```
 
 After the run, summarise:

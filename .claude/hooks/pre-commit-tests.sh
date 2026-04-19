@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Bash. Blocks `git commit` if unit tests fail.
 
-set -u
+set -uo pipefail
+
 payload=$(cat)
-cmd=$(printf '%s' "$payload" | python -c 'import json,sys; d=json.load(sys.stdin); print((d.get("tool_input") or {}).get("command",""))' 2>/dev/null)
+cmd=$(printf '%s' "$payload" | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("tool_input") or {}).get("command",""))' 2>/dev/null)
 [ -z "$cmd" ] && exit 0
 
 subcmd=$(printf '%s' "$cmd" | bash "$CLAUDE_PROJECT_DIR/.claude/hooks/guard-git-subcommand.sh")
@@ -13,9 +14,12 @@ subcmd=$(printf '%s' "$cmd" | bash "$CLAUDE_PROJECT_DIR/.claude/hooks/guard-git-
 printf '%s' "$cmd" | grep -Eq '(^| )--dry-run( |$)' && exit 0
 
 [ -n "${JAVA_HOME:-}" ] && export PATH="$JAVA_HOME/bin:$PATH"
-cd "$CLAUDE_PROJECT_DIR" || exit 0
+cd "$CLAUDE_PROJECT_DIR" || {
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Pre-commit hook: could not cd to $CLAUDE_PROJECT_DIR"}}'
+  exit 0
+}
 
-log=$(mktemp)
+log=$(mktemp) && chmod 600 "$log"
 trap 'rm -f "$log"' EXIT
 
 {
@@ -31,7 +35,7 @@ trap 'rm -f "$log"' EXIT
 status=$?
 
 if [ "$status" -ne 0 ]; then
-  python - "$log" <<'PY'
+  python3 - "$log" <<'PY'
 import json, sys
 log = open(sys.argv[1], encoding='utf-8', errors='replace').read()
 tail = log[-4000:]

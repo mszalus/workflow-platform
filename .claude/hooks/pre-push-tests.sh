@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Bash. Blocks `git push` if the full suite fails.
 
-set -u
+set -uo pipefail
+
 payload=$(cat)
-cmd=$(printf '%s' "$payload" | python -c 'import json,sys; d=json.load(sys.stdin); print((d.get("tool_input") or {}).get("command",""))' 2>/dev/null)
+cmd=$(printf '%s' "$payload" | python3 -c 'import json,sys; d=json.load(sys.stdin); print((d.get("tool_input") or {}).get("command",""))' 2>/dev/null)
 [ -z "$cmd" ] && exit 0
 
 subcmd=$(printf '%s' "$cmd" | bash "$CLAUDE_PROJECT_DIR/.claude/hooks/guard-git-subcommand.sh")
 [ "$subcmd" != "push" ] && exit 0
 
-[ -n "${JAVA_HOME:-}" ] && export PATH="$JAVA_HOME/bin:$PATH"
-cd "$CLAUDE_PROJECT_DIR" || exit 0
+# Skip --dry-run
+printf '%s' "$cmd" | grep -Eq '(^| )--dry-run( |$)' && exit 0
 
-log=$(mktemp)
+[ -n "${JAVA_HOME:-}" ] && export PATH="$JAVA_HOME/bin:$PATH"
+cd "$CLAUDE_PROJECT_DIR" || {
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Pre-push hook: could not cd to $CLAUDE_PROJECT_DIR"}}'
+  exit 0
+}
+
+log=$(mktemp) && chmod 600 "$log"
 trap 'rm -f "$log"' EXIT
 
 {
@@ -30,12 +37,21 @@ trap 'rm -f "$log"' EXIT
     echo "Docker stack not running — starting it for E2E..."
     docker compose -f docker/docker-compose.yml up -d
     timeout=120
+    gateway_ready=0
     while [ $timeout -gt 0 ]; do
-      if curl -sf http://localhost:9080/actuator/health >/dev/null 2>&1; then break; fi
+      if curl -sf http://localhost:9080/actuator/health >/dev/null 2>&1; then
+        gateway_ready=1
+        break
+      fi
       sleep 3; timeout=$((timeout-3))
     done
-    ( cd e2e && npm test )
-    e2e=$?
+    if [ $gateway_ready -ne 1 ]; then
+      echo "ERROR: gateway never became healthy within 120s — skipping E2E."
+      e2e=1
+    else
+      ( cd e2e && npm test )
+      e2e=$?
+    fi
   fi
   echo "== backend=$backend frontend=$frontend e2e=$e2e =="
   exit $(( backend || frontend || e2e ))
@@ -43,7 +59,7 @@ trap 'rm -f "$log"' EXIT
 status=$?
 
 if [ "$status" -ne 0 ]; then
-  python - "$log" <<'PY'
+  python3 - "$log" <<'PY'
 import json, sys
 log = open(sys.argv[1], encoding='utf-8', errors='replace').read()
 tail = log[-6000:]
