@@ -45,3 +45,6 @@ terraform/terraform.tfvars
 terraform/environments/**/*.tfvars
 !terraform/environments/**/*.tfvars.example
 terraform/.terraform.lock.hcl
+
+# Claude Code per-user overrides
+.claude/settings.local.json
