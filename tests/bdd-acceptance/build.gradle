@@ -24,6 +24,13 @@ tasks.withType(Test).configureEach {
     timeout = Duration.ofMinutes(5)
 }
 
+// Acceptance scenarios hit a real running stack at localhost:9080, so they
+// must be opted into explicitly (`./gradlew :tests:bdd-acceptance:test`)
+// rather than running as part of the default `build`/`check` task graph.
+tasks.named('test') {
+    onlyIf { gradle.startParameter.taskNames.any { it.contains('bdd-acceptance') } }
+}
+
 dependencies {
     testImplementation platform('io.cucumber:cucumber-bom:7.20.1')
     testImplementation 'io.cucumber:cucumber-java'
