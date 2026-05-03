@@ -11,7 +11,14 @@ Handles:
   - absolute path:    /usr/bin/git commit
   - chained/piped:    cd foo && git commit / x; git push / a | git log
   - git options:      git -c k=v commit / git -C path push / git --git-dir=x log
-  - shell delegation: bash -c "git commit"  (inspects the quoted argument)
+  - shell delegation: bash -c "git commit"  (inspects the quoted argument),
+                      including absolute paths (/bin/bash) and flags before -c
+                      (bash --login -c "..."), plus .exe suffixes on Windows.
+
+Known limitations (documented, not fixed):
+  - env-wrapped shell or git: `env bash -c "..."` / `env git commit` — `env`
+    is not recognized as a delegation prefix.
+  - Combined short shell flags: `bash -lc "..."` (vs. `bash -l -c "..."`).
 """
 
 import re
@@ -25,7 +32,14 @@ GIT_OPTS_FLAG = {"--literal-pathspecs", "--no-optional-locks",
                  "--help", "--version", "-h", "-v", "--glob-pathspecs",
                  "--noglob-pathspecs", "--icase-pathspecs"}
 
+SHELL_NAMES = {"bash", "sh", "zsh", "dash", "ksh",
+               "bash.exe", "sh.exe", "zsh.exe", "dash.exe", "ksh.exe"}
+
 ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+
+def _shell_base(token):
+    return token.rsplit("/", 1)[-1].rsplit("\\", 1)[-1].lower()
 
 
 def _is_git(token):
@@ -80,12 +94,14 @@ def find_subcommand(cmd):
     except ValueError:
         tokens = cmd.split()
     for segment in _split_on_operators(tokens):
-        if (len(segment) >= 3 and segment[0] in {"bash", "sh", "zsh"}
-                and segment[1] == "-c"):
-            inner = find_subcommand(segment[2])
-            if inner:
-                return inner
-            continue
+        if segment and _shell_base(segment[0]) in SHELL_NAMES:
+            c_idx = next((i for i, t in enumerate(segment[1:], 1) if t == "-c"),
+                         None)
+            if c_idx is not None and c_idx + 1 < len(segment):
+                inner = find_subcommand(segment[c_idx + 1])
+                if inner:
+                    return inner
+                continue
         sub = _extract_subcommand(segment)
         if sub:
             return sub
