@@ -1,5 +1,13 @@
 # Remaining Work — Execution Plan
 
+## Active Tasks
+
+Live cross-session task tracker. Items are removed once verified done (completed work lives in git log and the step records below). Kept in sync with the in-session task list.
+
+- [ ] **Fix shell delegation bypass in `guard_git_subcommand.py`** — handle absolute shell path (`/bin/bash -c`) via `rsplit` on `segment[0]`; walk past flags to locate `-c` (`bash --login -c`). Add regression cases.
+- [ ] **Add `+` refspec force-push deny rules to `.claude/settings.json`** — `Bash(git push origin +main*)`, `Bash(git push origin +HEAD:main*)`, `Bash(git push origin +refs/heads/main*)`.
+- [ ] **Commit, push, and verify CI green for round-2 fixes**.
+
 ## Context
 
 The workflow platform (Phase 1 + Phase 2) is built and verified with basic E2E testing (workflow-service + audit-service). This plan covers completing all remaining work: runtime testing of untested services, gateway routing, Docker full-stack build, README, and Helm deployment.
