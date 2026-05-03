@@ -17,7 +17,8 @@ import java.time.Instant;
 public class FlowableExceptionHandler {
 
     @ExceptionHandler(FlowableObjectNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(FlowableObjectNotFoundException ex, HttpServletRequest request) {
+    public ResponseEntity<ErrorResponse> handleNotFound(
+            FlowableObjectNotFoundException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 

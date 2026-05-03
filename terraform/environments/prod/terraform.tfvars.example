@@ -1,0 +1,26 @@
+# Prod environment variable overrides.
+# Usage: terraform -chdir=terraform apply -var-file=environments/prod/terraform.tfvars
+#
+# Copy to terraform/ root and edit with real values.
+# Prod secrets should be loaded via a secrets manager (1Password CLI, Vault, etc.).
+
+project_id   = "your-gcp-project-id-prod"
+region       = "europe-west1"
+environment  = "prod"
+
+# GKE — HA cluster with Spot nodes for cost savings on non-system pods
+node_machine_type  = "e2-standard-4"
+node_count_initial = 2
+node_count_min     = 2
+node_count_max     = 10
+node_spot          = true
+
+# Cloud SQL — HA with PITR (adds ~$120/month but required for prod SLA)
+sql_tier    = "db-custom-2-7680"
+sql_ha      = true
+sql_disk_gb = 100
+
+# Secrets — load from your secrets manager before applying
+sql_db_password         = "CHANGEME_db_password"
+keycloak_admin_password = "CHANGEME_keycloak_password"
+rabbitmq_password       = "CHANGEME_rabbitmq_password"

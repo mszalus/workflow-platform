@@ -1,5 +1,6 @@
 package com.wfp.workflow.service;
 
+import com.wfp.common.exception.BadRequestException;
 import com.wfp.common.exception.NotFoundException;
 import com.wfp.security.context.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,16 @@ public class DeploymentService {
         String tenantId = TenantContext.requireCurrentTenantId();
         // Ensure process definitions are marked executable (Flowable requires this)
         String fixedXml = bpmnXml.replace("isExecutable=\"false\"", "isExecutable=\"true\"");
-        return repositoryService.createDeployment()
-                .name(name)
-                .category(category)
-                .addString(name + ".bpmn20.xml", fixedXml)
-                .tenantId(tenantId)
-                .deploy();
+        try {
+            return repositoryService.createDeployment()
+                    .name(name)
+                    .category(category)
+                    .addString(name + ".bpmn20.xml", fixedXml)
+                    .tenantId(tenantId)
+                    .deploy();
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid BPMN: " + e.getMessage());
+        }
     }
 
     public List<ProcessDefinition> listProcessDefinitions() {
@@ -45,7 +50,9 @@ public class DeploymentService {
                 .processDefinitionId(processDefinitionId)
                 .processDefinitionTenantId(TenantContext.requireCurrentTenantId())
                 .singleResult();
-        if (pd == null) throw new NotFoundException("ProcessDefinition", processDefinitionId);
+        if (pd == null) {
+            throw new NotFoundException("ProcessDefinition", processDefinitionId);
+        }
         return pd;
     }
 
@@ -53,7 +60,9 @@ public class DeploymentService {
         ProcessDefinition pd = getProcessDefinition(processDefinitionId);
         InputStream is = repositoryService.getResourceAsStream(
                 pd.getDeploymentId(), pd.getResourceName());
-        if (is == null) throw new NotFoundException("BPMN resource", processDefinitionId);
+        if (is == null) {
+            throw new NotFoundException("BPMN resource", processDefinitionId);
+        }
         try {
             return new String(is.readAllBytes(), StandardCharsets.UTF_8);
         } catch (Exception e) {
