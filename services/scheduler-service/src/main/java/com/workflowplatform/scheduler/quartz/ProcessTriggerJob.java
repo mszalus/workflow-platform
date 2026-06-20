@@ -57,7 +57,7 @@ public class ProcessTriggerJob extends QuartzJobBean {
     @Value("${workflow-engine.base-url:http://localhost:8080}")
     private String workflowEngineBaseUrl;
 
-    @Value("${workflow-engine.service-token:dev-token}")
+    @Value("${workflow-engine.service-token:}")
     private String serviceToken;
 
     @Override
@@ -98,9 +98,13 @@ public class ProcessTriggerJob extends QuartzJobBean {
             requestBody.put("businessKey", "scheduled-" + Instant.now().toEpochMilli());
             requestBody.put("name", "Scheduled: " + processDefKey);
             requestBody.put("variables", variables);
+            requestBody.put("tenantId", tenantId);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            if (tenantId != null && !tenantId.isBlank()) {
+                headers.set("X-Tenant-Id", tenantId);
+            }
             if (serviceToken != null && !serviceToken.isBlank()) {
                 headers.setBearerAuth(serviceToken);
             }

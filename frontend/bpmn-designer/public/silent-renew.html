@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/oidc-client-ts/dist/browser/oidc-client-ts.min.js"></script>
+</head>
+<body>
+  <script>
+    new oidc.UserManager({ response_mode: "query" }).signinSilentCallback();
+  </script>
+</body>
+</html>

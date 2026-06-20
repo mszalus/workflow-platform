@@ -6,9 +6,8 @@ info:
     Manages in-app and email notifications for workflow platform events.
     Notifications are generated internally by platform services via an
     event bus; this API exposes read and preference management endpoints
-    to end users, and template management endpoints to platform admins.
-    All user-facing operations are implicitly scoped to the principal in
-    the JWT (the "current user").
+    to end users. All user-facing operations are implicitly scoped to
+    the principal in the JWT (the "current user").
   contact:
     name: Platform Engineering
   license:
@@ -26,8 +25,6 @@ tags:
     description: User notification inbox
   - name: preferences
     description: Per-user notification channel preferences
-  - name: templates
-    description: Notification template management (admin only)
 
 paths:
 
@@ -49,22 +46,15 @@ paths:
             type: boolean
             default: false
           description: When true, returns only notifications where readAt is null
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
       responses:
         '200':
-          description: Paged list of notifications
+          description: List of notifications
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/PagedResponse'
-                  - type: object
-                    properties:
-                      content:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/NotificationDto'
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotificationDto'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -76,22 +66,12 @@ paths:
       parameters:
         - $ref: '#/components/parameters/NotificationIdPath'
       responses:
-        '200':
+        '204':
           description: Notification marked as read
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationDto'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-        '409':
-          description: Notification is already marked as read
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /api/v1/notifications/read-all:
     put:
@@ -105,9 +85,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [markedRead]
+                required: [count]
                 properties:
-                  markedRead:
+                  count:
                     type: integer
                     description: Number of notifications that were updated
                     example: 7
@@ -158,114 +138,46 @@ paths:
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
 
-  # ─── Templates (admin) ───────────────────────────────────────────────────────
+  # ─── Unread Count ────────────────────────────────────────────────────────────
 
-  /api/v1/templates:
+  /api/v1/notifications/unread-count:
     get:
-      tags: [templates]
-      operationId: listNotificationTemplates
-      summary: List all notification templates (admin)
-      description: >
-        Requires the `notification-admin` realm role. Returns all templates
-        across notification types and channels.
-      parameters:
-        - name: type
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/NotificationType'
-          description: Filter by notification type
-        - name: channel
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/NotificationChannel'
-          description: Filter by delivery channel
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
+      tags: [notifications]
+      operationId: getUnreadCount
+      summary: Get the count of unread notifications for the current user
       responses:
         '200':
-          description: Paged list of templates
+          description: Unread notification count
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/PagedResponse'
-                  - type: object
-                    properties:
-                      content:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/NotificationTemplateDto'
+                type: object
+                required: [unreadCount]
+                properties:
+                  unreadCount:
+                    type: integer
+                    format: int64
+                    description: Number of unread notifications
+                    example: 5
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
 
-    post:
-      tags: [templates]
-      operationId: createNotificationTemplate
-      summary: Create a notification template (admin)
-      description: Requires the `notification-admin` realm role.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationTemplateInput'
-      responses:
-        '201':
-          description: Template created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationTemplateDto'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          description: A template already exists for this type/channel combination
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
+  # ─── Delete Notification ───────────────────────────────────────────────────
 
-  /api/v1/templates/{id}:
-    put:
-      tags: [templates]
-      operationId: updateNotificationTemplate
-      summary: Update a notification template (admin)
-      description: Requires the `notification-admin` realm role.
+  /api/v1/notifications/{id}:
+    delete:
+      tags: [notifications]
+      operationId: deleteNotification
+      summary: Delete a notification
       parameters:
-        - $ref: '#/components/parameters/TemplateIdPath'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationTemplateInput'
+        - $ref: '#/components/parameters/NotificationIdPath'
       responses:
-        '200':
-          description: Template updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationTemplateDto'
-        '400':
-          $ref: '#/components/responses/BadRequest'
+        '204':
+          description: Notification deleted
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
 
 components:
 
@@ -278,27 +190,6 @@ components:
         JWT issued by Keycloak. Must include `tenant_id` and `sub` claims.
 
   parameters:
-    PageParam:
-      name: page
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 0
-        default: 0
-      description: Zero-based page index
-
-    SizeParam:
-      name: size
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 200
-        default: 20
-      description: Number of items per page
-
     NotificationIdPath:
       name: id
       in: path
@@ -307,15 +198,6 @@ components:
         type: string
         format: uuid
       description: Notification UUID
-
-    TemplateIdPath:
-      name: id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-      description: Notification template UUID
 
   responses:
     BadRequest:
@@ -354,28 +236,6 @@ components:
             $ref: '#/components/schemas/ErrorResponse'
 
   schemas:
-
-    # ── Pagination ────────────────────────────────────────────────────────────
-    PagedResponse:
-      type: object
-      required: [content, totalElements, totalPages, page, size]
-      properties:
-        content:
-          type: array
-          items: {}
-        totalElements:
-          type: integer
-          format: int64
-          example: 31
-        totalPages:
-          type: integer
-          example: 2
-        page:
-          type: integer
-          example: 0
-        size:
-          type: integer
-          example: 20
 
     # ── Enumerations ──────────────────────────────────────────────────────────
     NotificationType:
@@ -495,52 +355,6 @@ components:
           type: boolean
         inAppEnabled:
           type: boolean
-
-    # ── Templates ─────────────────────────────────────────────────────────────
-    NotificationTemplateDto:
-      type: object
-      required: [id, type, subject, bodyTemplate, channel]
-      properties:
-        id:
-          type: string
-          format: uuid
-          example: "tmpl-uuid-0001"
-        type:
-          $ref: '#/components/schemas/NotificationType'
-        subject:
-          type: string
-          description: >
-            Email subject line or in-app notification title template.
-            Supports Handlebars-style interpolation: {{taskName}}, {{processKey}}, etc.
-          example: "Task assigned: {{taskName}}"
-        bodyTemplate:
-          type: string
-          description: >
-            Full body template. HTML is allowed and will be sanitised for in-app
-            delivery. Supports Handlebars expressions.
-          example: >
-            <p>Hi {{recipientName}},</p>
-            <p>You have been assigned the task <strong>{{taskName}}</strong>
-            in process <em>{{processName}}</em>.</p>
-            <p><a href="{{taskUrl}}">Open task</a></p>
-        channel:
-          $ref: '#/components/schemas/NotificationChannel'
-
-    NotificationTemplateInput:
-      type: object
-      required: [type, subject, bodyTemplate, channel]
-      description: Request body for creating or updating a notification template
-      properties:
-        type:
-          $ref: '#/components/schemas/NotificationType'
-        subject:
-          type: string
-          example: "Task assigned: {{taskName}}"
-        bodyTemplate:
-          type: string
-          example: "<p>Hi {{recipientName}}, you have a new task: {{taskName}}.</p>"
-        channel:
-          $ref: '#/components/schemas/NotificationChannel'
 
     # ── Error ─────────────────────────────────────────────────────────────────
     ErrorResponse:

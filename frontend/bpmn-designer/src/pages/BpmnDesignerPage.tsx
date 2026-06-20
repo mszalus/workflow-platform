@@ -133,8 +133,8 @@ export default function BpmnDesignerPage() {
     setSaveStatus("saving");
     try {
       const { xml } = await modelerRef.current.saveXML({ format: true });
-      // In a real app, this would PUT to /api/v1/process-definitions/:id
-      console.info("Saved BPMN XML:", xml.slice(0, 100));
+      const name = deploymentName.trim() || "Process Save";
+      await deployProcess({ name, bpmnXml: xml });
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus("idle"), 2000);
     } catch (err) {
@@ -142,7 +142,7 @@ export default function BpmnDesignerPage() {
       setSaveStatus("error");
       setTimeout(() => setSaveStatus("idle"), 3000);
     }
-  }, []);
+  }, [deploymentName]);
 
   const handleDeploy = useCallback(async () => {
     if (!modelerRef.current) return;

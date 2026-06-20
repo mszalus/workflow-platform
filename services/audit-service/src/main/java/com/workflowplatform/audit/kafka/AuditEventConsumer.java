@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Map;
-import java.util.UUID;
+
 
 @Slf4j
 @Component
@@ -50,11 +50,12 @@ public class AuditEventConsumer {
             return;
         }
 
-        // Extract eventId; fall back to a generated UUID for events without one
+        // Reject events without an eventId — idempotency requires a stable identifier
         String eventId = (String) eventMap.get("eventId");
         if (eventId == null || eventId.isBlank()) {
-            eventId = UUID.randomUUID().toString();
-            log.warn("Event from topic={} missing eventId, generated fallback={}", topic, eventId);
+            log.warn("Event from topic={} partition={} offset={} missing eventId, skipping",
+                topic, record.partition(), record.offset());
+            return;
         }
 
         // Idempotency: skip if already persisted

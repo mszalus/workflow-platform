@@ -51,19 +51,13 @@ public class WorkflowEventConsumer {
 
         log.info("Processing event type={} id={}", eventType, eventId);
 
-        try {
-            switch (eventType != null ? eventType : "") {
-                case "TASK_CREATED", "TASK_ASSIGNED" -> handleTaskAssigned(event);
-                case "TASK_COMPLETED"               -> handleTaskCompleted(event);
-                case "PROCESS_INSTANCE_STARTED"     -> handleProcessStarted(event);
-                case "PROCESS_INSTANCE_COMPLETED"   -> handleProcessCompleted(event);
-                case "PROCESS_INSTANCE_CANCELLED"   -> handleProcessCancelled(event);
-                default -> log.debug("No handler for event type={}", eventType);
-            }
-        } catch (Exception e) {
-            log.error("Error processing event type={} id={}", eventType, eventId, e);
-            // Don't rethrow - allow Kafka to continue processing next records.
-            // A dead-letter topic should be configured for production use.
+        switch (eventType != null ? eventType : "") {
+            case "TASK_CREATED", "TASK_ASSIGNED" -> handleTaskAssigned(event);
+            case "TASK_COMPLETED"               -> handleTaskCompleted(event);
+            case "PROCESS_INSTANCE_STARTED"     -> handleProcessStarted(event);
+            case "PROCESS_INSTANCE_COMPLETED"   -> handleProcessCompleted(event);
+            case "PROCESS_INSTANCE_CANCELLED"   -> handleProcessCancelled(event);
+            default -> log.debug("No handler for event type={}", eventType);
         }
     }
 

@@ -27,7 +27,7 @@ public class KafkaConsumerConfig {
     @Bean
     public ConsumerFactory<String, Map> consumerFactory() {
         JsonDeserializer<Map> deserializer = new JsonDeserializer<>(Map.class, false);
-        deserializer.addTrustedPackages("*");
+        deserializer.addTrustedPackages("com.workflowplatform");
 
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);

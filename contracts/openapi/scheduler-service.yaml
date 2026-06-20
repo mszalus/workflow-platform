@@ -205,33 +205,47 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /api/v1/scheduled-processes/{id}/history:
+  /api/v1/scheduled-processes/{id}/enable:
+    put:
+      tags: [schedules]
+      operationId: enableScheduledProcess
+      summary: Enable a scheduled process and resume its Quartz trigger
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      responses:
+        '204':
+          description: Scheduled process enabled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/scheduled-processes/{id}/disable:
+    put:
+      tags: [schedules]
+      operationId: disableScheduledProcess
+      summary: Disable a scheduled process and pause its Quartz trigger
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdPath'
+      responses:
+        '204':
+          description: Scheduled process disabled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/scheduled-processes/{id}/executions:
     get:
       tags: [history]
-      operationId: getScheduleHistory
+      operationId: getScheduleExecutions
       summary: Get execution history for a scheduled process
       parameters:
         - $ref: '#/components/parameters/ScheduleIdPath'
-        - name: status
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/ExecutionStatus'
-          description: Filter by execution status
-        - name: from
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date-time
-          description: Return executions fired at or after this ISO-8601 timestamp
-        - name: to
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date-time
-          description: Return executions fired at or before this ISO-8601 timestamp
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/SizeParam'
       responses:

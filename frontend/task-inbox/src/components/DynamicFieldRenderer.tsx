@@ -1,4 +1,5 @@
-import { type UseFormRegister, type FieldValues, type FieldErrors } from "react-hook-form";
+import { useState } from "react";
+import { type UseFormRegister, type UseFormSetValue, type FieldValues, type FieldErrors } from "react-hook-form";
 import { Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, cn } from "@workflow/ui-common";
 import type { FieldDefinitionDto } from "@workflow/ui-common";
 
@@ -14,6 +15,8 @@ interface DynamicFieldRendererProps {
   // For controlled select fields (ENUM), supply onChange separately
   onSelectChange?: (fieldKey: string, value: string) => void;
   selectValues?: Record<string, string>;
+  // setValue from react-hook-form for programmatic updates (e.g. USER_REF)
+  setValue?: UseFormSetValue<FieldValues>;
 }
 
 function FieldWrapper({
@@ -36,6 +39,77 @@ function FieldWrapper({
   );
 }
 
+function UserRefField({
+  field,
+  errorMsg,
+  disabled,
+  results,
+  register,
+  registerOpts,
+  setValue,
+  onUserSearch,
+}: {
+  field: FieldDefinitionDto;
+  errorMsg?: string;
+  disabled: boolean;
+  results: Array<{ id: string; name: string; email: string }>;
+  register: UseFormRegister<FieldValues>;
+  registerOpts: Record<string, unknown>;
+  setValue?: UseFormSetValue<FieldValues>;
+  onUserSearch?: (fieldKey: string, query: string) => void;
+}) {
+  const [searchDisplay, setSearchDisplay] = useState("");
+
+  return (
+    <FieldWrapper field={field} error={errorMsg}>
+      <div className="relative">
+        <Input
+          id={`${field.fieldKey}-search`}
+          type="text"
+          placeholder={`Search for ${field.label}...`}
+          disabled={disabled}
+          value={searchDisplay}
+          onChange={(e) => {
+            setSearchDisplay(e.target.value);
+            onUserSearch?.(field.fieldKey, e.target.value);
+          }}
+        />
+        {results.length > 0 && (
+          <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md">
+            {results.map((u) => (
+              <button
+                key={u.id}
+                type="button"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
+                onClick={() => {
+                  // Update form value through react-hook-form
+                  setValue?.(field.fieldKey, u.id, { shouldValidate: true });
+                  setSearchDisplay(`${u.name} (${u.email})`);
+                  onUserSearch?.(field.fieldKey, "");
+                }}
+              >
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                  {u.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium">{u.name}</p>
+                  <p className="text-xs text-muted-foreground">{u.email}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Hidden input stores the actual user ID */}
+      <input
+        id={field.fieldKey}
+        type="hidden"
+        {...register(field.fieldKey, registerOpts)}
+      />
+    </FieldWrapper>
+  );
+}
+
 export function DynamicFieldRenderer({
   fields,
   register,
@@ -46,6 +120,7 @@ export function DynamicFieldRenderer({
   userSearchResults = {},
   onSelectChange,
   selectValues = {},
+  setValue,
 }: DynamicFieldRendererProps) {
   const sortedFields = [...fields].sort((a, b) => a.displayOrder - b.displayOrder);
 
@@ -167,59 +242,17 @@ export function DynamicFieldRenderer({
           case "USER_REF": {
             const results = userSearchResults[field.fieldKey] ?? [];
             return (
-              <FieldWrapper key={field.fieldKey} field={field} error={errorMsg}>
-                <div className="relative">
-                  <Input
-                    id={`${field.fieldKey}-search`}
-                    type="text"
-                    placeholder={`Search for ${field.label}...`}
-                    disabled={disabled}
-                    onChange={(e) => onUserSearch?.(field.fieldKey, e.target.value)}
-                  />
-                  {results.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-md">
-                      {results.map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground"
-                          onClick={() => {
-                            // Set hidden field value
-                            const hiddenInput = document.getElementById(
-                              field.fieldKey
-                            ) as HTMLInputElement | null;
-                            if (hiddenInput) {
-                              hiddenInput.value = u.id;
-                              hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
-                            }
-                            const searchInput = document.getElementById(
-                              `${field.fieldKey}-search`
-                            ) as HTMLInputElement | null;
-                            if (searchInput) {
-                              searchInput.value = `${u.name} (${u.email})`;
-                            }
-                            onUserSearch?.(field.fieldKey, "");
-                          }}
-                        >
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
-                            {u.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium">{u.name}</p>
-                            <p className="text-xs text-muted-foreground">{u.email}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {/* Hidden input stores the actual user ID */}
-                <input
-                  id={field.fieldKey}
-                  type="hidden"
-                  {...register(field.fieldKey, registerOpts)}
-                />
-              </FieldWrapper>
+              <UserRefField
+                key={field.fieldKey}
+                field={field}
+                errorMsg={errorMsg}
+                disabled={disabled}
+                results={results}
+                register={register}
+                registerOpts={registerOpts}
+                setValue={setValue}
+                onUserSearch={onUserSearch}
+              />
             );
           }
 

@@ -1,5 +1,13 @@
 {
   "name": "@workflow/frontend",
   "private": true,
-  "workspaces": ["packages/*", "bpmn-designer", "task-inbox"]
+  "workspaces": [
+    "packages/*",
+    "bpmn-designer",
+    "task-inbox"
+  ],
+  "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "lucide-react": "^0.447.0"
+  }
 }
