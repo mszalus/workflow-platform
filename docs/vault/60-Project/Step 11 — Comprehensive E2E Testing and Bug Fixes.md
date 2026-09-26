@@ -74,4 +74,5 @@ Extensive API and UI testing with [[Testing Strategy|Playwright]] MCP and curl. 
 > [[GCP Cost Estimate]]
 > [[Step 18 — Release and Rollback Strategy]]
 > [[Step 19 — GCP Observability Readiness no deployment]]
+> [[Step 20 — Work Item Tracker on BPMN]]
 > [[Commit Strategy]]

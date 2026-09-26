@@ -37,7 +37,7 @@ status: open
 
 ---
 
-**Plan** — ← [[Step 18 — Release and Rollback Strategy]] · [[Commit Strategy]] →
+**Plan** — ← [[Step 18 — Release and Rollback Strategy]] · [[Step 20 — Work Item Tracker on BPMN]] →
 
 > [!abstract]- All notes in this set
 > [[Active Tasks]]
@@ -64,4 +64,5 @@ status: open
 > [[Step 17 — GCP Deployment and Acceptance Testing]]
 > [[GCP Cost Estimate]]
 > [[Step 18 — Release and Rollback Strategy]]
+> [[Step 20 — Work Item Tracker on BPMN]]
 > [[Commit Strategy]]

@@ -49,4 +49,5 @@ status: blocked
 > [[GCP Cost Estimate]]
 > [[Step 18 — Release and Rollback Strategy]]
 > [[Step 19 — GCP Observability Readiness no deployment]]
+> [[Step 20 — Work Item Tracker on BPMN]]
 > [[Commit Strategy]]

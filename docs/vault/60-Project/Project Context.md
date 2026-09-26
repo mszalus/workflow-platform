@@ -44,4 +44,5 @@ The workflow platform (Phase 1 + Phase 2) is built and verified with basic E2E t
 > [[GCP Cost Estimate]]
 > [[Step 18 — Release and Rollback Strategy]]
 > [[Step 19 — GCP Observability Readiness no deployment]]
+> [[Step 20 — Work Item Tracker on BPMN]]
 > [[Commit Strategy]]

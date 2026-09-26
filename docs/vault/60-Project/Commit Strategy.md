@@ -17,7 +17,7 @@ One commit after steps 1-4 (fixes + verified Docker stack), one commit for READM
 
 ---
 
-**Plan** — ← [[Step 19 — GCP Observability Readiness no deployment]]
+**Plan** — ← [[Step 20 — Work Item Tracker on BPMN]]
 
 > [!abstract]- All notes in this set
 > [[Active Tasks]]
@@ -45,3 +45,4 @@ One commit after steps 1-4 (fixes + verified Docker stack), one commit for READM
 > [[GCP Cost Estimate]]
 > [[Step 18 — Release and Rollback Strategy]]
 > [[Step 19 — GCP Observability Readiness no deployment]]
+> [[Step 20 — Work Item Tracker on BPMN]]

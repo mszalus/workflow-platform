@@ -352,6 +352,7 @@ Execution history and forward plan, split out of `PLAN.md`.
 
 [[Step 15 — Local Observability Verification]] · [[Step 16 — GCP Infrastructure Terraform Helm Preparation]]
 [[Step 17 — GCP Deployment and Acceptance Testing]] · [[Step 18 — Release and Rollback Strategy]]
+[[Step 19 — GCP Observability Readiness no deployment]] · [[Step 20 — Work Item Tracker on BPMN]]
 [[GCP Cost Estimate]]
 
 ## Known gaps in the product
