@@ -227,4 +227,5 @@ Before each production release:
 > [[Step 17 — GCP Deployment and Acceptance Testing]]
 > [[GCP Cost Estimate]]
 > [[Step 19 — GCP Observability Readiness no deployment]]
+> [[Step 20 — Work Item Tracker on BPMN]]
 > [[Commit Strategy]]

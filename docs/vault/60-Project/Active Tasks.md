@@ -22,6 +22,8 @@ Live cross-session task tracker. Items are removed once verified done (completed
 
 **Phase 2 — GCP observability readiness** → see [Step 19](#step-19-gcp-observability-readiness-no-deployment). No deployment.
 
+**Phase 3 — Work item tracker on BPMN** → see [Step 20](#step-20-work-item-tracker-on-bpmn--not-started-design-agreed-2026-09-26). Next up: the codebase simplification review (input in 20.7), then the 20.a spike.
+
 
 ---
 
@@ -52,4 +54,5 @@ Live cross-session task tracker. Items are removed once verified done (completed
 > [[GCP Cost Estimate]]
 > [[Step 18 — Release and Rollback Strategy]]
 > [[Step 19 — GCP Observability Readiness no deployment]]
+> [[Step 20 — Work Item Tracker on BPMN]]
 > [[Commit Strategy]]
