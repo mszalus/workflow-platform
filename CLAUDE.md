@@ -225,3 +225,8 @@ publisher. See `60-Project/Project MOC.md`.
 - **Don't push broken CI**: Check that `./gradlew build` and `npm run typecheck` pass before pushing to `main`.
 - **Commit granularity**: Logical commits — one per feature/fix, not one per file.
 - **Minimal comments**: Write as few comments as possible. Express intent through method and variable names, and extract helpers instead of writing explanatory comments. Only comment when something genuinely cannot be expressed through naming (e.g., a non-obvious external library workaround).
+- **Simple over clever**: Build the simplest design that meets today's need. Avoid speculative abstractions, extra layers, configurability nobody asked for, and a second implementation of an interface "just in case". When proposing a design, say which parts could be cut and default to cutting them.
+- **Standards before custom builds**: Prefer an existing standard or tool the stack already has (BPMN plus the bpmn-js editor, Flowable, Keycloak, PostgreSQL `jsonb`) over writing our own engine, DSL or framework.
+- **Thin facades only at replaceable boundaries**: Put a third-party engine that may be swapped (Flowable → Camunda 7, Operaton, Activiti) behind a small interface written in domain terms, with one adapter. Don't wrap stable libraries.
+- **Fewer moving parts**: Don't add a service, module, queue or copy of data when an existing one can own it. Data that must change together belongs in one service and one transaction.
+- **Simplify as you plan**: When planning, collect what could be simplified or removed. Step 20.7 in [PLAN.md](PLAN.md) lists the input for the codebase simplification review.
