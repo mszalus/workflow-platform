@@ -48,3 +48,9 @@ terraform/.terraform.lock.hcl
 
 # Claude Code per-user overrides
 .claude/settings.local.json
+
+# Local tooling output
+.playwright-mcp/
+test-results/
+__pycache__/
+/gcp-*.png
