@@ -1,0 +1,42 @@
+# Prometheus — local development scrape configuration
+#
+# Scrapes /actuator/prometheus from every backend service every 15 s.
+# On GCP, replace with Google Managed Prometheus (GMP) by adding the
+# prometheus.io/scrape: "true" annotations to your Kubernetes pods
+# (already configured in the Helm charts) and enabling the GMP operator.
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: local
+
+scrape_configs:
+  - job_name: gateway
+    static_configs:
+      - targets: ['gateway:8080']
+    metrics_path: /actuator/prometheus
+
+  - job_name: workflow-service
+    static_configs:
+      - targets: ['workflow-service:8081']
+    metrics_path: /actuator/prometheus
+
+  - job_name: custom-fields-service
+    static_configs:
+      - targets: ['custom-fields-service:8082']
+    metrics_path: /actuator/prometheus
+
+  - job_name: notification-service
+    static_configs:
+      - targets: ['notification-service:8083']
+    metrics_path: /actuator/prometheus
+
+  - job_name: audit-service
+    static_configs:
+      - targets: ['audit-service:8084']
+    metrics_path: /actuator/prometheus
+
+  - job_name: otel-collector
+    static_configs:
+      - targets: ['otel-collector:8888']

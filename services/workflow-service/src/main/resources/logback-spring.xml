@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <springProperty name="appName" source="spring.application.name" defaultValue="wfp"/>
+
+    <!--
+        JSON appender — used in all environments except 'local'.
+        Field layout is compatible with GCP Cloud Logging:
+          • "time"     — RFC-3339 timestamp (Cloud Logging picks this up for log ordering)
+          • "severity" — GCP severity level; written by GcpLoggingJsonProvider
+                         (WARN → WARNING so GCP does not drop it to DEFAULT)
+          • "message"  — log body
+          • "service"  — spring.application.name
+          • "traceId"/"spanId" — set in MDC by Micrometer Tracing (OTEL bridge)
+          • "tenantId"/"userId" — set in MDC by TenantInterceptor
+          • "logging.googleapis.com/trace" — written by GcpLoggingJsonProvider
+                         only when GOOGLE_CLOUD_PROJECT env-var is present
+    -->
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <fieldName>time</fieldName>
+                    <timeZone>UTC</timeZone>
+                    <pattern>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</pattern>
+                </timestamp>
+                <message/>
+                <loggerName>
+                    <fieldName>logger</fieldName>
+                    <shortenedLoggerNameLength>36</shortenedLoggerNameLength>
+                </loggerName>
+                <threadName>
+                    <fieldName>thread</fieldName>
+                </threadName>
+                <!-- Includes traceId, spanId (Micrometer Tracing), tenantId, userId (TenantInterceptor) -->
+                <mdc/>
+                <stackTrace>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerCause>20</maxDepthPerCause>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
+                </stackTrace>
+                <!-- Static service label -->
+                <pattern>
+                    <pattern>{"service":"${appName}"}</pattern>
+                </pattern>
+                <!-- GCP severity + Cloud Trace correlation fields -->
+                <provider class="com.wfp.common.logging.GcpLoggingJsonProvider"/>
+            </providers>
+        </encoder>
+    </appender>
+
+    <!--
+        Pretty console appender — active only with the 'local' Spring profile.
+        Shows traceId, spanId, and tenantId inline for easy debugging.
+    -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%cyan(%X{traceId:-})] [%yellow(%X{tenantId:-}/%X{userId:-})] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <springProfile name="local">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <logger name="com.wfp" level="DEBUG"/>
+    </springProfile>
+
+    <springProfile name="!local">
+        <root level="INFO">
+            <appender-ref ref="JSON"/>
+        </root>
+    </springProfile>
+</configuration>

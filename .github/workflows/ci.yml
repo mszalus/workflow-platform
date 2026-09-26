@@ -99,6 +99,66 @@ jobs:
             trivy image --exit-code 1 --severity CRITICAL --no-progress "$image"
           done
 
+  acceptance-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Build backend Docker images
+        run: docker compose -f docker/docker-compose.yml build gateway workflow-service custom-fields-service notification-service audit-service
+
+      - name: Start backend stack
+        run: docker compose -f docker/docker-compose.yml up -d postgres rabbitmq keycloak gateway workflow-service custom-fields-service notification-service audit-service
+
+      - name: Wait for gateway health
+        run: |
+          echo "Waiting for gateway to be healthy..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:9080/actuator/health > /dev/null 2>&1; then
+              echo "Gateway is healthy"
+              break
+            fi
+            echo "  attempt $i/60, retrying in 5s..."
+            sleep 5
+          done
+          curl -sf http://localhost:9080/actuator/health || (echo "ERROR: gateway never became healthy" && docker compose -f docker/docker-compose.yml logs && exit 1)
+
+      - name: Wait for Keycloak realm
+        run: |
+          echo "Waiting for Keycloak realm..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8180/realms/workflow-platform > /dev/null 2>&1; then
+              echo "Keycloak realm is ready"
+              break
+            fi
+            echo "  attempt $i/60, retrying in 5s..."
+            sleep 5
+          done
+          curl -sf http://localhost:8180/realms/workflow-platform || (echo "ERROR: Keycloak realm never became available" && docker compose -f docker/docker-compose.yml logs keycloak && exit 1)
+
+      - name: Run BDD acceptance tests
+        run: ./gradlew :tests:bdd-acceptance:test
+
+      - name: Upload Cucumber report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bdd-acceptance-report
+          path: tests/bdd-acceptance/build/reports/cucumber/
+
+      - name: Stop Docker stack
+        if: always()
+        run: docker compose -f docker/docker-compose.yml down -v
+
   helm-lint:
     runs-on: ubuntu-latest
     steps:

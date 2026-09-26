@@ -9,5 +9,6 @@ import java.util.UUID;
 
 public interface NotificationPreferenceRepository extends JpaRepository<NotificationPreference, UUID> {
     List<NotificationPreference> findByUserIdAndTenantId(String userId, String tenantId);
-    Optional<NotificationPreference> findByUserIdAndTenantIdAndEventType(String userId, String tenantId, String eventType);
+    Optional<NotificationPreference> findByUserIdAndTenantIdAndEventType(
+            String userId, String tenantId, String eventType);
 }

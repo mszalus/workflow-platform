@@ -9,6 +9,10 @@ service:
   type: ClusterIP
   port: 8080
 
+serviceAccount:
+  create: false        # set to true on GCP; Terraform creates the GSA, WI annotation binds it
+  annotations: {}      # iam.gke.io/gcp-service-account: <workload_sa_email>
+
 resources:
   requests:
     cpu: 100m
@@ -19,6 +23,10 @@ resources:
 
 ingress:
   enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
 
 autoscaling:
   enabled: false
@@ -26,4 +34,23 @@ autoscaling:
   maxReplicas: 5
   targetCPUUtilization: 70
 
-env: {}
+env:
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
+
+# External Secrets — disabled locally, enabled on GCP
+externalSecrets:
+  enabled: false
+  environment: "dev"   # matches the Secret Manager name prefix wfp-<env>-*
+
+# Secret references — used when externalSecrets.enabled=true
+# Each key maps to a K8s secret key in the ExternalSecret-created secret.
+secretEnv: []
+# Example when enabled:
+# - name: SPRING_DATASOURCE_PASSWORD
+#   secretName: gateway-secrets
+#   secretKey: db-password
+
+podDisruptionBudget:
+  enabled: false     # enable on GCP via values-gcp.yaml
+  minAvailable: 1

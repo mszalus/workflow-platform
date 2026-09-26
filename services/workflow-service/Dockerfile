@@ -8,6 +8,7 @@ COPY gradle.properties .
 COPY buildSrc/ buildSrc/
 COPY libs/ libs/
 COPY services/ services/
+COPY tests/ tests/
 RUN chmod +x gradlew && ./gradlew :services:workflow-service:bootJar -x test --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine

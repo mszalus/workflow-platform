@@ -72,7 +72,9 @@ public class ProcessService {
                 .processInstanceId(processInstanceId)
                 .processInstanceTenantId(TenantContext.requireCurrentTenantId())
                 .singleResult();
-        if (pi == null) throw new NotFoundException("ProcessInstance", processInstanceId);
+        if (pi == null) {
+            throw new NotFoundException("ProcessInstance", processInstanceId);
+        }
         return toDto(pi);
     }
 

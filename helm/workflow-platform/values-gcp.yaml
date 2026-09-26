@@ -1,35 +1,127 @@
+## GCP production/dev values — apply with:
+##   helm upgrade --install wfp helm/workflow-platform/ \
+##     -f helm/workflow-platform/values-gcp.yaml \
+##     --set externalSecrets.gcpProjectId=<project-id> \
+##     --set externalSecrets.clusterName=<cluster-name> \
+##     --set externalSecrets.clusterLocation=europe-west1 \
+##     --set gateway.ingress.hosts[0].host=wfp.example.com \
+##     --set "otel-collector.gcpProjectId=<project-id>"
+
 postgresql:
-  enabled: false
+  enabled: false   # Using Cloud SQL via private IP
 
 rabbitmq:
-  enabled: false
+  enabled: false   # Using a managed RabbitMQ or Cloud AMQP
 
 keycloak:
-  enabled: false
+  enabled: false   # Deployed separately or as managed identity provider
 
+# ---------------------------------------------------------------------------
+# External Secrets Operator — ClusterSecretStore → GCP Secret Manager
+# ESO must be installed before deploying this chart:
+#   helm install external-secrets external-secrets/external-secrets \
+#     -n external-secrets --create-namespace
+# ---------------------------------------------------------------------------
+externalSecrets:
+  enabled: true
+  gcpProjectId: "REPLACE_WITH_GCP_PROJECT_ID"
+  clusterLocation: "europe-west1"
+  clusterName: "REPLACE_WITH_CLUSTER_NAME"
+  environment: "dev"   # or "prod"
+
+# ---------------------------------------------------------------------------
+# OTEL Collector — exports traces to GCP Cloud Trace
+# ---------------------------------------------------------------------------
+otel-collector:
+  enabled: true
+  gcpProjectId: "REPLACE_WITH_GCP_PROJECT_ID"
+  replicaCount: 1
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+# ---------------------------------------------------------------------------
+# Gateway — public ingress with TLS via cert-manager
+# cert-manager must be installed before deploying:
+#   helm install cert-manager jetstack/cert-manager \
+#     -n cert-manager --create-namespace --set installCRDs=true
+# ---------------------------------------------------------------------------
 gateway:
   replicaCount: 2
   autoscaling:
     enabled: true
     minReplicas: 2
     maxReplicas: 5
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
   resources:
     requests: { cpu: 250m, memory: 256Mi }
     limits: { cpu: 500m, memory: 512Mi }
   ingress:
     enabled: true
+    className: "gce"   # GKE Ingress class (or "nginx" if using nginx-ingress)
+    annotations:
+      kubernetes.io/ingress.global-static-ip-name: "wfp-gateway-ip"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: "REPLACE_WITH_YOUR_DOMAIN"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: wfp-gateway-tls
+        hosts:
+          - "REPLACE_WITH_YOUR_DOMAIN"
+  externalSecrets:
+    enabled: true
+    environment: "dev"
+  env:
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
+    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
 
+# ---------------------------------------------------------------------------
+# Backend services — Cloud SQL connection + observability
+# DB password comes from the ExternalSecret-created K8s secret.
+# ---------------------------------------------------------------------------
 workflow-service:
   replicaCount: 2
   autoscaling:
     enabled: true
     minReplicas: 2
     maxReplicas: 5
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
   resources:
     requests: { cpu: 500m, memory: 512Mi }
     limits: { cpu: 1000m, memory: 1Gi }
+  externalSecrets:
+    enabled: true
+    environment: "dev"
   env:
-    SPRING_DATASOURCE_URL: jdbc:postgresql://cloudsql-proxy:5432/wfp?currentSchema=workflow
+    # Cloud SQL private IP — no proxy needed from GKE with VPC peering
+    SPRING_DATASOURCE_URL: "jdbc:postgresql://REPLACE_WITH_CLOUDSQL_PRIVATE_IP:5432/wfp?currentSchema=workflow"
+    SPRING_DATASOURCE_USERNAME: "wfp"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
+    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
+  secretEnv:
+    - name: SPRING_DATASOURCE_PASSWORD
+      secretName: workflow-service-secrets
+      secretKey: db-password
+    - name: SPRING_RABBITMQ_PASSWORD
+      secretName: workflow-service-secrets
+      secretKey: rabbitmq-password
 
 custom-fields-service:
   replicaCount: 2
@@ -37,9 +129,29 @@ custom-fields-service:
     enabled: true
     minReplicas: 2
     maxReplicas: 3
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
   resources:
     requests: { cpu: 250m, memory: 512Mi }
     limits: { cpu: 500m, memory: 1Gi }
+  externalSecrets:
+    enabled: true
+    environment: "dev"
+  env:
+    SPRING_DATASOURCE_URL: "jdbc:postgresql://REPLACE_WITH_CLOUDSQL_PRIVATE_IP:5432/wfp?currentSchema=custom_fields"
+    SPRING_DATASOURCE_USERNAME: "wfp"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
+    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
+  secretEnv:
+    - name: SPRING_DATASOURCE_PASSWORD
+      secretName: custom-fields-service-secrets
+      secretKey: db-password
+    - name: SPRING_RABBITMQ_PASSWORD
+      secretName: custom-fields-service-secrets
+      secretKey: rabbitmq-password
 
 notification-service:
   replicaCount: 2
@@ -47,9 +159,29 @@ notification-service:
     enabled: true
     minReplicas: 2
     maxReplicas: 3
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
   resources:
     requests: { cpu: 250m, memory: 512Mi }
     limits: { cpu: 500m, memory: 1Gi }
+  externalSecrets:
+    enabled: true
+    environment: "dev"
+  env:
+    SPRING_DATASOURCE_URL: "jdbc:postgresql://REPLACE_WITH_CLOUDSQL_PRIVATE_IP:5432/wfp?currentSchema=notification"
+    SPRING_DATASOURCE_USERNAME: "wfp"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
+    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
+  secretEnv:
+    - name: SPRING_DATASOURCE_PASSWORD
+      secretName: notification-service-secrets
+      secretKey: db-password
+    - name: SPRING_RABBITMQ_PASSWORD
+      secretName: notification-service-secrets
+      secretKey: rabbitmq-password
 
 audit-service:
   replicaCount: 2
@@ -57,9 +189,29 @@ audit-service:
     enabled: true
     minReplicas: 2
     maxReplicas: 3
+  serviceAccount:
+    create: true
+    annotations:
+      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
   resources:
     requests: { cpu: 250m, memory: 512Mi }
     limits: { cpu: 500m, memory: 1Gi }
+  externalSecrets:
+    enabled: true
+    environment: "dev"
+  env:
+    SPRING_DATASOURCE_URL: "jdbc:postgresql://REPLACE_WITH_CLOUDSQL_PRIVATE_IP:5432/wfp?currentSchema=audit"
+    SPRING_DATASOURCE_USERNAME: "wfp"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
+    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
+  secretEnv:
+    - name: SPRING_DATASOURCE_PASSWORD
+      secretName: audit-service-secrets
+      secretKey: db-password
+    - name: SPRING_RABBITMQ_PASSWORD
+      secretName: audit-service-secrets
+      secretKey: rabbitmq-password
 
 admin-portal:
   replicaCount: 2

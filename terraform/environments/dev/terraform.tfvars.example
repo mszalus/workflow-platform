@@ -1,0 +1,27 @@
+# Dev environment variable overrides.
+# Usage: terraform -chdir=terraform apply -var-file=environments/dev/terraform.tfvars
+#
+# Copy this file to terraform.tfvars in the terraform/ root:
+#   cp environments/dev/terraform.tfvars.example terraform.tfvars
+# Then edit with real values. NEVER commit terraform.tfvars.
+
+project_id   = "your-gcp-project-id"
+region       = "europe-west1"
+environment  = "dev"
+
+# GKE — small dev cluster
+node_machine_type  = "e2-standard-2"
+node_count_initial = 1
+node_count_min     = 1
+node_count_max     = 3
+node_spot          = false
+
+# Cloud SQL — minimal spec
+sql_tier    = "db-g1-small"
+sql_ha      = false
+sql_disk_gb = 20
+
+# Secrets — fill in real values (or load from a password manager)
+sql_db_password         = "CHANGEME_db_password"
+keycloak_admin_password = "CHANGEME_keycloak_password"
+rabbitmq_password       = "CHANGEME_rabbitmq_password"

@@ -12,7 +12,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +42,9 @@ public class FieldValueService {
 
         for (Map.Entry<String, String> entry : req.getValues().entrySet()) {
             FieldSchema schema = schemaMap.get(entry.getKey());
-            if (schema == null) continue;
+            if (schema == null) {
+                continue;
+            }
 
             if (schema.getValidationRegex() != null && entry.getValue() != null
                     && !entry.getValue().matches(schema.getValidationRegex())) {

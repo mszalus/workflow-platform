@@ -16,3 +16,11 @@ keycloak:
   auth:
     adminUser: admin
     adminPassword: admin
+
+# External Secrets Operator — disabled locally, enabled on GCP via values-gcp.yaml
+externalSecrets:
+  enabled: false
+  gcpProjectId: ""
+  clusterLocation: ""
+  clusterName: ""
+  environment: "dev"   # used to construct secret names: wfp-<env>-<secret>

@@ -2,7 +2,9 @@ package com.wfp.workflow.service;
 
 import com.wfp.common.dto.PagedResponse;
 import com.wfp.common.exception.NotFoundException;
-import com.wfp.events.*;
+import com.wfp.events.EventConstants;
+import com.wfp.events.TaskCompletedEvent;
+import com.wfp.events.TaskDelegatedEvent;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.TaskDto;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +27,15 @@ public class TaskService {
                                              String processDefinitionKey, int page, int size) {
         String tenantId = TenantContext.requireCurrentTenantId();
         TaskQuery query = flowableTaskService.createTaskQuery().taskTenantId(tenantId);
-        if (assignee != null) query.taskAssignee(assignee);
-        if (candidateGroup != null) query.taskCandidateGroup(candidateGroup);
-        if (processDefinitionKey != null) query.processDefinitionKey(processDefinitionKey);
+        if (assignee != null) {
+            query.taskAssignee(assignee);
+        }
+        if (candidateGroup != null) {
+            query.taskCandidateGroup(candidateGroup);
+        }
+        if (processDefinitionKey != null) {
+            query.processDefinitionKey(processDefinitionKey);
+        }
         query.orderByTaskCreateTime().desc();
 
         long total = query.count();
@@ -41,7 +49,9 @@ public class TaskService {
                 .taskId(taskId)
                 .taskTenantId(TenantContext.requireCurrentTenantId())
                 .singleResult();
-        if (task == null) throw new NotFoundException("Task", taskId);
+        if (task == null) {
+            throw new NotFoundException("Task", taskId);
+        }
         return toDto(task);
     }
 
@@ -88,7 +98,9 @@ public class TaskService {
     }
 
     private String extractProcessDefinitionKey(String processDefinitionId) {
-        if (processDefinitionId == null) return null;
+        if (processDefinitionId == null) {
+            return null;
+        }
         int colonIdx = processDefinitionId.indexOf(':');
         return colonIdx > 0 ? processDefinitionId.substring(0, colonIdx) : processDefinitionId;
     }

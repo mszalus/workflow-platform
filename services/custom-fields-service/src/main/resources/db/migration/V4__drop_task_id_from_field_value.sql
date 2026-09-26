@@ -1,12 +1,12 @@
 -- Custom field values are now process-instance scoped, not task-scoped.
--- Deduplicate: keep the most recently updated row per (field_schema_id, process_instance_id, tenant_id)
-DELETE FROM field_value a
-    USING field_value b
-WHERE a.id <> b.id
-  AND a.field_schema_id = b.field_schema_id
-  AND a.process_instance_id = b.process_instance_id
-  AND a.tenant_id = b.tenant_id
-  AND a.updated_at < b.updated_at;
+-- Deduplicate: keep the most recently updated row per (field_schema_id, process_instance_id, tenant_id).
+-- Use id as a tiebreaker so rows with equal updated_at are handled deterministically.
+DELETE FROM field_value
+WHERE id NOT IN (
+    SELECT DISTINCT ON (field_schema_id, process_instance_id, tenant_id) id
+    FROM field_value
+    ORDER BY field_schema_id, process_instance_id, tenant_id, updated_at DESC NULLS LAST, id DESC
+);
 
 DROP INDEX IF EXISTS idx_field_value_unique;
 ALTER TABLE field_value DROP COLUMN IF EXISTS task_id;

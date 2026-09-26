@@ -6,8 +6,8 @@ See [PLAN.md](PLAN.md) for the active implementation plan and progress tracker.
 
 ## Branches
 
-- **`main`** — primary development branch, all active work lands here
-- **`origin/fix/code-review-remediation`** — STALE, do not use. Contains an incompatible architectural rewrite (Maven, Kafka, completely different services). Open PR #1 should be closed.
+- **`main`**: the default branch on GitHub and the only long-lived branch. Work lands through short-lived feature branches and PRs.
+- The old `master` and `fix/code-review-remediation` branches (the incompatible Maven/Kafka design) were deleted on 2026-09-26.
 
 ## Project Overview
 
@@ -57,6 +57,14 @@ workflow-platform/
 │   ├── docker-compose.yml       # Full stack (PG, RabbitMQ, Keycloak, 5 services, 2 frontends)
 │   ├── init-db.sql              # Creates per-service schemas
 │   └── keycloak/realm-export.json
+├── docs/
+│   ├── admin-manual.md          # Source doc — hand-edited
+│   ├── user-manual.md           # Source doc — hand-edited
+│   ├── architecture/            # C4 diagrams + ERD (Mermaid) — hand-edited
+│   ├── screenshots/             # PNGs captured from the running stack
+│   └── vault/                   # GENERATED Obsidian vault — never hand-edit
+├── tools/
+│   └── vault-build/             # Generator for docs/vault (run_all.sh)
 └── helm/
     ├── charts/                  # Per-service Helm sub-charts
     └── workflow-platform/       # Umbrella chart (Chart.yaml, values-local.yaml)
@@ -137,6 +145,7 @@ In Docker, URIs are overridden via env vars (`SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_
 6. **EventPublisher**: Inject `@Nullable RabbitTemplate` — test contexts may not have RabbitMQ
 7. **Frontend build order**: `shared-ui` → `bpmn-editor` → apps (apps depend on packages)
 8. **CI gradlew permission**: The `gradlew` file must have execute permission in git (`git update-index --chmod=+x gradlew`)
+9. **Gradle daemon JDK**: Gradle 9.2 cannot run on JDK 26+. `gradle/gradle-daemon-jvm.properties` pins the daemon to Java 21, which Gradle picks from locally installed JDKs whatever `JAVA_HOME` says
 
 ## CI Pipeline (.github/workflows/ci.yml)
 
@@ -154,12 +163,65 @@ Runs on push to `main` and on PRs targeting `main`. Four parallel jobs:
 - `TenantTestHelper` sets up `TenantContext` for service-layer tests
 - Frontend: TypeScript typecheck only (no unit test framework yet)
 
+## Documentation Vault (`docs/vault/`)
+
+An Obsidian vault — ~140 notes, fully cross-linked — that indexes this codebase. **Read it
+before exploring the source tree**: it is usually faster than grepping, and it records the
+*why* behind decisions that the code alone does not explain.
+
+### Where to look
+
+| Question | Note |
+|----------|------|
+| What is this system? | `Home.md`, then `00-Index/*.md` (MOC hub notes) |
+| How do the pieces fit? | `10-Architecture/` — C4 L1→L4 + ERD, all Mermaid |
+| What does service X do? | `20-Services/<Service Name>.md` |
+| Why is it built this way? | `30-Concepts/` — tenancy, events, security, pitfalls |
+| Which endpoint / event / table? | `35-Reference/` — generated from source |
+| How do I run or deploy it? | `40-Operations/` |
+| How does a user do X? | `50-Manuals/` |
+| What is left to do? | `60-Project/` — split from PLAN.md, `status:` in frontmatter |
+
+Every note carries `source:` frontmatter naming the files it was derived from.
+
+### Rules
+
+- **Never hand-edit anything under `docs/vault/`.** It is build output; the whole tree is
+  emptied and regenerated on every run. Edit the source doc (`docs/*.md`, `PLAN.md`,
+  `README.md`) or the generator in `tools/vault-build/`, then rebuild.
+- **Regenerate after changing controllers, entities, or event types** — the notes in
+  `35-Reference/` and `20-Services/` are derived from those and will otherwise drift:
+  ```bash
+  bash tools/vault-build/run_all.sh     # rebuilds, then validates every wikilink
+  ```
+  A clean build reports `broken: 0`, `ORPHANS: 0`, `DEAD ENDS: 0`. Treat anything else as
+  a failure.
+- Adding a controller, entity, or event means updating the corresponding list in
+  `content_reference.py` or `content_services.py` — the generator does not auto-discover.
+
+### Open gaps the vault records
+
+`Attachment` has an entity and repository but no REST endpoint; `NotificationPreference`
+is never consulted before creating a notification; `process.sla.breached`,
+`field.schema.created` and `field.value.saved` are declared in `EventConstants` with no
+publisher. See `60-Project/Project MOC.md`.
+
 ## MCP Servers
 
 - **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, RabbitMQ management UI, frontend portals, and gateway health endpoints.
+
+## Plugins & Skills
+
+- **`obsidian@obsidian-skills`** (third-party, MIT, `kepano/obsidian-skills`) — Obsidian
+  Flavored Markdown, Bases, and JSON Canvas skills. Use `obsidian-markdown` when editing
+  the generator's note templates so wikilinks, embeds, callouts and properties stay valid.
+- **`claude-code-setup@claude-plugins-official`** (Anthropic) — recommends Claude Code
+  automations for this repo. Note it does not know about the hooks and permissions already
+  configured in `.claude/settings.json`, so expect overlap in its suggestions.
 
 ## Working Agreements
 
 - **Verify before claiming done**: Build, run tests, and start the application if infra is available. Don't commit untested code.
 - **Don't push broken CI**: Check that `./gradlew build` and `npm run typecheck` pass before pushing to `main`.
 - **Commit granularity**: Logical commits — one per feature/fix, not one per file.
+- **Minimal comments**: Write as few comments as possible. Express intent through method and variable names, and extract helpers instead of writing explanatory comments. Only comment when something genuinely cannot be expressed through naming (e.g., a non-obvious external library workaround).
