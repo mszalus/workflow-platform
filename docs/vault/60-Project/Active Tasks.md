@@ -12,6 +12,13 @@ status: open
 
 Live cross-session task tracker. Items are removed once verified done (completed work lives in git log and the step records below). Kept in sync with the in-session task list.
 
+**Phase 0 — Fix CI on main** (found 2026-09-26: the first main CI run since April 7 ran the main-only jobs for the first time)
+- [ ] **Tenant isolation BDD fails in CI only**: "Tenant A cannot see Tenant B's process instances", where tenant B's list contains tenant A's instance. Locally all 20 scenarios pass on the same backend code. `ProcessService.listInstances` filters by tenant correctly, so the difference is the environment: CI has empty volumes and a fresh [[Security and JWT|Keycloak]] realm import, while the local database has lived since March. Reproduce on a fresh stack (`docker compose down -v`, which wipes local data) and treat it as a possible tenant leak until explained.
+- [ ] **Custom fields: GET field values returns 500 in CI only** ("Save and retrieve field values for a process instance"). Reproduce on the same fresh stack and capture the [[Custom Fields Service|custom-fields-service]] logs.
+- [ ] **Gateway header spoofing check**: when a JWT has no `tenant_id` claim, `TenantHeaderFilter` passes the request on unchanged, so a client-supplied `X-Tenant-Id` may reach the services. Verify, then always strip the incoming header and reject tokens without the claim.
+- [ ] **docker-build: the Trivy v0.60.0 install fails** (the release download is no longer available). Pin an available version or switch to `aquasecurity/trivy-action`.
+- [ ] **User action: regenerate `CLAUDE_CODE_OAUTH_TOKEN`** (`claude setup-token`, then `gh secret set CLAUDE_CODE_OAUTH_TOKEN`). `claude-review` and `@claude` fail after 2s with $0 cost.
+
 **Phase 1 — Frontend unit tests** (the April 10 tests were lost before they were committed)
 - [ ] Add Vitest + React Testing Library + jsdom, with a `test` script in `shared-ui`, `bpmn-editor`, `user-portal` and `admin-portal`.
 - [ ] `shared-ui`: tests for `apiClient` (token and tenant headers, error mapping) and `AuthProvider`.
