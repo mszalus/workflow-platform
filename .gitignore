@@ -54,3 +54,4 @@ terraform/.terraform.lock.hcl
 test-results/
 __pycache__/
 /gcp-*.png
+.claude/worktrees/
