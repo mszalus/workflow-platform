@@ -12,6 +12,8 @@ status: open
 
 **Goal:** Turn the platform into a simple issue tracker. A **work item** has a few fixed fields and any number of custom fields. Its lifecycle is a BPMN process drawn in the existing editor. The BPMN engine sits behind a small facade, so [[Flowable Engine|Flowable]] can later be swapped for Camunda 7, Operaton or Activiti.
 
+**Target use case:** a service desk / request tracker rather than a Jira Software clone. The [[User Portal|user portal]] already works as a request portal, and BPMN automation (approvals, SLAs) is what sets this apart from Jira-lite tools.
+
 ## 20.1 Decisions
 
 | Topic | Decision | Why |
@@ -30,6 +32,10 @@ status: open
 | Engine facade | A `WorkflowEngine` interface in tracker terms, with a single Flowable adapter. Stored BPMN keeps the `flowable:*` attributes | Swapping to Camunda 7 or Operaton means a new adapter plus a one-time `flowable:` → `camunda:` rewrite of stored XML |
 
 **Deferred (judged over-engineering for now):** a "simple mode" that generates BPMN from a status table, an engine-neutral namespace for every attribute, a second engine adapter, Camunda 8 (a remote, async engine that needs a licence to self-host), a JQL-style query language, and sprints.
+
+**Rejected alternatives:**
+- **A custom status-machine engine** (a table of statuses and transitions instead of BPMN): BPMN plus the existing visual editor already gives visual design, and adds automation that a status table cannot express. BPMN's real cost is moving open items onto a new workflow version, not editing the diagram; 20.4 handles that.
+- **Flowable CMMN (case management):** more powerful for long-lived cases, but much heavier to learn and model, which works against a simple tracker.
 
 ## 20.2 Data ownership: what is copied between engine and database
 
@@ -96,6 +102,11 @@ interface WorkflowEngine {
 
 The adapter is today's Flowable code from `DeploymentService`, `ProcessService`, `TaskService`, `ProcessHistoryService` and `FlowableEventListener` moved behind this interface. An ArchUnit test fails the build if `org.flowable` is imported outside the adapter package. That also fixes the `Deployment` type leaking into `DeploymentController`.
 
+**Engine swap notes:**
+- **Camunda 7 and its community forks (Operaton, CIB seven):** the closest fit. They share Flowable's Activiti heritage, have a near-identical API, support tenant ids, and have `startBeforeActivity`. Camunda 7 Community Edition has reached end of life, so the forks are the open-source option.
+- **Activiti:** feasible, but check its start-at-activity support before relying on 20.4.
+- **Camunda 8 (Zeebe):** out of scope. It is a remote, async engine with no runtime queries in the same process, and it needs a licence to self-host in production.
+
 ## 20.6 Delivery order
 
 | # | Slice | Done when |
@@ -104,7 +115,7 @@ The adapter is today's Flowable code from `DeploymentService`, `ProcessService`,
 | 20.b | Extract the facade (refactor only). Pair it with the codebase simplification review | Existing tests and BDD scenarios green; ArchUnit rule in place |
 | 20.c | Item model: `wf_item`, `jsonb` custom fields, key sequence, `wf_item_transition`, REST API, `item.*` events with field diffs | Create → transition → close works end to end through the gateway |
 | 20.d | Editor guardrails and the validate endpoint | Invalid elements are marked live; deploy is refused with errors |
-| 20.e | User portal: filterable item list, board by status category, item detail with transition buttons and history | [[Testing Strategy|Playwright]] flow: create, move across the board, close, reopen |
+| 20.e | User portal: item list with a structured filter builder (field / operator / value → SQL over fixed and `jsonb` fields), board by status category, item detail with transition buttons and history | [[Testing Strategy|Playwright]] flow: create, move across the board, close, reopen |
 | 20.f | Moving items to a new version, with dry run | Integration test covers all three outcomes (same status, walked back, reset) |
 | 20.g | Fold `custom-fields-service` into `workflow-service`; update Docker, [[Helm and Kubernetes|Helm]], gateway and CI; regenerate the vault | 4 backend services; `run_all.sh` reports `broken: 0` |
 
@@ -115,6 +126,14 @@ The adapter is today's Flowable code from `DeploymentService`, `ProcessService`,
 - DTOs exposing engine concepts such as `processDefinitionId` in `key:version:uuid` form.
 - `custom-fields-service` (to be retired in 20.g).
 - Declared-but-unused events (`field.*`, `process.sla.breached`). SLA becomes a boundary timer publishing `item.sla.breached`.
+
+## 20.8 After 20.g (not scheduled)
+
+- Saved filters.
+- Watchers and @mentions, which read `NotificationPreference` before notifying (closes that open gap).
+- Links between items (*blocks*, *relates to*).
+- Attachment upload and download (gives `Attachment` its missing endpoint).
+- **Request portal:** forms that create items in a service-desk project, SLA timers per request type, and "my requests" for the people who submit them.
 
 ---
 
