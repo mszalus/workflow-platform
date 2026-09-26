@@ -4,9 +4,15 @@
 
 Live cross-session task tracker. Items are removed once verified done (completed work lives in git log and the step records below). Kept in sync with the in-session task list.
 
-- [ ] **Fix shell delegation bypass in `guard_git_subcommand.py`** — handle absolute shell path (`/bin/bash -c`) via `rsplit` on `segment[0]`; walk past flags to locate `-c` (`bash --login -c`). Add regression cases.
-- [ ] **Add `+` refspec force-push deny rules to `.claude/settings.json`** — `Bash(git push origin +main*)`, `Bash(git push origin +HEAD:main*)`, `Bash(git push origin +refs/heads/main*)`.
-- [ ] **Commit, push, and verify CI green for round-2 fixes**.
+**Phase 1 — Frontend unit tests** (the April 10 tests were lost before they were committed)
+- [ ] Add Vitest + React Testing Library + jsdom, with a `test` script in `shared-ui`, `bpmn-editor`, `user-portal` and `admin-portal`.
+- [ ] `shared-ui`: tests for `apiClient` (token and tenant headers, error mapping) and `AuthProvider`.
+- [ ] `bpmn-editor`: tests for `FlowablePropertiesProvider` (Flowable extension properties).
+- [ ] `user-portal`: tests for the task inbox, task detail with dynamic custom-field forms, and start process. Pre-seed the QueryClient cache.
+- [ ] `admin-portal`: tests for the process list, deploy and BPMN import/export, the custom field editor, and the audit log.
+- [ ] Commit together with the pending `ci.yml` test and coverage step, with coverage paths covering all 4 packages. The pre-commit and pre-push Claude hooks already run `npm run test --workspaces`, so they pick the tests up automatically.
+
+**Phase 2 — GCP observability readiness** → see [Step 19](#step-19-gcp-observability-readiness-no-deployment). No deployment.
 
 ## Context
 
@@ -373,7 +379,7 @@ Structured JSON logging, distributed tracing via OpenTelemetry, and Prometheus m
 
 ---
 
-## Step 15: Local Observability Verification
+## Step 15: Local Observability Verification — DONE (2026-04-09, see `observability-report.md`)
 
 **Goal:** Verify that traces appear in Tempo, metrics appear in Prometheus, and structured logs contain the right fields — all running locally via docker-compose.
 
@@ -476,7 +482,7 @@ All 20 scenarios must pass.
 
 ---
 
-## Step 16: GCP Infrastructure — Terraform + Helm Preparation
+## Step 16: GCP Infrastructure — Terraform + Helm Preparation — CODE DONE (2026-04-09), verification checklist open
 
 **Goal:** Create all GCP infrastructure as code so the platform can be deployed to GCP with a single `terraform apply` + `helm install`. No deployment happens in this step — only code is written and reviewed.
 
@@ -604,7 +610,7 @@ Update `helm/workflow-platform/values-gcp.yaml` with:
 
 ---
 
-## Step 17: GCP Deployment and Acceptance Testing
+## Step 17: GCP Deployment and Acceptance Testing — NOT STARTED (parked; the 2026-03-22 GCP run was a single-VM docker-compose deploy via `deploy/gcp/`, not GKE)
 
 **Goal:** Deploy the full platform to GCP, run the BDD acceptance tests against it, and verify observability (Cloud Logging, Cloud Trace, Cloud Monitoring).
 
@@ -792,7 +798,7 @@ All prices approximate, us-central1 / europe-west1 regions, on-demand pricing (2
 
 ---
 
-## Step 18: Release and Rollback Strategy
+## Step 18: Release and Rollback Strategy — PARTIAL (rolling-update settings in Helm charts; canary and rollback runbook not exercised)
 
 **Goal:** Define a safe, repeatable release process using Kubernetes native features (rolling updates, Helm revisions, replica-weighted canary) — no external tooling required.
 
@@ -978,6 +984,32 @@ Before each production release:
 - [ ] Rollback procedure reviewed — know which `helm history` revision to target
 - [ ] On-call engineer available for 30 minutes post-promotion
 - [ ] Cloud Monitoring error rate alert threshold reviewed
+
+---
+
+## Step 19: GCP Observability Readiness (no deployment)
+
+**Goal:** Close the gaps between the local observability stack from step 14/15 and what GKE, Cloud Logging, Cloud Trace and Managed Prometheus actually need. Everything is verified locally. The GCP deployment (step 17) stays parked.
+
+| # | Gap found (2026-09-26) | Change |
+|---|---|---|
+| 19.1 | Gateway serves `/actuator/prometheus` with `permitAll`, so it would be public through the GKE ingress | Move actuator to a separate `management.server.port` on every service, drop the `permitAll`, and keep the port out of the ingress and service |
+| 19.2 | Liveness and readiness probes both hit `/actuator/health`, so a DB or RabbitMQ outage restarts every pod | Enable probe groups: liveness → `/actuator/health/liveness` (no dependencies), readiness → `/actuator/health/readiness` (DB, RabbitMQ) |
+| 19.3 | GMP ignores `prometheus.io/scrape` annotations, which contradicts `values-gcp.yaml` and the report | Add `PodMonitoring` resources to the Helm charts, enabled by a values flag in `values-gcp.yaml`, and correct the docs |
+| 19.4 | Traces stop at RabbitMQ, so audit and notification consumers start new traces | Enable Micrometer observation on `RabbitTemplate` and the listener container factory, then check in Tempo for one trace spanning gateway → workflow → audit/notification |
+| 19.5 | Only JVM/HTTP metrics exist; there are no business metrics | Counters/timers: processes started and completed, tasks completed plus duration, events published/consumed/failed, notifications created. The `tenant` tag sits behind the `wfp.metrics.tenant-tag-enabled` setting, **default `false`**, to control Managed Prometheus cost |
+| 19.6 | Log/trace details | `traceSampled` should reflect the real sampling decision instead of always `true`. ERROR entries should be Error Reporting-compatible (`serviceContext`, stack trace). Add the OTel resource attributes `service.version` and `deployment.environment` |
+| 19.7 | No dashboards or alerts | Grafana dashboard JSON (RED per service, business metrics, queue depth) provisioned locally. Define the SLOs (availability, p95 latency, DLQ depth) that later become Cloud Monitoring alerts |
+| 19.8 | Verification | Re-run the step 15 checklist plus the new items, update `observability-report.md`, and regenerate the vault |
+
+**Out of scope:** frontend RUM/tracing, Cloud Monitoring alert Terraform (after 19.7), and the actual GKE deployment.
+
+**Verification checklist:**
+- [ ] `curl gateway:<public-port>/actuator/prometheus` → 404/401; the management port serves the metrics
+- [ ] Stopping RabbitMQ makes readiness fail while liveness stays UP
+- [ ] `helm template -f values-gcp.yaml` renders `PodMonitoring` for all 5 services
+- [ ] One Tempo trace covers the HTTP request and the async RabbitMQ consumers
+- [ ] Business metrics are visible in Prometheus after a BDD run; all 20 BDD scenarios pass
 
 ---
 
