@@ -1,3 +1,9 @@
+x-spring-healthcheck: &spring-healthcheck
+  interval: 10s
+  timeout: 5s
+  retries: 30
+  start_period: 60s
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -55,6 +61,17 @@ services:
       - "8180:8080"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    healthcheck:
+      <<: *spring-healthcheck
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /realms/workflow-platform HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          read -r status_line <&3 &&
+          [[ $$status_line == *" 200"* ]]
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,6 +136,9 @@ services:
       context: ..
       dockerfile: services/gateway/Dockerfile
     container_name: wfp-gateway
+    healthcheck:
+      <<: *spring-healthcheck
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8080/actuator/health"]
     ports:
       - "9080:8080"
     environment:
@@ -138,6 +158,9 @@ services:
       context: ..
       dockerfile: services/workflow-service/Dockerfile
     container_name: wfp-workflow
+    healthcheck:
+      <<: *spring-healthcheck
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8081/actuator/health"]
     ports:
       - "8081:8081"
     environment:
@@ -165,6 +188,9 @@ services:
       context: ..
       dockerfile: services/custom-fields-service/Dockerfile
     container_name: wfp-custom-fields
+    healthcheck:
+      <<: *spring-healthcheck
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8082/actuator/health"]
     ports:
       - "8082:8082"
     environment:
@@ -190,6 +216,9 @@ services:
       context: ..
       dockerfile: services/notification-service/Dockerfile
     container_name: wfp-notification
+    healthcheck:
+      <<: *spring-healthcheck
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8083/actuator/health"]
     ports:
       - "8083:8083"
     environment:
@@ -215,6 +244,9 @@ services:
       context: ..
       dockerfile: services/audit-service/Dockerfile
     container_name: wfp-audit
+    healthcheck:
+      <<: *spring-healthcheck
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8084/actuator/health"]
     ports:
       - "8084:8084"
     environment:
