@@ -82,17 +82,18 @@ jobs:
         run: docker compose -f docker/docker-compose.yml build workflow-service custom-fields-service notification-service audit-service gateway
 
       - name: Install Trivy
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.60.0
+        uses: aquasecurity/setup-trivy@v0.3.1
+        with:
+          version: v0.74.0
 
       - name: Scan images for CRITICAL CVEs
         run: |
           IMAGES=(
-            workflow-platform-workflow-service
-            workflow-platform-custom-fields-service
-            workflow-platform-notification-service
-            workflow-platform-audit-service
-            workflow-platform-gateway
+            docker-workflow-service
+            docker-custom-fields-service
+            docker-notification-service
+            docker-audit-service
+            docker-gateway
           )
           for image in "${IMAGES[@]}"; do
             echo "=== Scanning $image ==="
@@ -116,37 +117,15 @@ jobs:
       - name: Build backend Docker images
         run: docker compose -f docker/docker-compose.yml build gateway workflow-service custom-fields-service notification-service audit-service
 
-      - name: Start backend stack
-        run: docker compose -f docker/docker-compose.yml up -d postgres rabbitmq keycloak gateway workflow-service custom-fields-service notification-service audit-service
-
-      - name: Wait for gateway health
-        run: |
-          echo "Waiting for gateway to be healthy..."
-          for i in $(seq 1 60); do
-            if curl -sf http://localhost:9080/actuator/health > /dev/null 2>&1; then
-              echo "Gateway is healthy"
-              break
-            fi
-            echo "  attempt $i/60, retrying in 5s..."
-            sleep 5
-          done
-          curl -sf http://localhost:9080/actuator/health || (echo "ERROR: gateway never became healthy" && docker compose -f docker/docker-compose.yml logs && exit 1)
-
-      - name: Wait for Keycloak realm
-        run: |
-          echo "Waiting for Keycloak realm..."
-          for i in $(seq 1 60); do
-            if curl -sf http://localhost:8180/realms/workflow-platform > /dev/null 2>&1; then
-              echo "Keycloak realm is ready"
-              break
-            fi
-            echo "  attempt $i/60, retrying in 5s..."
-            sleep 5
-          done
-          curl -sf http://localhost:8180/realms/workflow-platform || (echo "ERROR: Keycloak realm never became available" && docker compose -f docker/docker-compose.yml logs keycloak && exit 1)
+      - name: Start backend stack and wait until healthy
+        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres rabbitmq keycloak gateway workflow-service custom-fields-service notification-service audit-service
 
       - name: Run BDD acceptance tests
         run: ./gradlew :tests:bdd-acceptance:test
+
+      - name: Dump service logs
+        if: failure()
+        run: docker compose -f docker/docker-compose.yml logs --no-color --timestamps
 
       - name: Upload Cucumber report
         if: always()

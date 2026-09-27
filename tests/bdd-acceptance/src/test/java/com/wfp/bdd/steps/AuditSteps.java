@@ -5,6 +5,9 @@ import com.wfp.bdd.config.ScenarioContext;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.restassured.response.Response;
+import org.awaitility.Awaitility;
+
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,19 +25,23 @@ public class AuditSteps {
 
     @Given("I record the current audit entry count")
     public void recordCurrentAuditCount() {
-        Response response = api.listAuditEntries();
-        assertThat(response.statusCode()).isEqualTo(200);
-        Integer total = response.jsonPath().getInt("totalElements");
-        auditCountBefore = total != null ? total : 0;
+        auditCountBefore = currentAuditCount();
     }
 
     @Then("the audit log has more entries than before")
     public void auditLogHasMoreEntries() {
+        Awaitility.await("audit entry recorded")
+                .atMost(15, TimeUnit.SECONDS)
+                .pollInterval(1, TimeUnit.SECONDS)
+                .untilAsserted(() -> assertThat(currentAuditCount())
+                        .as("Audit entry count should have increased (was %d)", auditCountBefore)
+                        .isGreaterThan(auditCountBefore));
+    }
+
+    private int currentAuditCount() {
         Response response = api.listAuditEntries();
         assertThat(response.statusCode()).isEqualTo(200);
-        int totalAfter = response.jsonPath().getInt("totalElements");
-        assertThat(totalAfter)
-                .as("Audit entry count should have increased (was %d)", auditCountBefore)
-                .isGreaterThan(auditCountBefore);
+        Integer total = response.jsonPath().getInt("totalElements");
+        return total != null ? total : 0;
     }
 }
