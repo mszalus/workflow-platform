@@ -29,6 +29,7 @@ public class ProcessSteps {
     @Given("the {string} process definition is deployed")
     public void ensureProcessDeployed(String processKey) {
         Response listResponse = api.listProcessDefinitions();
+        assertThat(listResponse.statusCode()).isEqualTo(200);
         List<String> existingKeys = listResponse.jsonPath().getList("key");
         if (!existingKeys.contains(processKey)) {
             Response deployResponse = api.deployProcess(processKey, processKey);
@@ -101,6 +102,7 @@ public class ProcessSteps {
     @Then("{string} appears in the process definitions list")
     public void processAppearsInDefinitionsList(String processKey) {
         Response response = api.listProcessDefinitions();
+        assertThat(response.statusCode()).isEqualTo(200);
         List<String> keys = response.jsonPath().getList("key");
         assertThat(keys)
                 .as("Process definitions list should contain key '%s'", processKey)
@@ -121,6 +123,7 @@ public class ProcessSteps {
     public void instanceAppearsInActiveProcesses() {
         String processInstanceId = context.getLastProcessInstanceId();
         Response response = api.listProcesses();
+        assertThat(response.statusCode()).isEqualTo(200);
         List<String> ids = response.jsonPath().getList("content.id");
         assertThat(ids)
                 .as("Active processes should contain instance %s", processInstanceId)
@@ -131,6 +134,7 @@ public class ProcessSteps {
     public void processInstanceNoLongerActive() {
         String processInstanceId = context.getLastProcessInstanceId();
         Response response = api.listProcesses();
+        assertThat(response.statusCode()).isEqualTo(200);
         List<String> ids = response.jsonPath().getList("content.id");
         assertThat(ids)
                 .as("Active processes should not contain cancelled instance %s", processInstanceId)
