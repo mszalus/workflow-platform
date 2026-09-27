@@ -14,15 +14,23 @@ subcmd=$(printf '%s' "$cmd" | bash "$CLAUDE_PROJECT_DIR/.claude/hooks/guard-git-
 printf '%s' "$cmd" | grep -Eq '(^| )--dry-run( |$)' && exit 0
 
 [ -n "${JAVA_HOME:-}" ] && export PATH="$JAVA_HOME/bin:$PATH"
-cd "$CLAUDE_PROJECT_DIR" || {
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Pre-commit hook: could not cd to $CLAUDE_PROJECT_DIR"}}'
+cwd=$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("cwd",""))' 2>/dev/null)
+repo=$(git -C "${cwd:-$CLAUDE_PROJECT_DIR}" rev-parse --show-toplevel 2>/dev/null)
+cd "$repo" || {
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Pre-commit hook: could not find the git repository of the session cwd"}}'
   exit 0
 }
+
+changed=$( { git diff --name-only HEAD; git ls-files --others --exclude-standard; } )
+if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -Evq '^(docs/|\.claude/)|\.md$'; then
+  echo '{"systemMessage":"Pre-commit tests skipped: only *.md, docs/ or .claude/ files changed."}'
+  exit 0
+fi
 
 log=$(mktemp) && chmod 600 "$log"
 trap 'rm -f "$log"' EXIT
 
-{
+(
   echo "== pre-commit: backend ./gradlew test =="
   ./gradlew test --console=plain
   backend=$?
@@ -31,7 +39,7 @@ trap 'rm -f "$log"' EXIT
   frontend=$?
   echo "== backend=$backend frontend=$frontend =="
   exit $(( backend || frontend ))
-} >"$log" 2>&1
+) >"$log" 2>&1
 status=$?
 
 if [ "$status" -ne 0 ]; then
