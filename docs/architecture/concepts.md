@@ -1,19 +1,13 @@
-#!/usr/bin/env python3
-"""Atomic concept notes — the ideas you have to hold in your head to work on this repo."""
-import sys, pathlib
-sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from build_vault import fm, write
+# Architecture Concepts
 
-C = "30-Concepts"
+The ideas you need to hold in your head to work on this repo, and why they are built this way. Diagrams for each level are in the other files in this folder; known pitfalls are in `CLAUDE.md`.
 
-def n(name, tags, source, body):
-    write(C, name, fm(name, ["concept"] + tags, "concept", source) + body.strip() + "\n")
+## Multi-Tenancy
 
-n("Multi-Tenancy", ["tenancy", "security"], "libs/wfp-security, CLAUDE.md", """
 Every request carries a tenant id. It originates in the JWT and is enforced at four
 separate layers — a break in any one of them is a cross-tenant data leak.
 
-## The chain
+### The chain
 
 ```mermaid
 flowchart LR
@@ -27,14 +21,15 @@ flowchart LR
 
 | Layer | Mechanism | Lives in |
 |---|---|---|
-| Edge | `TenantHeaderFilter` reads the `tenant_id` claim, sets `X-Tenant-Id` | [[API Gateway]] |
-| Request | `TenantInterceptor` reads the header into `TenantContext` (ThreadLocal) | [[wfp-security]] |
+| Edge | `TenantHeaderFilter` reads the `tenant_id` claim, sets `X-Tenant-Id` | API Gateway |
+| Request | `TenantInterceptor` reads the header into `TenantContext` (ThreadLocal) | wfp-security |
 | JPA | `@FilterDef`/`@Filter` auto-append `tenant_id = :tenantId` | entity classes |
-| Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | [[Flowable Engine]] |
+| Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
 
-## The @FilterDef rule
+### The @FilterDef rule
 
-> [!danger] One `@FilterDef` per persistence unit — not per entity
+> [!CAUTION]
+> **One `@FilterDef` per persistence unit — not per entity**
 > Hibernate registers filter definitions globally. A second `@FilterDef(name = "tenantFilter")`
 > in the same service throws at boot. Additional entities declare `@Filter` **only**.
 
@@ -42,31 +37,31 @@ Current owners of the single `@FilterDef` in each service:
 
 | Service | Declares `@FilterDef` | Declare `@Filter` only |
 |---|---|---|
-| [[Workflow Service]] | [[ProcessMetadata]] | [[Comment]], [[Attachment]] |
-| [[Custom Fields Service]] | [[FieldSchema]] | [[FieldValue]] |
-| [[Notification Service]] | [[Notification]] | [[NotificationPreference]] |
-| [[Audit Service]] | [[AuditEntry]] | — |
+| Workflow Service | ProcessMetadata | Comment, Attachment |
+| Custom Fields Service | FieldSchema | FieldValue |
+| Notification Service | Notification | NotificationPreference |
+| Audit Service | AuditEntry | — |
 
-Note that [[FieldOption]] has no `tenant_id` at all — it is reached only through its
+Note that FieldOption has no `tenant_id` at all — it is reached only through its
 parent `FieldSchema`, which is already filtered.
 
-## Identity side
+### Identity side
 
 Keycloak models tenants as **Organizations** inside a single realm, and stamps the
-`tenant_id` claim onto issued tokens. See [[Security and JWT]] and
-[[Admin — Keycloak Administration]].
+`tenant_id` claim onto issued tokens. See Security and JWT and
+Admin — Keycloak Administration.
 
-## See also
+### See also
 
-[[Known Pitfalls]] · [[Data Model ERD]] · [[User — Multi-Tenant Isolation]]
-""")
+Known Pitfalls · Data Model ERD · User — Multi-Tenant Isolation
 
-n("Event System", ["events", "rabbitmq", "async"], "libs/wfp-events, */config/RabbitMQConfig.java", """
+## Event System
+
 All inter-service communication is asynchronous. There are **no synchronous
 service-to-service HTTP calls** in the platform — services share a database instance but
 not schemas, and talk only over RabbitMQ.
 
-## Topology
+### Topology
 
 ```mermaid
 flowchart LR
@@ -80,31 +75,32 @@ flowchart LR
 | | |
 |---|---|
 | Exchange | `wfp.events` (topic) |
-| Producer | [[Workflow Service]] only |
-| Consumers | [[Notification Service]] (`wfp.notification`), [[Audit Service]] (`wfp.audit`) |
-| Contract | [[wfp-events]] |
+| Producer | Workflow Service only |
+| Consumers | Notification Service (`wfp.notification`), Audit Service (`wfp.audit`) |
+| Contract | wfp-events |
 
-## Routing keys
+### Routing keys
 
 `process.started` · `process.completed` · `process.cancelled` · `process.sla.breached`
 `task.created` · `task.assigned` · `task.completed` · `task.delegated`
 `field.schema.created` · `field.value.saved`
 
 The last four are declared in `EventConstants` but **not yet published by any service** —
-see [[Event Catalog]] for which are live.
+see Event Catalog for which are live.
 
-## Serialization
+### Serialization
 
 `BaseEvent` is polymorphic via `@JsonTypeInfo(use = Id.NAME, property = "eventType")`, so
 the JSON body carries its own discriminator and consumers deserialize to the concrete type.
 
-> [!warning] Each consumer needs a `Jackson2JsonMessageConverter` bean
+> [!WARNING]
+> **Each consumer needs a `Jackson2JsonMessageConverter` bean**
 > Without it, Spring AMQP delivers a raw `byte[]` and the listener signature will not match.
-> See [[Known Pitfalls]].
+> See Known Pitfalls.
 
-## Two publication paths
+### Two publication paths
 
-Events reach the bus by two different routes inside [[Workflow Service]]:
+Events reach the bus by two different routes inside Workflow Service:
 
 1. **Explicit** — `ProcessService` and `TaskService` call `EventPublisher` directly for
    actions the API initiated (`process.started`, `process.cancelled`, `task.completed`,
@@ -113,49 +109,49 @@ Events reach the bus by two different routes inside [[Workflow Service]]:
    and forwards engine-originated transitions (`task.created`, `task.assigned`,
    `process.completed`), which no API call directly causes.
 
-## See also
+### See also
 
-[[Event Catalog]] · [[Admin — RabbitMQ Monitoring]] · [[C4 L2 Container]]
-""")
+Event Catalog · Admin — RabbitMQ Monitoring · C4 L2 Container
 
-n("Security and JWT", ["security", "auth", "keycloak"], "libs/wfp-security, services/gateway", """
+## Security and JWT
+
 Keycloak 25 is the sole identity provider. Every service is an OAuth2 **resource server**;
 none of them holds a session.
 
-## Flow
+### Flow
 
 1. The browser runs an OIDC Authorization Code flow against Keycloak
-   (realm `workflow-platform`) from [[Admin Portal]] or [[User Portal]].
-2. The SPA sends the access token as `Authorization: Bearer …` to the [[API Gateway]].
+   (realm `workflow-platform`) from Admin Portal or User Portal.
+2. The SPA sends the access token as `Authorization: Bearer …` to the API Gateway.
 3. The gateway validates the signature against the Keycloak JWK Set.
 4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`.
-5. `TenantHeaderFilter` propagates the tenant downstream — see [[Multi-Tenancy]].
+5. `TenantHeaderFilter` propagates the tenant downstream — see Multi-Tenancy.
 6. Each backend service independently re-validates the JWT. **The gateway is not a
    trust boundary the services rely on** — they do not accept unauthenticated traffic
    even if reached directly.
 
-## Public endpoints
+### Public endpoints
 
 Whitelisted in `SecurityConfig`, no token required:
 
 `/actuator/health` · `/actuator/info` · `/v3/api-docs/**` · `/swagger-ui/**`
 
-## Gotcha: the gateway has no database
+### Gotcha: the gateway has no database
 
-[[wfp-security]] drags in Spring Data JPA. `GatewayApplication` must exclude
+wfp-security drags in Spring Data JPA. `GatewayApplication` must exclude
 `DataSourceAutoConfiguration` and `HibernateJpaAutoConfiguration` or it will not boot.
-See [[Known Pitfalls]].
+See Known Pitfalls.
 
-## See also
+### See also
 
-[[Admin — Keycloak Administration]] · [[API Gateway]] · [[User — Login]]
-""")
+Admin — Keycloak Administration · API Gateway · User — Login
 
-n("Gateway Routing", ["gateway", "routing"], "services/gateway/src/main/resources/application.yml", """
+## Gateway Routing
+
 Four routes, two of which rewrite the path. The asymmetry is deliberate:
-[[Workflow Service]] and [[Custom Fields Service]] expose generic `/api/**` paths that
-would collide, so the gateway namespaces them; [[Notification Service]] and
-[[Audit Service]] already expose distinct prefixes and pass through untouched.
+Workflow Service and Custom Fields Service expose generic `/api/**` paths that
+would collide, so the gateway namespaces them; Notification Service and
+Audit Service already expose distinct prefixes and pass through untouched.
 
 | External path | Target | Rewrite |
 |---|---|---|
@@ -167,7 +163,7 @@ would collide, so the gateway namespaces them; [[Notification Service]] and
 So `/api/workflow/tasks` reaches the backend as `/api/tasks`, but
 `/api/notifications/unread-count` arrives verbatim.
 
-## Overriding URIs in Docker
+### Overriding URIs in Docker
 
 Compose sets `SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_URI` per route index. The project also
 defines named vars (`WORKFLOW_SERVICE_URL`, `CUSTOM_FIELDS_SERVICE_URL`,
@@ -175,21 +171,22 @@ defines named vars (`WORKFLOW_SERVICE_URL`, `CUSTOM_FIELDS_SERVICE_URL`,
 because indexed env vars silently drop the rest of a route definition when partially
 overridden.
 
-> [!tip] Frontend path bug class
+> [!TIP]
+> **Frontend path bug class**
 > A portal calling `/api/tasks` instead of `/api/workflow/tasks` gets a 404 from the
-> gateway, not from the service. See [[Frontend API Path Bug Fix]].
+> gateway, not from the service. See Frontend API Path Bug Fix.
 
-## See also
+### See also
 
-[[C4 L3 API Gateway]] · [[API Endpoint Catalog]] · [[Ports and Endpoints]]
-""")
+C4 L3 API Gateway · API Endpoint Catalog · Ports and Endpoints
 
-n("Flowable Engine", ["flowable", "bpmn"], "services/workflow-service", """
-Flowable 7.1.0 runs **embedded, in-process** inside [[Workflow Service]] — it is not a
+## Flowable Engine
+
+Flowable 7.1.0 runs **embedded, in-process** inside Workflow Service — it is not a
 separate container. It shares the `workflow` PostgreSQL schema, where its `ACT_*` tables
 sit alongside the application `wf_*` tables.
 
-## Engine services used
+### Engine services used
 
 | Flowable API | Wrapped by | Purpose |
 |---|---|---|
@@ -199,29 +196,30 @@ sit alongside the application `wf_*` tables.
 | `TaskService` | `TaskService` | claim, unclaim, complete, delegate |
 | `HistoryService` | `ProcessHistoryService` | completed processes and tasks |
 
-## Native tenant support
+### Native tenant support
 
 Flowable stores a `TENANT_ID_` column on its own tables, so tenant isolation for engine
 data is handled by passing `tenantId` on every engine call rather than by the Hibernate
-filter used for application entities. See [[Multi-Tenancy]].
+filter used for application entities. See Multi-Tenancy.
 
-## Engine events
+### Engine events
 
 `FlowableEventListener` subscribes to the engine event bus for `TASK_CREATED`,
 `TASK_ASSIGNED` and `PROCESS_COMPLETED` and republishes them to RabbitMQ. These
 transitions are caused by the engine advancing a process, not by an API call, so they
-cannot be published from a controller. See [[Event System]].
+cannot be published from a controller. See Event System.
 
-> [!warning] H2 test mode
+> [!WARNING]
+> **H2 test mode**
 > Flowable integration tests need `MODE=LEGACY` in the H2 JDBC URL. `MODE=PostgreSQL`
-> fails on Flowable schema creation. See [[Known Pitfalls]].
+> fails on Flowable schema creation. See Known Pitfalls.
 
-## See also
+### See also
 
-[[Workflow Service]] · [[Admin — Process Designer]] · [[Data Model ERD]]
-""")
+Workflow Service · Admin — Process Designer · Data Model ERD
 
-n("Frontend Architecture", ["frontend", "react", "build"], "frontend/", """
+## Frontend Architecture
+
 An npm **workspaces** monorepo: two apps, two shared packages, one lockfile.
 
 ```
@@ -234,11 +232,11 @@ frontend/
     └── user-portal/   → depends on shared-ui
 ```
 
-## Build order is not optional
+### Build order is not optional
 
 `shared-ui` → `bpmn-editor` → apps. The apps import the packages by workspace name and
 resolve to built output, so a clean build that runs the apps first fails on missing
-types. Recorded in [[Known Pitfalls]].
+types. Recorded in Known Pitfalls.
 
 ```bash
 cd frontend
@@ -247,23 +245,23 @@ npm run build                              # respects the order
 npm run typecheck --workspaces --if-present
 ```
 
-## Auth and API access
+### Auth and API access
 
-Both apps mount `AuthProvider` from [[shared-ui]], which performs the OIDC code flow
+Both apps mount `AuthProvider` from shared-ui, which performs the OIDC code flow
 against Keycloak and injects the bearer token into `apiClient`. All calls go through the
-[[API Gateway]], so every path is prefixed per [[Gateway Routing]].
+API Gateway, so every path is prefixed per Gateway Routing.
 
-## Testing posture
+### Testing posture
 
 TypeScript typecheck only — there is no frontend unit test framework yet.
-Behaviour is covered by Playwright at the [[Testing Strategy|E2E layer]].
+Behaviour is covered by Playwright at the E2E layer.
 
-## See also
+### See also
 
-[[Admin Portal]] · [[User Portal]] · [[shared-ui]] · [[bpmn-editor]]
-""")
+Admin Portal · User Portal · shared-ui · bpmn-editor
 
-n("Build System", ["gradle", "build"], "buildSrc/, settings.gradle", """
+## Build System
+
 Gradle 9.2 with the **Groovy DSL** and three convention plugins in `buildSrc/`. No module
 configures Java, Lombok or the Spring BOM itself.
 
@@ -273,7 +271,7 @@ configures Java, Lombok or the Spring BOM itself.
 | `wfp.library-conventions` | `libs/*` | `java-library` + Lombok |
 | `wfp.spring-boot-app` | `services/*` | Boot plugin + Lombok + Spring Cloud BOM |
 
-## Commands
+### Commands
 
 ```bash
 ./gradlew build                                       # compile + test everything
@@ -281,20 +279,22 @@ configures Java, Lombok or the Spring BOM itself.
 ./gradlew :services:workflow-service:test             # one service test suite
 ```
 
-> [!warning] Dockerfiles must copy the whole `services/` tree
+> [!WARNING]
+> **Dockerfiles must copy the whole `services/` tree**
 > `settings.gradle` includes every module, so a build context missing a sibling service
 > fails project evaluation — even though that sibling is not being built.
-> See [[Known Pitfalls]].
+> See Known Pitfalls.
 
-> [!warning] `gradlew` needs the executable bit in git
+> [!WARNING]
+> **`gradlew` needs the executable bit in git**
 > `git update-index --chmod=+x gradlew`, or CI fails with permission denied.
 
-## See also
+### See also
 
-[[Build Commands|Backend build commands]] · [[CI Pipeline]] · [[Repository Layout]]
-""")
+Backend build commands · CI Pipeline · Repository Layout
 
-n("Testing Strategy", ["testing", "quality"], "libs/wfp-test-support, e2e/, tests/", """
+## Testing Strategy
+
 | Layer | Tooling | Scope |
 |---|---|---|
 | Backend unit | JUnit 5 | services and mappers |
@@ -307,42 +307,18 @@ n("Testing Strategy", ["testing", "quality"], "libs/wfp-test-support, e2e/, test
 Integration tests activate `SPRING_PROFILES_ACTIVE=test` and read
 `src/test/resources/application-test.yml`.
 
-## Fixtures
+### Fixtures
 
-[[wfp-test-support]] supplies `JwtTestHelper` (mock tokens with tenant and role claims),
+wfp-test-support supplies `JwtTestHelper` (mock tokens with tenant and role claims),
 `TenantTestHelper` (sets and clears `TenantContext`) and `TestContainersConfig`.
 
-## Traps
+### Traps
 
-- Flowable on H2 requires `MODE=LEGACY` — see [[Known Pitfalls]].
+- Flowable on H2 requires `MODE=LEGACY` — see Known Pitfalls.
 - `EventPublisher` takes a `@Nullable RabbitTemplate` so contexts without RabbitMQ start.
 - React component tests must pre-seed the QueryClient cache; a `useQuery` + `useEffect`
   pair otherwise loops forever.
 
-## See also
+### See also
 
-[[CI Pipeline]] · [[Step 07 — Playwright E2E Tests]] · [[Step 11 — Comprehensive E2E Testing and Bug Fixes]]
-""")
-
-n("Known Pitfalls", ["gotchas", "troubleshooting"], "CLAUDE.md", """
-The failure modes this codebase actually hits. Each links to the note that explains why.
-
-| # | Trap | Fix | Context |
-|---|---|---|---|
-| 1 | Docker build fails evaluating Gradle projects | Copy the **entire** `services/` dir into the build context — `settings.gradle` includes all modules | [[Build System]] |
-| 2 | PostgreSQL port conflict on 5432 | Compose maps PG to **5433** on the host | [[Ports and Endpoints]] |
-| 3 | Boot fails: duplicate filter definition | Only **one** `@FilterDef` per persistence unit; other entities use `@Filter` only | [[Multi-Tenancy]] |
-| 4 | RabbitMQ listener receives `byte[]` | Add a `Jackson2JsonMessageConverter` bean to the RabbitMQ config | [[Event System]] |
-| 5 | Flowable schema creation fails on H2 | Use `MODE=LEGACY`, not `MODE=PostgreSQL`, in the test JDBC URL | [[Flowable Engine]] |
-| 6 | Test context fails without a broker | Inject `@Nullable RabbitTemplate` in `EventPublisher` | [[Testing Strategy]] |
-| 7 | Frontend build fails on missing types | Build order: `shared-ui` → `bpmn-editor` → apps | [[Frontend Architecture]] |
-| 8 | CI: `./gradlew` permission denied | `git update-index --chmod=+x gradlew` | [[CI Pipeline]] |
-| 9 | Gateway will not start, wants a `DataSource` | Exclude `DataSourceAutoConfiguration` + `HibernateJpaAutoConfiguration` | [[API Gateway]] |
-| 10 | Partially overridden gateway routes in Docker | Use named service URL env vars, not indexed `..._ROUTES_N_URI` | [[Gateway Routing]] |
-
-## See also
-
-[[Admin — Troubleshooting]] · [[User — Troubleshooting]] · [[GCP VM — Troubleshooting]]
-""")
-
-print("concepts written")
+CI Pipeline · Step 07 — Playwright E2E Tests · Step 11 — Comprehensive E2E Testing and Bug Fixes
