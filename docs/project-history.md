@@ -1,0 +1,477 @@
+# Project History
+
+Completed work from the original `PLAN.md`, kept as written at the time. Open work lives in GitHub Issues; design documents live in `docs/design/`. Work after September 2026 is recorded in closed issues and merged PRs.
+
+## Context
+
+The workflow platform (Phase 1 + Phase 2) is built and verified with basic E2E testing (workflow-service + audit-service). This plan covers completing all remaining work: runtime testing of untested services, gateway routing, Docker full-stack build, README, and Helm deployment.
+
+---
+
+## Step 1: Fix Backend Dockerfiles — DONE
+
+4 service Dockerfiles used `../../` relative COPY paths which break with docker-compose `context: ..` (project root).
+
+**Files fixed:**
+- `services/workflow-service/Dockerfile`
+- `services/custom-fields-service/Dockerfile`
+- `services/notification-service/Dockerfile`
+- `services/audit-service/Dockerfile`
+- `services/gateway/Dockerfile` (also fixed: was missing `buildSrc/` and `gradle.properties`)
+
+**Additional fixes discovered during build:**
+- All Dockerfiles must `COPY services/ services/` (not just target service) because `settings.gradle` includes all modules and Gradle requires all project directories to exist
+- Gateway Dockerfile switched to alpine images for consistency
+- Gateway Dockerfile: `groupadd`/`useradd` → `addgroup`/`adduser` (alpine)
+
+**Verified:** All 7 Docker images (5 backend + 2 frontend) build successfully.
+
+---
+
+## Step 2: Runtime test custom-fields-service & notification-service — DONE (with fixes)
+
+Start infra (PG on 5433, RabbitMQ, Keycloak) + all 5 backend services locally.
+
+**Runtime bugs found and fixed:**
+- `notification-service`: Duplicate `@FilterDef(name = "tenantFilter")` on both `Notification` and `NotificationPreference` entities. Fix: removed `@FilterDef` from `NotificationPreference`, kept only `@Filter`.
+- `gateway`: `Failed to configure a DataSource` — gateway pulls in `spring-boot-starter-data-jpa` transitively via `wfp-security` but has no database. Fix: added `@SpringBootApplication(exclude = {DataSourceAutoConfiguration.class, HibernateJpaAutoConfiguration.class})`.
+- `gateway`: `Predicate must not be null` — docker-compose env vars using indexed route overrides (`SPRING_CLOUD_GATEWAY_MVC_ROUTES_0_URI`) were creating partial route definitions without predicates. Fix: switched to named env vars (`WORKFLOW_SERVICE_URL`, etc.) with `${...}` defaults in `application.yml`.
+
+**Additional runtime bugs found and fixed (2026-03-21):**
+- `GlobalExceptionHandler`: `NoResourceFoundException` (trailing-slash URLs) returned 500 instead of 404. Fix: added explicit `@ExceptionHandler(NoResourceFoundException.class)` returning 404.
+- `WorkflowEventListener` (notification-service): `handleTaskCompleted` crashed when `userId` was null (NOT NULL constraint on `notification.user_id`). Fix: added null guard + `completedBy` fallback.
+
+**Keycloak realm-export.json fix (2026-03-21):**
+- JWT tokens were missing `preferred_username`, `given_name`, `family_name`, `email`, and `realm_access.roles` claims
+- Cause: realm-export.json only defined the `tenant` client scope; built-in `profile`/`email` scopes referenced in `defaultClientScopes` were not present because Keycloak 25 `start-dev --import-realm` doesn't auto-create built-in scopes for imported realms
+- Fix: explicitly defined `profile`, `email`, and `roles` client scopes with protocol mappers in realm-export.json
+- Impact: notification-service uses `preferred_username` to query/create notifications per user — was broken without this claim
+
+**Verified via Docker runtime:**
+- custom-fields-service: GET /api/schemas — 200 OK
+- notification-service: GET /api/notifications — 200 OK (5 notifications created during E2E flow)
+- notification-service: GET /api/notifications/unread-count — 200 OK (`{"count":5}`)
+- notification-service: PUT /api/notifications/mark-all-read — 200 OK (count drops to 0)
+- Note: trailing-slash paths (`/api/notifications/`) now return 404 (correct Spring Boot 3.x behavior) instead of 500
+
+---
+
+## Step 3: Gateway routing test — DONE
+
+**Fixed:** Gateway used `StripPrefix=2` which stripped too many path segments.
+- `/api/workflow/deployments` → `/deployments` (wrong, expects `/api/deployments`)
+
+**New routing config:**
+- `workflow-service`: `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}`
+- `custom-fields-service`: `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}`
+- `notification-service`: pass-through (no filter — gateway path matches service path)
+- `audit-service`: pass-through (no filter — gateway path matches service path)
+
+**Also fixed:** Gateway env var approach changed from indexed (`SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_URI`) to named (`WORKFLOW_SERVICE_URL`) to avoid partial route override issues.
+
+**Runtime verified (2026-03-21):**
+- Gateway → workflow-service (`/api/workflow/deployments`): 200 OK
+- Gateway → custom-fields-service (`/api/fields/schemas?processDefinitionKey=test`): 200 OK
+- Gateway → notification-service (`/api/notifications/unread-count`): 200 OK
+- Gateway → audit-service (`/api/audit`): 200 OK
+
+---
+
+## Step 4: Docker full-stack build & E2E — DONE
+
+1. ~~Fix Dockerfiles (Step 1)~~ DONE
+2. ~~Build all 7 custom images~~ DONE
+3. ~~All 10 containers running and healthy~~ DONE
+4. ~~E2E flow through gateway~~ DONE
+
+**E2E flow verified (2026-03-21):**
+- Deploy BPMN (`POST /api/workflow/deployments`): 201 Created
+- Start process (`POST /api/workflow/processes`): 201 Created (approvalProcess, businessKey=E2E-001)
+- Complete "Submit Request" task: 204
+- Claim + complete "Manager Approval" with `approved=true`: 204
+- Process completed (no longer in active list)
+- Audit trail captured all events: process.started, task.assigned, task.created, task.completed (9 total entries)
+
+---
+
+## Step 5: README documentation — DONE
+
+Created `README.md` at project root with:
+- Architecture diagram (text-based)
+- Tech stack table
+- Prerequisites
+- Quick start (docker-compose)
+- Local development setup (backend + frontend)
+- API endpoints table (all gateway routes)
+- Project structure tree
+- Multi-tenancy explanation
+- Testing and CI/CD sections
+- Kubernetes/Helm deployment
+
+---
+
+## Step 9: Documentation — User Manual & Admin Manual — DONE
+
+**User Manual** (`docs/user-manual.md`):
+- Getting started, login flow (Keycloak OIDC), dashboard
+- Task inbox: viewing, opening, completing tasks with custom fields and comments
+- Starting a new process, tracking process instances
+- Notifications: viewing, marking as read
+- Multi-tenant isolation explanation, troubleshooting guide
+
+**Admin Manual** (`docs/admin-manual.md`):
+- Architecture diagram with gateway routing table
+- Process Designer: BPMN editor with Flowable properties panel (user task, service task, async)
+- Process definition management (deploy, delete)
+- Custom field schemas: creating, deleting, field types
+- Audit log: filtering by type/user, pagination, event types
+- Keycloak administration: realm structure, user management, tenant isolation, JWT claims
+- RabbitMQ monitoring: exchanges, queues, troubleshooting
+- Docker deployment: container overview, startup order, environment variables, database schemas
+- Kubernetes/Helm deployment: chart structure, install commands
+- Comprehensive troubleshooting table and useful curl commands
+
+**Note:** Screenshots not included (Playwright MCP browser launch conflicts with existing Chrome session). Keycloak login screenshot captured at `docs/screenshots/keycloak-login.png`.
+
+---
+
+## Step 10: BPMN Import/Export — DONE
+
+Added upload (import), download (export), and edit-existing functionality to the Process Designer.
+
+**Backend:**
+- `DeploymentController.java` — added `GET /api/deployments/{processDefinitionId}/bpmn` endpoint
+- `DeploymentService.java` — added `getProcessDefinitionBpmnXml()` method using Flowable `RepositoryService.getResourceAsStream()`
+
+**Frontend:**
+- `ProcessDesigner.tsx` — complete rewrite with Import (file upload via FileReader), Export (Blob download), and Edit (load existing BPMN from Flowable when URL has `:id` param). Auto-fills process name from filename on import.
+- `ProcessList.tsx` — added Edit link for each process definition, linking to `/processes/designer/:id`
+
+**Round-trip verification (all PASS):**
+1. Deploy BPMN with 6 Flowable properties via curl → retrieve XML → all properties preserved
+2. Re-deploy retrieved XML → retrieve again → all properties still intact
+3. Browser: open existing process via Edit → Flowable properties panel shows all values correctly (assignee, candidateGroups, formKey, priority, async, class)
+4. Browser: export XML from editor → all `flowable:*` attributes present in output
+5. Browser: import exported file into fresh designer → all Flowable properties visible in panel
+
+---
+
+## Step 6: Helm deployment — BLOCKED (no helm binary)
+
+Helm is not installed on this machine. Sub-chart lint passes in CI (GitHub Actions installs helm via `azure/setup-helm@v4`).
+
+**TODO when helm is available:**
+1. `helm dependency update helm/workflow-platform/`
+2. `helm lint helm/workflow-platform/ -f helm/workflow-platform/values-local.yaml`
+3. If minikube available: `helm install wfp helm/workflow-platform/ -f helm/workflow-platform/values-local.yaml`
+
+---
+
+## CI Pipeline Fixes — DONE
+
+Two issues causing CI failures on every push to `main`:
+
+1. **`gradlew` not executable** (exit code 126): File was committed with `100644` mode. Fix: `git update-index --chmod=+x gradlew` → now `100755`.
+2. **Frontend typecheck fails in CI** (clean checkout has no `dist/`): Packages used `composite: true` with project references, requiring built `.d.ts` output that doesn't exist in CI. Fix: removed `composite`/`declaration`/`declarationMap` from shared-ui and bpmn-editor tsconfigs, removed `references` from admin-portal and user-portal tsconfigs. Vite resolves imports from source via npm workspace symlinks — no build artifacts needed.
+
+**Verified:** `npm run typecheck --workspaces --if-present` passes with `dist/` directories deleted.
+
+---
+
+## Step 7: Playwright E2E Tests — DONE
+
+Playwright test suite in `e2e/` directory. All 8 tests pass against live Docker stack.
+
+**Files:**
+- `e2e/playwright.config.ts` — config (baseURL: localhost:9080, 30s timeout)
+- `e2e/playwright.test.ts` — 8 test cases
+- `e2e/package.json` — standalone package with `@playwright/test`
+
+**Test results (2026-03-21, all pass):**
+1. Keycloak realm exists — OIDC discovery endpoint returns issuer
+2. RabbitMQ management accessible — login + Overview page
+3. Admin Portal loads and redirects to Keycloak — OIDC redirect with correct client_id
+4. User Portal loads and redirects to Keycloak — OIDC redirect with correct client_id
+5. Gateway health check — actuator/health returns UP
+6. All backend services healthy — ports 8081-8084 all UP
+7. Full workflow E2E through gateway — deploy → start → list tasks → complete → audit → notifications
+8. Multi-tenant isolation — tenant-a and tenant-b see only their own processes
+
+**Fixes applied to make tests pass:**
+- RabbitMQ login: switched from `#username`/`#password` CSS selectors to role-based `getByRole('textbox')` (RabbitMQ management UI doesn't use ID attributes)
+- Frontend portals: OIDC-protected apps redirect to Keycloak, so tests verify the redirect URL and Keycloak login page instead of checking for `#root`
+- RabbitMQ Overview assertion: used `getByRole('heading')` to disambiguate from nav link
+
+---
+
+## Step 8: Flowable BPMN Editor Extensions — DONE
+
+Added native Flowable support to bpmn-js editor. Produces `flowable:*` XML attributes directly.
+
+**Approach:** Flowable moddle descriptor + custom properties panel provider.
+
+**Files created/modified:**
+- `frontend/packages/bpmn-editor/src/flowable.json` — Flowable moddle descriptor (~200 lines). Defines `flowable:` namespace and extensions:
+  - `Assignable` (UserTask): assignee, candidateUsers, candidateGroups, dueDate, priority, formKey, category, skipExpression
+  - `AsyncCapable` (Activity/Gateway/Event): async, asyncBefore, asyncAfter, exclusive
+  - `ServiceTaskLike` (ServiceTask): class, delegateExpression, expression, resultVariable, type
+  - `ScriptTaskLike`, `CallActivityLike`, `ProcessLike` extensions
+  - `ExecutionListener`, `TaskListener`, `FormProperty` element types
+- `frontend/packages/bpmn-editor/src/FlowablePropertiesProvider.ts` — registers Flowable property groups:
+  - **Flowable** group on UserTask: assignee, candidate users/groups, form key, due date, priority
+  - **Flowable** group on ServiceTask: java class, expression, delegate expression, result variable
+  - **Asynchronous** group on all Activities/Gateways/Events: async, asyncBefore, asyncAfter, exclusive
+- `frontend/packages/bpmn-editor/src/BpmnEditor.tsx` — updated to mount properties panel sidebar (320px), register Flowable moddle and provider modules
+- `frontend/packages/bpmn-editor/src/types.d.ts` — type declarations for bpmn-js, properties-panel modules
+- `frontend/apps/admin-portal/src/env.d.ts` — ambient module declarations for admin-portal TypeScript
+
+**Verification:** `npm run typecheck --workspaces --if-present` passes. Runtime verification pending (needs frontend dev server or Docker rebuild).
+
+---
+
+## Frontend API Path Bug Fix — DONE (2026-03-21)
+
+**Bug:** All frontend API calls used doubled `/api` prefix. The axios client has `baseURL: '/api'`, but every call also included `/api/` in the path (e.g., `apiClient.get('/api/workflow/deployments')` → request to `/api/api/workflow/deployments`).
+
+**Additional issue:** Notification and audit paths were also doubled at the service level: `/api/notifications/notifications` and `/api/audit/audit`.
+
+**Fix:** Removed `/api` prefix from all 22 API calls across 11 frontend files. Paths now use relative service paths (e.g., `/workflow/deployments`, `/notifications`, `/audit`).
+
+**Files fixed (admin-portal):**
+- `Dashboard.tsx`, `ProcessList.tsx`, `ProcessDesigner.tsx`, `CustomFieldEditor.tsx`, `AuditLog.tsx`
+
+**Files fixed (user-portal):**
+- `Dashboard.tsx`, `TaskInbox.tsx`, `TaskDetail.tsx`, `StartProcess.tsx`, `MyProcesses.tsx`, `Notifications.tsx`, `DynamicFieldForm.tsx`
+
+**Verified:**
+- TypeScript typecheck passes
+- Docker frontend images rebuilt and restarted
+- Nginx proxy paths verified via curl: admin-portal:5173/api/* and user-portal:5174/api/* → gateway → backend services (all 200 OK)
+- All 8 Playwright E2E tests pass
+
+---
+
+## Step 11: Comprehensive E2E Testing & Bug Fixes — DONE (2026-03-21)
+
+Extensive API and UI testing with Playwright MCP and curl. Found and fixed multiple critical bugs.
+
+**Bugs found and fixed:**
+
+1. **Flowable initiator resolution (500 on POST /api/processes):**
+   - Root cause: ProcessService didn't call `identityService.setAuthenticatedUserId()` before starting process, and BPMN startEvent lacked `flowable:initiator="initiator"` attribute
+   - Fix: Inject IdentityService with try/finally cleanup, add flowable:initiator to sample-approval.bpmn20.xml
+
+2. **TaskDto missing processDefinitionKey:**
+   - Frontend `Task` type expected it but backend didn't provide it
+   - Fix: Added field to TaskDto, extract key from processDefinitionId (format: `key:version:uuid`) in TaskService and ProcessHistoryService
+
+3. **FieldSchemaController 500 without processDefinitionKey:**
+   - `@RequestParam` was required by default; admin Dashboard called without parameter
+   - Fix: Made param optional, added `listAll()` to FieldSchemaService, added repository query
+
+4. **Admin Dashboard hardcoded metrics:**
+   - "Active Instances" and "Custom Field Schemas" showed "--"
+   - Fix: Added real API calls to fetch data
+
+5. **TaskInbox only showed assigned tasks:**
+   - No way to see/claim candidate tasks
+   - Fix: Added "Available to Claim" section with unassigned tasks and Claim button
+
+6. **Error handling: Flowable exceptions returned 500:**
+   - FlowableException (invalid BPMN), FlowableObjectNotFoundException, HttpMediaTypeNotSupportedException, MissingServletRequestParameterException all fell through to generic 500
+   - Fix: Added FlowableExceptionHandler in workflow-service (400/404), added handlers in GlobalExceptionHandler for MissingParam, IllegalArgument, HttpMediaType
+
+**Comprehensive E2E test suite:** `e2e/comprehensive.test.ts` — 71 tests across 13 categories covering health checks, auth, process lifecycle, approval flow, comments, custom fields, notifications, audit trail, multi-tenant isolation, negative tests, BPMN import/export, admin portal UI, and user portal UI.
+
+**CI:** All 4 jobs pass (backend-build, frontend-build, docker-build, helm-lint).
+
+---
+
+## Verification
+
+After each step, verify before moving to the next:
+- Step 1: `docker compose -f docker/docker-compose.yml config --quiet` — PASSED
+- Step 2: curl all custom-fields + notification endpoints with JWT — PASSED
+- Step 3: curl through gateway for all 4 downstream services — PASSED
+- Step 4: `docker compose up` + E2E flow — PASSED
+- Step 5: README exists and is accurate — DONE
+- Step 6: `helm lint` passes — BLOCKED (no helm)
+- Step 7: All 8 Playwright E2E tests pass — VERIFIED
+- Step 9: User + Admin manuals created — DONE
+- CI fixes: typecheck passes without dist/ — VERIFIED
+- Frontend API path fix: all proxy paths verified via curl — VERIFIED
+
+## Step 12: Architecture Diagrams & Data Model — DONE (2026-04-05)
+
+Created C4 model diagrams and data model documentation in `docs/architecture/` using Mermaid format (editable, version-controlled, GitHub-rendered).
+
+**Files created:**
+- `docs/architecture/README.md` — Index of all diagrams with viewing/editing instructions
+- `docs/architecture/c4-context.md` — C4 Level 1: System Context (users, external systems, platform boundary)
+- `docs/architecture/c4-container.md` — C4 Level 2: All containers (10 services, DB, MQ, gateway routing table, event flows)
+- `docs/architecture/c4-component-workflow-service.md` — C4 Level 3: Workflow service internals (controllers, services, Flowable engine, event publisher)
+- `docs/architecture/c4-component-notification-service.md` — C4 Level 3: Notification service (event listener, CRUD, event-to-notification mapping)
+- `docs/architecture/c4-component-gateway.md` — C4 Level 3: Gateway (JWT validation, tenant propagation, routing)
+- `docs/architecture/c4-deployment.md` — C4 Level 4: Docker Compose topology, GCP VM deployment, Kubernetes/Helm with resource allocation
+- `docs/architecture/data-model.md` — ER diagram: 9 JPA entities + key Flowable tables, enumerations, cross-schema references, multi-tenancy pattern
+
+Each diagram includes a "Notes for Editors" section explaining how to extend it for common changes (add service, add entity, add route, etc.).
+
+---
+
+## Step 13: SDLC Improvements — DONE (2026-04-06)
+
+All 9 phases of the SDLC improvements plan implemented and committed.
+
+**Phases 1–8 (previously committed):**
+- Phase 1: ESLint 9 (flat config) + Prettier 3 — frontend linting and formatting
+- Phase 2: Checkstyle 10 — Java style enforcement across all modules
+- Phase 3: Husky + lint-staged — pre-commit hooks
+- Phase 4: Commitlint — conventional commit message enforcement
+- Phase 5a: OWASP dependency-check + npm audit — security scanning
+- Phase 5b: Trivy — container image CVE scanning in CI
+- Phase 6: Docker hardening — all containers run as non-root (appuser / nginx-unprivileged)
+- Phase 7: JaCoCo — test coverage reporting (XML + HTML)
+- Phase 8: CSRF comment in SecurityConfig, branch protection documented
+
+**Phase 9 (committed 2026-04-06, 5 commits):**
+- Removed all Checkstyle suppressions one service at a time
+- Fixed every violation: star imports → explicit imports, LeftCurly, NeedBraces, unused imports, long lines
+- Deleted `config/checkstyle/suppressions.xml` and removed SuppressionFilter from `checkstyle.xml`
+- All 30 `checkstyleMain` tasks pass with zero violations
+
+---
+
+## Step 14: Observability & BDD Acceptance Tests — DONE (2026-04-09)
+
+**Observability (commits 45349b8, 02052a6):**
+
+Structured JSON logging, distributed tracing via OpenTelemetry, and Prometheus metrics added to all five services. Ready for GCP Cloud Logging, Cloud Trace, and Google Managed Prometheus without code changes — only env-var overrides.
+
+- `logstash-logback-encoder` + `logback-spring.xml` on all services: JSON to stdout (`!local` profile), colored console for `local` profile
+- `GcpLoggingJsonProvider` (wfp-common): maps WARN→WARNING for GCP severity; adds `logging.googleapis.com/trace` + span fields when `GOOGLE_CLOUD_PROJECT` is set
+- `TenantInterceptor` writes `tenantId` and `userId` to MDC on every request
+- `micrometer-registry-prometheus`: `/actuator/prometheus` on all services
+- `micrometer-tracing-bridge-otel` + `opentelemetry-exporter-otlp`: traces sent to `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://localhost:4318`)
+- Local stack added to docker-compose: OTEL Collector (4317/4318) → Tempo → Grafana (3000); Prometheus (9090) → Grafana; both datasources auto-provisioned
+- Helm deployment templates: `prometheus.io/scrape` annotations on all pods; `OTEL_EXPORTER_OTLP_ENDPOINT` and `MANAGEMENT_TRACING_SAMPLING_PROBABILITY=0.1` in per-service values
+- `values-gcp.yaml`: documents Cloud Trace (OTLP collector swap), GMP (annotations already present), Cloud Logging (set `GOOGLE_CLOUD_PROJECT`)
+
+**BDD Acceptance Tests (commits 1f4f822, 30de72d, 6cc3f4e, 0f1cc94):**
+
+20 Cucumber scenarios across 4 phases, all passing:
+- Phase A: process management + task lifecycle (8 scenarios)
+- Phase B: multi-tenancy isolation, audit trail, API security (8 scenarios)
+- Phase C: custom fields, notifications via RabbitMQ (4 scenarios)
+- Phase D: `acceptance-tests` CI job (builds images, starts stack, runs BDD, uploads report)
+
+---
+
+## Step 15: Local Observability Verification — DONE (2026-04-09, see `docs/reports/observability-report.md`)
+
+**Goal:** Verify that traces appear in Tempo, metrics appear in Prometheus, and structured logs contain the right fields — all running locally via docker-compose.
+
+### Prerequisites
+
+- Full stack running: `docker compose -f docker/docker-compose.yml up -d`
+- Wait for all services to be healthy (gateway health: `curl http://localhost:9080/actuator/health`)
+- New containers added: `wfp-otel-collector`, `wfp-tempo`, `wfp-prometheus`, `wfp-grafana`
+- Note: backend service images must be rebuilt after the observability commit to pick up new JARs:
+  ```bash
+  docker compose -f docker/docker-compose.yml build \
+    gateway workflow-service custom-fields-service notification-service audit-service
+  docker compose -f docker/docker-compose.yml up -d
+  ```
+
+### 15.1 Verify Prometheus scraping
+
+1. Open `http://localhost:9090/targets` — all 5 services + `otel-collector` must show **State: UP**
+2. If any show DOWN, check `docker logs wfp-prometheus` and verify the service container is running
+3. Spot-check a metric in the Prometheus query UI:
+   ```promql
+   http_server_requests_seconds_count{application="workflow-service"}
+   ```
+4. Generate traffic first if needed:
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token \
+     -d "grant_type=password&client_id=wfp-admin-portal&username=admin-a&password=password" \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+   curl -s -H "Authorization: Bearer $TOKEN" http://localhost:9080/api/workflow/deployments | python3 -m json.tool
+   ```
+5. Query JVM metrics: `jvm_memory_used_bytes{application="workflow-service"}`
+
+### 15.2 Verify distributed tracing in Grafana + Tempo
+
+1. Open `http://localhost:3000` (anonymous access, no login required)
+2. Go to **Explore** → select **Tempo** datasource
+3. Set **Query type: Search**, click **Run query** — traces from all services should appear
+4. Click any trace to see the span waterfall: gateway → workflow-service (or whichever service handled the request)
+5. Verify span attributes include `tenantId` (set via MDC) and `http.route`
+6. In the **Grafana Explore** panel, switch to **Prometheus** datasource and verify `up` metric shows all targets
+
+### 15.3 Verify structured logs
+
+1. Inspect a backend service container's stdout:
+   ```bash
+   docker logs wfp-workflow --tail 20
+   ```
+   Each line should be a single JSON object with fields: `time`, `severity`, `message`, `logger`, `thread`, `service`, `traceId`, `spanId`, `tenantId`, `userId`
+
+2. Verify `severity` uses GCP values (INFO, WARNING, ERROR — not WARN):
+   ```bash
+   docker logs wfp-workflow 2>&1 | python3 -c "
+   import sys, json
+   for line in sys.stdin:
+       try:
+           obj = json.loads(line)
+           print(obj.get('severity'), '|', obj.get('tenantId'), '|', obj.get('message','')[:60])
+       except: pass
+   " | head -20
+   ```
+
+3. Trigger a WARN-level log by making an unauthenticated request and verify `severity: WARNING` appears (not WARN):
+   ```bash
+   curl -s http://localhost:9080/api/workflow/deployments  # no token → 401
+   docker logs wfp-gateway --tail 5
+   ```
+
+4. Verify `tenantId` appears on authenticated requests:
+   ```bash
+   curl -s -H "Authorization: Bearer $TOKEN" http://localhost:9080/api/workflow/deployments > /dev/null
+   docker logs wfp-workflow --tail 5 | python3 -c "import sys,json; [print(json.loads(l).get('tenantId','(none)')) for l in sys.stdin if l.strip()]"
+   ```
+
+### 15.4 Verify trace–log correlation (manual)
+
+1. Make an API call and note the `traceId` from the response log:
+   ```bash
+   curl -s -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"processDefinitionKey":"test"}' \
+     http://localhost:9080/api/workflow/processes
+   docker logs wfp-workflow --tail 3 | python3 -c "import sys,json; [print(json.loads(l).get('traceId')) for l in sys.stdin if l.strip()]"
+   ```
+2. Take the `traceId`, open Grafana Explore → Tempo → **TraceQL** → `{ .traceId = "<id>" }` — the full trace should appear
+
+### 15.5 Run BDD acceptance tests to confirm nothing regressed
+
+```bash
+JAVA_HOME='C:\Program Files\JetBrains\IntelliJ IDEA 2025.3.4\jbr' \
+  ./gradlew :tests:bdd-acceptance:test --no-daemon
+```
+All 20 scenarios must pass.
+
+**Verification checklist:**
+- [ ] Prometheus shows all 6 scrape targets as UP
+- [ ] Grafana Tempo shows traces with multi-span waterfalls
+- [ ] Container logs are JSON with `severity`, `traceId`, `tenantId`, `userId`
+- [ ] `severity` uses GCP values (WARNING not WARN)
+- [ ] All 20 BDD scenarios pass
+
+---
+
+## Commit strategy (March 2026)
+
+One commit after steps 1-4 (fixes + verified Docker stack), one commit for README, one for Helm fixes if any.
+
+**Updated strategy (due to disk blocker):** Commit all current fixes together since Docker runtime verification is blocked. The fixes are all code-correct (verified via build/typecheck), just awaiting Docker runtime E2E verification.
