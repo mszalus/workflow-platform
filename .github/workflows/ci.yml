@@ -95,10 +95,15 @@ jobs:
             docker-audit-service
             docker-gateway
           )
+          failed=()
           for image in "${IMAGES[@]}"; do
             echo "=== Scanning $image ==="
-            trivy image --exit-code 1 --severity CRITICAL --no-progress "$image"
+            trivy image --exit-code 1 --severity CRITICAL --no-progress "$image" || failed+=("$image")
           done
+          if [ ${#failed[@]} -gt 0 ]; then
+            echo "CRITICAL CVEs in: ${failed[*]}"
+            exit 1
+          fi
 
   acceptance-tests:
     runs-on: ubuntu-latest
