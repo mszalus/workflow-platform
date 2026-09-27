@@ -7,6 +7,8 @@ spring:
   cloud:
     gateway:
       mvc:
+        http-client:
+          type: autodetect
         routes:
           - id: workflow-service
             uri: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
