@@ -22,6 +22,7 @@ const USERS = {
 /** Navigate to a portal URL and handle Keycloak login if redirected */
 async function loginIfNeeded(page: import('@playwright/test').Page, portalUrl: string, username: string, password: string) {
   await page.goto(portalUrl);
+  await page.waitForURL((url) => url.href.includes('realms/workflow-platform') || url.pathname.includes('dashboard'));
   if (page.url().includes('realms/workflow-platform')) {
     await page.getByLabel('Username or email').fill(username);
     await page.getByLabel('Password', { exact: true }).fill(password);
