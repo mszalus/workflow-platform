@@ -4,10 +4,10 @@ import com.wfp.bdd.config.ApiClient;
 import com.wfp.bdd.config.ScenarioContext;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -16,8 +16,10 @@ public class TenantIsolationSteps {
     private final ScenarioContext context;
     private final ApiClient api;
 
-    // Holds the token obtained after switching tenants mid-scenario
-    private String tenantBToken;
+    private List<String> tenantBProcessIds;
+    private List<String> tenantBTaskProcessIds;
+    private List<String> tenantBDefinitionKeys;
+    private List<String> tenantBAuditEntityIds;
 
     public TenantIsolationSteps(ScenarioContext context, ApiClient api) {
         this.context = context;
@@ -26,25 +28,8 @@ public class TenantIsolationSteps {
 
     @When("I authenticate as {string} and list active processes")
     public void authenticateAsTenantBAndListProcesses(String username) {
-        tenantBToken = api.obtainToken(username);
-        // Temporarily switch context to make the request
-        String originalToken = context.getCurrentToken();
-        context.setCurrentToken(tenantBToken);
-        Response response = api.listProcesses();
-        context.setCurrentToken(originalToken);
-        context.setLastStatusCode(response.statusCode());
-        // Store the IDs returned by tenant B for the assertion
-        List<String> ids = response.jsonPath().getList("content.id");
-        // We reuse lastResponseBody as a delimited string for the assertion step
-        context.setLastStatusCode(response.statusCode());
-        // Save IDs via a simple approach: store in a thread-local-like field
-        tenantBProcessIds = ids;
+        tenantBProcessIds = listAs(username, api::listProcesses, "content.id");
     }
-
-    private List<String> tenantBProcessIds;
-    private List<String> tenantBTaskIds;
-    private List<String> tenantBDefinitionKeys;
-    private List<String> tenantBAuditProcessIds;
 
     @Then("the process instance from tenant A is not in the list")
     public void processInstanceNotVisibleToTenantB() {
@@ -56,33 +41,21 @@ public class TenantIsolationSteps {
 
     @When("I authenticate as {string} and list tasks for {string}")
     public void authenticateAsTenantBAndListTasks(String tenantBUser, String assignee) {
-        tenantBToken = api.obtainToken(tenantBUser);
-        String originalToken = context.getCurrentToken();
-        context.setCurrentToken(tenantBToken);
-        Response response = api.listTasksForAssignee(assignee);
-        context.setCurrentToken(originalToken);
-
-        List<String> taskProcessIds = response.jsonPath().getList("content.processInstanceId");
-        tenantBTaskIds = taskProcessIds;
+        tenantBTaskProcessIds = listAs(tenantBUser, () -> api.listTasksForAssignee(assignee),
+                "content.processInstanceId");
     }
 
     @Then("no tasks are returned for that query")
     public void noTasksReturnedForTenantBQuery() {
         String instanceId = context.getLastProcessInstanceId();
-        // Either the list is empty, or none of the tasks belong to tenant A's process
-        assertThat(tenantBTaskIds)
+        assertThat(tenantBTaskProcessIds)
                 .as("Tenant B should not see tasks from tenant A's process %s", instanceId)
                 .doesNotContain(instanceId);
     }
 
     @When("I authenticate as {string} and list process definitions")
     public void authenticateAsTenantBAndListDefinitions(String username) {
-        tenantBToken = api.obtainToken(username);
-        String originalToken = context.getCurrentToken();
-        context.setCurrentToken(tenantBToken);
-        Response response = api.listProcessDefinitions();
-        context.setCurrentToken(originalToken);
-        tenantBDefinitionKeys = response.jsonPath().getList("key");
+        tenantBDefinitionKeys = listAs(username, api::listProcessDefinitions, "key");
     }
 
     @Then("{string} is not in the definitions list for tenant B")
@@ -94,22 +67,28 @@ public class TenantIsolationSteps {
 
     @When("I authenticate as {string} and query the audit log")
     public void authenticateAsTenantBAndQueryAudit(String username) {
-        tenantBToken = api.obtainToken(username);
-        String originalToken = context.getCurrentToken();
-        context.setCurrentToken(tenantBToken);
-        Response response = api.listAuditEntries();
-        context.setCurrentToken(originalToken);
-
-        // Collect all entity IDs from tenant B's audit entries
-        List<String> entityIds = response.jsonPath().getList("content.entityId");
-        tenantBAuditProcessIds = entityIds;
+        tenantBAuditEntityIds = listAs(username, api::listAuditEntries, "content.entityId");
     }
 
     @Then("none of the audit entries belong to tenant A's process")
     public void noAuditEntriesFromTenantAProcess() {
         String instanceId = context.getLastProcessInstanceId();
-        assertThat(tenantBAuditProcessIds)
+        assertThat(tenantBAuditEntityIds)
                 .as("Tenant B's audit log should not contain entries for tenant A's process %s", instanceId)
                 .doesNotContain(instanceId);
+    }
+
+    private List<String> listAs(String username, Supplier<Response> request, String valuePath) {
+        String originalToken = context.getCurrentToken();
+        context.setCurrentToken(api.obtainToken(username));
+        try {
+            Response response = request.get();
+            assertThat(response.statusCode())
+                    .as("%s's request should succeed before its results are checked", username)
+                    .isEqualTo(200);
+            return response.jsonPath().getList(valuePath);
+        } finally {
+            context.setCurrentToken(originalToken);
+        }
     }
 }
