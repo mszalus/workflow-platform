@@ -59,7 +59,7 @@ public class ProcessService {
         String tenantId = TenantContext.requireCurrentTenantId();
         ProcessInstanceQuery query = runtimeService.createProcessInstanceQuery()
                 .processInstanceTenantId(tenantId)
-                .orderByProcessInstanceId().desc();
+                .orderByStartTime().desc();
 
         long total = query.count();
         List<ProcessInstanceDto> items = query.listPage(page * size, size)
