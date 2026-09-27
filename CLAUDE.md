@@ -166,7 +166,7 @@ Every request is tenant-scoped: JWT `tenant_id` claim → gateway `X-Tenant-Id` 
 - `JwtTestHelper` generates mock JWTs for authenticated endpoint tests
 - `TenantTestHelper` sets up `TenantContext` for service-layer tests
 - Frontend: TypeScript typecheck only (no unit test framework yet)
-- Acceptance: Cucumber BDD in `tests/bdd-acceptance` and Playwright in `e2e/`, both against the Docker stack
+- Acceptance: Cucumber BDD in `tests/bdd-acceptance` and Playwright in `e2e/` (`npm test`), both run in CI against a fresh Docker stack. `npm run screenshots` in `e2e/` refreshes `docs/screenshots/`
 
 ## MCP Servers
 

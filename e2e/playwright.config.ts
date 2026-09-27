@@ -6,4 +6,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:9080',
   },
+  projects: [
+    { name: 'e2e', testIgnore: 'screenshots.test.ts' },
+    { name: 'screenshots', testMatch: 'screenshots.test.ts' },
+  ],
 });
