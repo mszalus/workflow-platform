@@ -12,7 +12,7 @@ and `docs/design/`. This file covers only how we work.
 
 - Sessions share nothing but committed files and GitHub. A decision that is not written down in the repo or an issue does not exist for the other session.
 - A session reads `CLAUDE.md` and `.claude/` when it starts. After a process PR merges, restart the work sessions or tell them to re-read `CLAUDE.md` and this file.
-- Parallel sessions each work in their own git worktree (`.claude/worktrees/`), never in the same checkout.
+- A session works through its items one at a time (the "One item at a time" agreement in `CLAUDE.md`), in the main checkout. A worktree (`.claude/worktrees/`) is only for a second session running at the same time, or for a background session, which Claude Code requires to use one; either way it is one worktree per session, not per item.
 
 ## Tasks
 
