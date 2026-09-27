@@ -43,9 +43,17 @@ and `docs/design/`. This file covers only how we work.
 
 - Both hooks skip the tests when every changed file is `*.md`, under `docs/` or under `.claude/`.
 - The hooks fire only for commands Claude runs, not for git in your own terminal. Branch protection is the safety net; the hooks exist to fail fast.
-- E2E tests run in CI, not locally before a push: CI starts a fresh stack, while every local worktree shares one Docker stack.
+- E2E tests run in CI, not locally before a push: CI starts a fresh stack, while every local checkout shares one Docker stack.
 - Doc screenshots are not part of the E2E run. Refresh them on purpose with `cd e2e && npm run screenshots` and commit them in a `docs/` PR.
 - Known gaps in these gates are issues labelled `process`: `gh issue list --label process`.
+
+## Local Docker stack
+
+There is one local stack per machine. The compose file uses fixed container names and host ports, so every checkout and worktree starts, stops and rebuilds the same containers. It is for manual testing and debugging; E2E tests run in CI.
+
+- Rebuild before testing a branch locally: `docker compose -f docker/docker-compose.yml up -d --build`. Otherwise you test whatever was built last, possibly from another branch.
+- Never run `docker compose down -v` while another session may be testing: it wipes the shared database.
+- Data piles up across runs, so tests must not assume an empty database.
 
 ## Planning and review
 
