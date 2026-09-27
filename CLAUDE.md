@@ -146,7 +146,7 @@ helm install wfp helm/workflow-platform/ -f helm/workflow-platform/values-local.
 
 ## Tenancy
 
-Every request is tenant-scoped: JWT `tenant_id` claim → gateway `X-Tenant-Id` header → `TenantContext` → Hibernate `tenantFilter` and the `tenantId` argument on every Flowable call. A query or engine call without the tenant is a cross-tenant data leak. Read the Multi-Tenancy section of [docs/architecture/concepts.md](docs/architecture/concepts.md) before changing any of these layers.
+Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInterceptor` in each service → `TenantContext` → Hibernate `tenantFilter` and the `tenantId` argument on every Flowable call. A query or engine call without the tenant is a cross-tenant data leak. Read the Multi-Tenancy section of [docs/architecture/concepts.md](docs/architecture/concepts.md) before changing any of these layers.
 
 ## Known Pitfalls
 

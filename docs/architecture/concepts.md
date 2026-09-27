@@ -11,8 +11,7 @@ separate layers — a break in any one of them is a cross-tenant data leak.
 
 ```mermaid
 flowchart LR
-    JWT["JWT<br/>tenant_id claim"] --> GW["Gateway<br/>TenantHeaderFilter"]
-    GW -->|"X-Tenant-Id header"| SVC["Service<br/>TenantInterceptor"]
+    JWT["JWT<br/>tenant_id claim"] --> SVC["Service<br/>TenantInterceptor"]
     SVC -->|"ThreadLocal"| CTX["TenantContext"]
     CTX --> ASP["TenantFilterAspect"]
     ASP -->|"enables"| HIB["Hibernate @Filter<br/>tenant_id = :tenantId"]
@@ -21,8 +20,8 @@ flowchart LR
 
 | Layer | Mechanism | Lives in |
 |---|---|---|
-| Edge | `TenantHeaderFilter` reads the `tenant_id` claim, sets `X-Tenant-Id` | API Gateway |
-| Request | `TenantInterceptor` reads the header into `TenantContext` (ThreadLocal) | wfp-security |
+| Edge | `TenantHeaderFilter` strips any client-supplied `X-Tenant-Id` | API Gateway |
+| Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | wfp-security |
 | JPA | `@FilterDef`/`@Filter` auto-append `tenant_id = :tenantId` | entity classes |
 | Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
 
@@ -125,7 +124,7 @@ none of them holds a session.
 2. The SPA sends the access token as `Authorization: Bearer …` to the API Gateway.
 3. The gateway validates the signature against the Keycloak JWK Set.
 4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`.
-5. `TenantHeaderFilter` propagates the tenant downstream — see Multi-Tenancy.
+5. `TenantHeaderFilter` strips any client-supplied `X-Tenant-Id`; each service takes the tenant from the JWT itself — see Multi-Tenancy.
 6. Each backend service independently re-validates the JWT. **The gateway is not a
    trust boundary the services rely on** — they do not accept unauthenticated traffic
    even if reached directly.

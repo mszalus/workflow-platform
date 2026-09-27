@@ -17,8 +17,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
  * <p>
  * This overrides the default {@code SecurityConfig} from wfp-security because the gateway
  * uses Spring Cloud Gateway MVC (servlet-based) and does not need the {@code TenantInterceptor}
- * or MVC-specific interceptors. Instead, tenant propagation is handled by {@link TenantHeaderFilter}
- * which injects the {@code X-Tenant-Id} header into downstream requests.
+ * or MVC-specific interceptors. Services take the tenant from the JWT themselves; the gateway only
+ * strips any client-supplied {@code X-Tenant-Id} header in {@link TenantHeaderFilter}.
  */
 @Configuration
 @EnableWebSecurity
