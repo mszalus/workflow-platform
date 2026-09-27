@@ -4,9 +4,12 @@
 
 See [PLAN.md](PLAN.md) for the active implementation plan and progress tracker.
 
-## Branches
+## Engineering Process
 
-- **`main`**: the default branch on GitHub and the only long-lived branch. Work lands through short-lived feature branches and PRs.
+Sessions, branches and merging, gates, review and subagent delegation are described in [docs/engineering-process.md](docs/engineering-process.md). In short:
+
+- **`main`** is protected and the only long-lived branch. Work lands through short-lived branches and PRs that pass `backend-build`, `frontend-build` and `helm-lint`. Only the human merges.
+- Delegate mechanical work to the subagents in `.claude/agents/` (`test-runner`, `vault-rebuilder`, `ci-triager`). Keep design and tenancy or security changes in the main session.
 - The old `master` and `fix/code-review-remediation` branches (the incompatible Maven/Kafka design) were deleted on 2026-09-26.
 
 ## Project Overview
