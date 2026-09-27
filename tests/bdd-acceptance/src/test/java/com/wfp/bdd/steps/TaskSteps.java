@@ -47,6 +47,7 @@ public class TaskSteps {
     public void noActiveTasksRemainForProcess() {
         String assignee = context.getCurrentUsername();
         Response response = api.listTasksForAssignee(assignee);
+        assertThat(response.statusCode()).isEqualTo(200);
         List<Map<String, Object>> tasks = response.jsonPath().getList("content");
 
         boolean hasTaskForProcess = tasks.stream()
