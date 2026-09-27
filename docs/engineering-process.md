@@ -29,8 +29,9 @@ How a change travels from an idea to `main`. What to build (FR and NFR) lives in
 | Claude runs `git commit` | `./gradlew test` and frontend unit tests | `.claude/hooks/pre-commit-tests.sh` | the commit |
 | Claude runs `git push` | `./gradlew build`, frontend unit tests, Playwright E2E (starts the Docker stack if it is down) | `.claude/hooks/pre-push-tests.sh` | the push |
 | PR opened or updated | `backend-build`; `frontend-build` (lint, format, typecheck, `npm audit`); `helm-lint` | `.github/workflows/ci.yml` | the merge |
+| PR opened or updated | `acceptance-tests` (BDD against the Docker stack) | `.github/workflows/ci.yml` | nothing yet; becomes required once it is green on `main` |
 | PR opened or updated | Claude code review | `.github/workflows/claude-code-review.yml` | nothing, advisory |
-| Push to `main` | `docker-build` (images and Trivy), `acceptance-tests` (BDD against the Docker stack) | `.github/workflows/ci.yml` | nothing; a red run becomes a Phase 0 item in PLAN.md |
+| Push to `main` | `docker-build` (images and Trivy), `acceptance-tests` | `.github/workflows/ci.yml` | nothing; a red run becomes a Phase 0 item in PLAN.md |
 | Weekly | OWASP dependency check, `npm audit` | `.github/workflows/security.yml` | nothing |
 
 - Both hooks skip the tests when every changed file is `*.md`, under `docs/` or under `.claude/`.
@@ -38,8 +39,9 @@ How a change travels from an idea to `main`. What to build (FR and NFR) lives in
 
 Known gaps:
 
-- Playwright E2E runs only in the pre-push hook and the BDD acceptance tests only after merge, so a PR can pass CI and still break them. Once the acceptance job is reliable, run it on PRs and make it required, then move Playwright into CI and cut the pre-push hook down to `./gradlew build`.
-- `claude-review` fails until `CLAUDE_CODE_OAUTH_TOKEN` is regenerated (PLAN.md, Phase 0).
+- `acceptance-tests` runs on PRs but is not required, because it is still red on `main`. Once it is green, add it to the required checks (`gh api -X PUT repos/mszalus/workflow-platform/branches/main/protection`).
+- Playwright E2E runs only in the pre-push hook, so a PR can pass CI and still break it. Move it into CI next to `acceptance-tests`, then cut the pre-push hook down to `./gradlew build`.
+- `claude-review` fails after about 2 seconds at $0 cost: the API call is rejected before any model use, which points to `CLAUDE_CODE_OAUTH_TOKEN`. Regenerate it (PLAN.md, Phase 0).
 - All worktrees share one Docker stack (fixed container names), so pre-push E2E tests whichever images are running.
 
 ## Planning and review
