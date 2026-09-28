@@ -324,8 +324,8 @@ Tenant isolation is enforced through the `tenant_id` JWT claim:
 
 1. Each user has a `tenant_id` attribute in Keycloak
 2. The `tenant` client scope maps this attribute to the JWT `tenant_id` claim
-3. The gateway extracts the claim and adds `X-Tenant-Id` header
-4. Each service reads the header and filters all database queries by tenant
+3. Each service reads the claim from the validated token and filters all database queries by tenant
+4. A user without a `tenant_id` attribute gets **403 Forbidden** on every API call, so set the attribute for every user
 
 ### Default Configuration
 

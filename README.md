@@ -170,7 +170,7 @@ workflow-platform/
 │   ├── wfp-security/            # JWT auth, tenant context, Hibernate tenant filter
 │   └── wfp-test-support/        # Test helpers (JWT mocking, Testcontainers)
 ├── services/
-│   ├── gateway/                 # API Gateway (routing, JWT validation, tenant headers)
+│   ├── gateway/                 # API Gateway (routing, JWT validation)
 │   ├── workflow-service/        # Flowable BPMN engine + REST API
 │   ├── custom-fields-service/   # Dynamic field schemas and values
 │   ├── notification-service/    # Event-driven notifications
@@ -189,8 +189,8 @@ workflow-platform/
 Tenant isolation is enforced at every layer:
 
 1. **JWT** — Keycloak issues tokens with a `tenant_id` claim
-2. **Gateway** — extracts tenant from JWT, adds `X-Tenant-Id` header to downstream requests
-3. **Services** — `TenantInterceptor` stores tenant in `TenantContext` (ThreadLocal)
+2. **Gateway** — strips any client-supplied `X-Tenant-Id` header; it never decides the tenant
+3. **Services** — `TenantInterceptor` reads `tenant_id` from the validated JWT into `TenantContext` (ThreadLocal) and rejects a token without it (403)
 4. **JPA** — Hibernate `@Filter` automatically adds `WHERE tenant_id = :tenantId` to all queries
 5. **Flowable** — all engine API calls include `tenantId`
 

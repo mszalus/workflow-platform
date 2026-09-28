@@ -82,4 +82,23 @@ class AuditControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
     }
+
+    @Test
+    void shouldIgnoreForgedTenantHeader() throws Exception {
+        mockMvc.perform(get("/api/audit")
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
+                                .claim("tenant_id", "tenant-other")))
+                        .header("X-Tenant-Id", "tenant-test"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty());
+    }
+
+    @Test
+    void shouldRejectTokenWithoutTenantClaim() throws Exception {
+        mockMvc.perform(get("/api/audit")
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "admin")))
+                        .header("X-Tenant-Id", "tenant-test"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Token has no tenant"));
+    }
 }

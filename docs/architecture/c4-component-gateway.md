@@ -21,7 +21,7 @@ C4Component
 
         Component(jwtFilter, "JWT Validation", "Spring Security OAuth2 Resource Server", "Validates JWT signature against Keycloak JWK Set. Extracts claims (preferred_username, tenant_id, roles).")
 
-        Component(tenantFilter, "TenantHeaderFilter", "Gateway Filter", "Reads tenant_id from JWT claims. Adds X-Tenant-Id header to downstream requests.")
+        Component(tenantFilter, "TenantHeaderFilter", "Gateway Filter", "Strips any client-supplied X-Tenant-Id header. Services take the tenant from the JWT.")
 
         Component(corsConfig, "CORS Configuration", "Spring Security", "Allows configured origins for cross-origin requests from frontend portals.")
 
@@ -49,9 +49,9 @@ C4Component
 Browser -> nginx (frontend) -> Gateway:9080
   1. Route matcher selects backend based on path prefix
   2. JWT filter validates token signature via Keycloak JWK Set
-  3. TenantHeaderFilter extracts tenant_id claim -> X-Tenant-Id header
+  3. TenantHeaderFilter strips any client-supplied X-Tenant-Id header
   4. RewritePath (if applicable) transforms the URL
-  5. Request forwarded to backend service with Authorization + X-Tenant-Id headers
+  5. Request forwarded to backend service with the Authorization header; the service reads tenant_id from the JWT
 ```
 
 ## Key Design Decisions

@@ -16,7 +16,7 @@ C4Container
         Container(adminPortal, "Admin Portal", "React 18, TypeScript, Vite, nginx", "BPMN process designer, custom field editor, deployment management, audit log viewer")
         Container(userPortal, "User Portal", "React 18, TypeScript, Vite, nginx", "Task inbox, start process, notifications, dynamic forms")
 
-        Container(gateway, "API Gateway", "Spring Cloud Gateway MVC, Java 21", "JWT validation, path routing, tenant header propagation. Port 8080")
+        Container(gateway, "API Gateway", "Spring Cloud Gateway MVC, Java 21", "JWT validation, path routing. Port 8080")
 
         Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history. Port 8081")
         Container(fieldsSvc, "Custom Fields Service", "Spring Boot 3.3, Java 21", "Dynamic field schemas and values per process definition. Port 8082")
@@ -60,7 +60,7 @@ C4Container
 |-----------|-----------|------|----------------|-------------|
 | Admin Portal | React 18 + nginx | 5173 (host) | - | Process designer, field editor, audit viewer |
 | User Portal | React 18 + nginx | 5174 (host) | - | Task inbox, start process, notifications |
-| API Gateway | Spring Cloud Gateway MVC | 9080 (host) / 8080 | - (no DB) | JWT validation, routing, tenant propagation |
+| API Gateway | Spring Cloud Gateway MVC | 9080 (host) / 8080 | - (no DB) | JWT validation, routing |
 | Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle |
 | Custom Fields Service | Spring Boot | 8082 | `custom_fields` | Dynamic field schemas & values |
 | Notification Service | Spring Boot | 8083 | `notification` | Event-driven notifications |

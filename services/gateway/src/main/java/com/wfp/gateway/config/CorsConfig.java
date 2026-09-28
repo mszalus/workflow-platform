@@ -31,12 +31,7 @@ public class CorsConfig {
             "Content-Type",
             "X-Requested-With",
             "Accept",
-            "Origin",
-            "X-Tenant-Id"
-    );
-
-    private static final List<String> EXPOSED_HEADERS = List.of(
-            "X-Tenant-Id"
+            "Origin"
     );
 
     @Bean
@@ -45,7 +40,6 @@ public class CorsConfig {
         configuration.setAllowedOrigins(ALLOWED_ORIGINS);
         configuration.setAllowedMethods(ALLOWED_METHODS);
         configuration.setAllowedHeaders(ALLOWED_HEADERS);
-        configuration.setExposedHeaders(EXPOSED_HEADERS);
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
 
