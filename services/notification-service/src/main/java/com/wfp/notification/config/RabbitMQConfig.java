@@ -1,5 +1,6 @@
 package com.wfp.notification.config;
 
+import com.wfp.events.BaseEvent;
 import com.wfp.events.EventConstants;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -35,6 +36,6 @@ public class RabbitMQConfig {
 
     @Bean
     public MessageConverter jackson2JsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+        return new Jackson2JsonMessageConverter(BaseEvent.class.getPackageName());
     }
 }
