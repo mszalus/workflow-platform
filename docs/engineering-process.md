@@ -23,7 +23,7 @@ and `docs/design/`. This file covers only how we work.
 
 ## Branches and merging
 
-- `main` is protected. Changes land only through a PR, and `backend-build`, `frontend-build` and `helm-lint` must pass. Nobody pushes to `main` directly, admins and Claude included.
+- `main` is protected. Changes land only through a PR, and `backend-build`, `frontend-build`, `helm-lint` and `acceptance-tests` must pass. Nobody pushes to `main` directly, admins and Claude included.
 - One branch per logical change, named `feat/`, `fix/`, `docs/` or `chore/` plus a short slug. Branch from current `main` and merge within days.
 - Claude opens the PR: as a draft while work is in progress, and ready for review once the local gates pass.
 - **Only the human merges**, after reading the diff. Claude never merges, including its own `chore/` PRs.
@@ -36,7 +36,8 @@ and `docs/design/`. This file covers only how we work.
 | Claude runs `git commit` | `./gradlew test` and frontend unit tests | `.claude/hooks/pre-commit-tests.sh` | the commit |
 | Claude runs `git push` | `./gradlew build` and frontend unit tests | `.claude/hooks/pre-push-tests.sh` | the push |
 | PR opened or updated | `backend-build`; `frontend-build` (lint, format, typecheck, `npm audit`); `helm-lint` | `.github/workflows/ci.yml` | the merge |
-| PR opened or updated | `acceptance-tests` (BDD) and `e2e-playwright` (Playwright), each against a fresh Docker stack | `.github/workflows/ci.yml` | nothing yet; each becomes required after 5 green runs in a row (#48 for acceptance) |
+| PR opened or updated | `acceptance-tests` (BDD against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
+| PR opened or updated | `e2e-playwright` (Playwright against a fresh Docker stack) | `.github/workflows/ci.yml` | nothing yet; required after 5 green runs in a row |
 | PR opened or updated | Claude code review | `.github/workflows/claude-code-review.yml` | nothing, advisory |
 | Push to `main` | `docker-build` (images and Trivy), plus the PR jobs | `.github/workflows/ci.yml` | nothing; a red run becomes an issue in the current Phase 0 milestone |
 | Weekly | OWASP dependency check, `npm audit` | `.github/workflows/security.yml` | nothing |
