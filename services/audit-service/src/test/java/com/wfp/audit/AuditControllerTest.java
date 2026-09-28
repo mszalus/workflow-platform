@@ -98,6 +98,7 @@ class AuditControllerTest {
         mockMvc.perform(get("/api/audit")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")))
                         .header("X-Tenant-Id", "tenant-test"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Token has no tenant"));
     }
 }

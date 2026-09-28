@@ -14,12 +14,13 @@ import java.util.Enumeration;
 
 /**
  * Strips any client-supplied {@code X-Tenant-Id} header before the request is proxied.
- * Services take the tenant only from the validated JWT, so a forged header must never reach them.
+ * Services take the tenant only from the validated JWT and ignore this header; stripping it
+ * is defense in depth, so a forged header never reaches anything downstream.
  */
 @Component
 public class TenantHeaderFilter extends OncePerRequestFilter {
 
-    public static final String TENANT_HEADER = "X-Tenant-Id";
+    private static final String TENANT_HEADER = "X-Tenant-Id";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
