@@ -9,4 +9,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation project(':libs:wfp-common')
     implementation project(':libs:wfp-security')
+
+    constraints {
+        implementation('org.bouncycastle:bcprov-jdk18on:1.85') {
+            because 'spring-cloud-starter 4.3.3 brings 1.80.2, which has CRITICAL CVE-2026-8763'
+        }
+    }
 }
