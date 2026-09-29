@@ -251,7 +251,7 @@ Every entity (except `field_option`) carries a `tenant_id` column. Hibernate fil
 
 - **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`, `FieldSchema`, `Notification`, `AuditEntry`
 - **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldValue`, `NotificationPreference`
-- The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and load by id in every session; `CurrentTenantIdResolver` (from `wfp-security`) supplies the tenant from `TenantContext` and throws when none is set
+- The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (from `wfp-security`) supplies the tenant from `TenantContext` and throws when none is set
 
 ### Cross-Schema References
 

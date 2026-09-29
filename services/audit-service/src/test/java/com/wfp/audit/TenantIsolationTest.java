@@ -10,6 +10,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -33,16 +35,16 @@ class TenantIsolationTest {
     void readsOnlyTheCurrentTenantsRowsOutsideARequestOrTransaction() {
         saveEntryAs("tenant-a");
         UUID tenantBEntryId = saveEntryAs("tenant-b");
-        AtomicReference<Object> tenantsSeenByA = new AtomicReference<>();
-        AtomicReference<Object> tenantBEntrySeenByA = new AtomicReference<>();
+        AtomicReference<List<String>> tenantsSeenByA = new AtomicReference<>();
+        AtomicReference<Optional<AuditEntry>> tenantBEntrySeenByA = new AtomicReference<>();
 
         TenantContext.runAs("tenant-a", () -> {
             tenantsSeenByA.set(auditEntryRepository.findAll().stream().map(AuditEntry::getTenantId).distinct().toList());
             tenantBEntrySeenByA.set(auditEntryRepository.findById(tenantBEntryId));
         });
 
-        assertThat(tenantsSeenByA.get()).asList().containsExactly("tenant-a");
-        assertThat(tenantBEntrySeenByA.get()).isEqualTo(java.util.Optional.empty());
+        assertThat(tenantsSeenByA.get()).containsExactly("tenant-a");
+        assertThat(tenantBEntrySeenByA.get()).isEmpty();
     }
 
     @Test

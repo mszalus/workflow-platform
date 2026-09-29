@@ -22,7 +22,7 @@ flowchart LR
 |---|---|---|
 | Edge | `TenantHeaderFilter` strips any client-supplied `X-Tenant-Id` | API Gateway |
 | Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | wfp-security |
-| JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none | entity classes, wfp-security |
+| JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id from the database gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none. Inserts are not filtered: the entity's own `tenant_id` is written | entity classes, wfp-security |
 | Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
 
 ### The @FilterDef rule
@@ -43,7 +43,7 @@ Current owners of the single `@FilterDef` in each service:
 
 The single `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `resolver = CurrentTenantIdResolver.class`; without them the filter silently stops applying.
 
-Code that runs outside a request (RabbitMQ listeners, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a repository call without a tenant throws.
+Code that runs outside a request (RabbitMQ listeners, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a query without a tenant throws.
 
 Note that FieldOption has no `tenant_id` at all — it is reached only through its
 parent `FieldSchema`, which is already filtered.
