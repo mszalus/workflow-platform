@@ -1,5 +1,7 @@
 package com.wfp.notification.entity;
 
+import com.wfp.security.filter.CurrentTenantIdResolver;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -24,7 +26,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "notification")
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
-@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
+@FilterDef(name = "tenantFilter", autoEnabled = true, applyToLoadByKey = true,
+        parameters = @ParamDef(name = "tenantId", type = String.class, resolver = CurrentTenantIdResolver.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class Notification {
 

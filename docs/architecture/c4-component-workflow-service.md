@@ -31,7 +31,7 @@ C4Component
 
         Component(eventPub, "EventPublisher", "Service", "Publishes domain events to RabbitMQ. Handles null RabbitTemplate gracefully in test contexts.")
         Component(eventListener, "FlowableEventListener", "Flowable Listener", "Listens to Flowable engine events (TASK_CREATED, TASK_ASSIGNED, PROCESS_COMPLETED) and delegates to EventPublisher")
-        Component(tenantAspect, "TenantFilterAspect", "AOP Aspect", "Enables Hibernate tenant filter on every request using TenantContext")
+        Component(tenantResolver, "CurrentTenantIdResolver", "Hibernate filter parameter", "Supplies the tenant from TenantContext to the auto-enabled tenantFilter")
         Component(securityConfig, "SecurityConfig", "Spring Security", "OAuth2 resource server, JWT validation, public endpoint whitelist")
 
         Component(processMetaRepo, "ProcessMetadataRepository", "JPA Repository", "CRUD for ProcessMetadata entity")
@@ -85,7 +85,7 @@ C4Component
 | ProcessHistoryService | Service | Wraps Flowable HistoryService |
 | EventPublisher | Service | Publishes events to RabbitMQ (null-safe for tests) |
 | FlowableEventListener | Engine Listener | Bridges Flowable engine events to EventPublisher |
-| TenantFilterAspect | AOP | Auto-enables Hibernate `tenantFilter` per request |
+| CurrentTenantIdResolver | Hibernate filter parameter | Supplies the tenant from `TenantContext` to the auto-enabled `tenantFilter` |
 | SecurityConfig | Config | OAuth2 JWT resource server setup |
 
 ## Notes for Editors
