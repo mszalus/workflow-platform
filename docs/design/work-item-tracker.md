@@ -1,6 +1,6 @@
 # Work Item Tracker on BPMN
 
-Design agreed 2026-09-26, moved from `PLAN.md` step 20. Delivery is tracked in the GitHub milestone "Phase 3: Work item tracker".
+Design agreed 2026-09-26, moved from `PLAN.md` step 20. Delivery is tracked in the GitHub milestone "Phase 1: Work item tracker".
 
 **Goal:** Turn the platform into a simple issue tracker. A **work item** has a few fixed fields and any number of custom fields. Its lifecycle is a BPMN process drawn in the existing editor. The BPMN engine sits behind a small facade, so Flowable can later be swapped for Camunda 7, Operaton or Activiti.
 
