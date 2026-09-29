@@ -12,6 +12,7 @@ import com.wfp.events.TaskAssignedEvent;
 import com.wfp.events.TaskCompletedEvent;
 import com.wfp.events.TaskCreatedEvent;
 import com.wfp.events.TaskDelegatedEvent;
+import com.wfp.security.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -28,21 +29,20 @@ public class AuditEventListener {
     @RabbitListener(queues = EventConstants.AUDIT_QUEUE)
     public void handleEvent(BaseEvent event) {
         log.info("Audit: received [{}] for tenant [{}]", event.getEventType(), event.getTenantId());
+        TenantContext.runAs(event.getTenantId(), () -> auditService.saveEntry(toAuditEntry(event)));
+    }
 
-        String entityType = resolveEntityType(event);
-        String entityId = resolveEntityId(event);
-        String details = serializeEvent(event);
-
-        auditService.saveEntry(AuditEntry.builder()
+    private AuditEntry toAuditEntry(BaseEvent event) {
+        return AuditEntry.builder()
                 .eventType(event.getEventType())
-                .entityType(entityType)
-                .entityId(entityId)
+                .entityType(resolveEntityType(event))
+                .entityId(resolveEntityId(event))
                 .userId(event.getUserId())
                 .tenantId(event.getTenantId())
                 .timestamp(event.getTimestamp())
-                .details(details)
+                .details(serializeEvent(event))
                 .sourceService("workflow-service")
-                .build());
+                .build();
     }
 
     private String resolveEntityType(BaseEvent event) {
