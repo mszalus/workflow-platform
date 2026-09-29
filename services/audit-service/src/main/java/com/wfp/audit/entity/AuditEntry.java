@@ -1,5 +1,7 @@
 package com.wfp.audit.entity;
 
+import com.wfp.security.filter.CurrentTenantIdResolver;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -21,7 +23,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "audit_entry")
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
-@FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = String.class))
+@FilterDef(name = "tenantFilter", autoEnabled = true, applyToLoadByKey = true,
+        parameters = @ParamDef(name = "tenantId", type = String.class, resolver = CurrentTenantIdResolver.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class AuditEntry {
 

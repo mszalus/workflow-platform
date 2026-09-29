@@ -13,8 +13,8 @@ separate layers — a break in any one of them is a cross-tenant data leak.
 flowchart LR
     JWT["JWT<br/>tenant_id claim"] --> SVC["Service<br/>TenantInterceptor"]
     SVC -->|"ThreadLocal"| CTX["TenantContext"]
-    CTX --> ASP["TenantFilterAspect"]
-    ASP -->|"enables"| HIB["Hibernate @Filter<br/>tenant_id = :tenantId"]
+    CTX --> RES["CurrentTenantIdResolver"]
+    RES -->|"supplies :tenantId"| HIB["Hibernate @Filter<br/>tenant_id = :tenantId"]
     CTX --> FLOW["Flowable calls<br/>tenantId parameter"]
 ```
 
@@ -22,7 +22,7 @@ flowchart LR
 |---|---|---|
 | Edge | `TenantHeaderFilter` strips any client-supplied `X-Tenant-Id` | API Gateway |
 | Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | wfp-security |
-| JPA | `@FilterDef`/`@Filter` auto-append `tenant_id = :tenantId` | entity classes |
+| JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none | entity classes, wfp-security |
 | Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
 
 ### The @FilterDef rule
@@ -40,6 +40,10 @@ Current owners of the single `@FilterDef` in each service:
 | Custom Fields Service | FieldSchema | FieldValue |
 | Notification Service | Notification | NotificationPreference |
 | Audit Service | AuditEntry | — |
+
+The single `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `resolver = CurrentTenantIdResolver.class`; without them the filter silently stops applying.
+
+Code that runs outside a request (RabbitMQ listeners, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a repository call without a tenant throws.
 
 Note that FieldOption has no `tenant_id` at all — it is reached only through its
 parent `FieldSchema`, which is already filtered.

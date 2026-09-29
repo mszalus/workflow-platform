@@ -18,7 +18,7 @@ C4Component
 
         Component(eventListener, "WorkflowEventListener", "RabbitMQ Listener", "Consumes task.* and process.completed events. Creates Notification entities. Handles null userId gracefully.")
 
-        Component(tenantAspect, "TenantFilterAspect", "AOP Aspect", "Auto-enables Hibernate tenantFilter on REST requests")
+        Component(tenantResolver, "CurrentTenantIdResolver", "Hibernate filter parameter", "Supplies the tenant from TenantContext to the auto-enabled tenantFilter")
         Component(securityConfig, "SecurityConfig", "Spring Security", "OAuth2 resource server, JWT validation")
 
         Component(notifRepo, "NotificationRepository", "JPA Repository", "CRUD for Notification entity. Custom queries: findByUserIdOrderByCreatedAtDesc, countByUserIdAndReadFalse, markAllReadByUserId")
