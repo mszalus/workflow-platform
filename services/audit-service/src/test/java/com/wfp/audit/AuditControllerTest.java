@@ -46,8 +46,7 @@ class AuditControllerTest {
 
     @AfterEach
     void tearDown() {
-        auditEntryRepository.deleteAll();
-        TenantContext.clear();
+        TenantContext.runAs("tenant-test", auditEntryRepository::deleteAll);
     }
 
     @Test

@@ -18,12 +18,10 @@ public class TenantHibernateFilter {
     private final EntityManager entityManager;
 
     public void enableFilter() {
-        String tenantId = TenantContext.getCurrentTenantId();
-        if (tenantId != null) {
-            Session session = entityManager.unwrap(Session.class);
-            session.enableFilter(FILTER_NAME).setParameter(PARAMETER_NAME, tenantId);
-            log.debug("Enabled tenant Hibernate filter for tenant: {}", tenantId);
-        }
+        String tenantId = TenantContext.requireCurrentTenantId();
+        Session session = entityManager.unwrap(Session.class);
+        session.enableFilter(FILTER_NAME).setParameter(PARAMETER_NAME, tenantId);
+        log.debug("Enabled tenant Hibernate filter for tenant: {}", tenantId);
     }
 
     public void disableFilter() {

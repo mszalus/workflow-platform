@@ -8,6 +8,7 @@ import com.wfp.events.TaskCompletedEvent;
 import com.wfp.events.TaskCreatedEvent;
 import com.wfp.notification.entity.NotificationType;
 import com.wfp.notification.service.NotificationService;
+import com.wfp.security.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -23,7 +24,10 @@ public class WorkflowEventListener {
     @RabbitListener(queues = EventConstants.NOTIFICATION_QUEUE)
     public void handleEvent(BaseEvent event) {
         log.info("Received event: {} for tenant: {}", event.getEventType(), event.getTenantId());
+        TenantContext.runAs(event.getTenantId(), () -> dispatch(event));
+    }
 
+    private void dispatch(BaseEvent event) {
         switch (event) {
             case TaskCreatedEvent e -> handleTaskCreated(e);
             case TaskAssignedEvent e -> handleTaskAssigned(e);

@@ -18,6 +18,15 @@ public final class TenantContext {
         CURRENT_TENANT.remove();
     }
 
+    public static void runAs(String tenantId, Runnable action) {
+        setCurrentTenantId(tenantId);
+        try {
+            action.run();
+        } finally {
+            clear();
+        }
+    }
+
     public static String requireCurrentTenantId() {
         String tenantId = CURRENT_TENANT.get();
         if (tenantId == null || tenantId.isBlank()) {
