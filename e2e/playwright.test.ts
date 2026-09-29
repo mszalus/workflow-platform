@@ -56,7 +56,7 @@ test.describe('Workflow Platform E2E', () => {
         password: 'password',
       },
     });
-    expect(tokenResponse.status()).toBe(200);
+    expect(tokenResponse.status(), `Keycloak token for admin-a: ${await tokenResponse.text()}`).toBe(200);
     const { access_token: token } = await tokenResponse.json();
 
     const headers = { Authorization: `Bearer ${token}` };

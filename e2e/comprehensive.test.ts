@@ -107,7 +107,7 @@ async function getToken(
       password: 'password',
     },
   });
-  expect(response.status()).toBe(200);
+  expect(response.status(), `Keycloak token for ${username}: ${await response.text()}`).toBe(200);
 
   const body = await response.json();
   expect(body.access_token).toBeTruthy();
