@@ -31,8 +31,7 @@ class AuditControllerTest {
 
     @BeforeEach
     void setUp() {
-        TenantContext.setCurrentTenantId("tenant-test");
-        auditEntryRepository.save(AuditEntry.builder()
+        TenantContext.runAs("tenant-test", () -> auditEntryRepository.save(AuditEntry.builder()
                 .eventType("process.started")
                 .entityType("PROCESS")
                 .entityId("proc-123")
@@ -41,7 +40,7 @@ class AuditControllerTest {
                 .timestamp(Instant.now())
                 .details("{\"key\":\"value\"}")
                 .sourceService("workflow-service")
-                .build());
+                .build()));
     }
 
     @AfterEach

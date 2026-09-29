@@ -26,6 +26,15 @@ class TenantContextTest {
     }
 
     @Test
+    void restoresOuterTenantAfterNestedRun() {
+        TenantContext.setCurrentTenantId("tenant-outer");
+
+        TenantContext.runAs("tenant-a", () -> { });
+
+        assertThat(TenantContext.getCurrentTenantId()).isEqualTo("tenant-outer");
+    }
+
+    @Test
     void clearsTenantWhenActionFails() {
         assertThatThrownBy(() -> TenantContext.runAs("tenant-a", () -> {
             throw new IllegalStateException("boom");

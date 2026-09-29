@@ -19,11 +19,12 @@ public final class TenantContext {
     }
 
     public static void runAs(String tenantId, Runnable action) {
+        String outerTenantId = CURRENT_TENANT.get();
         setCurrentTenantId(tenantId);
         try {
             action.run();
         } finally {
-            clear();
+            CURRENT_TENANT.set(outerTenantId);
         }
     }
 
