@@ -145,7 +145,7 @@ erDiagram
     }
 
     %% ============================================================
-    %% NOTIFICATION SCHEMA (notification-service)
+    %% NOTIFICATIONS (workflow schema, workflow-service)
     %% ============================================================
 
     notification {
@@ -159,15 +159,6 @@ erDiagram
         string reference_id "nullable (taskId or processInstanceId)"
         string reference_type "nullable"
         instant created_at "NOT NULL, immutable"
-    }
-
-    notification_preference {
-        uuid id PK
-        string user_id "NOT NULL"
-        string tenant_id "NOT NULL, filtered"
-        string event_type "NOT NULL"
-        boolean email_enabled "default true"
-        boolean in_app_enabled "default true"
     }
 
     %% ============================================================
@@ -205,15 +196,13 @@ erDiagram
     %% Cross-schema logical relationships (no physical FK)
     wf_process_metadata ||--o{ wf_comments : "process has comments (via process_instance_id)"
     wf_process_metadata ||--o{ wf_attachments : "process has attachments (via process_instance_id)"
-    notification }o--|| notification_preference : "user preferences per event type (unique: user_id, tenant_id, event_type)"
 ```
 
 ## Schema Overview
 
 | Schema | Service | Tables | Description |
 |--------|---------|--------|-------------|
-| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments`, `field_schema`, `field_option`, `field_value` + ~60 `ACT_*` tables | Process metadata, comments, attachments, custom field definitions and values + Flowable engine |
-| `notification` | notification-service | `notification`, `notification_preference` | User notifications and delivery preferences |
+| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments`, `field_schema`, `field_option`, `field_value`, `notification` + ~60 `ACT_*` tables | Process metadata, comments, attachments, custom field definitions and values, in-app notifications + Flowable engine |
 | `audit` | audit-service | `audit_entry` | Immutable audit trail |
 | `keycloak` | Keycloak | (managed by Keycloak) | Users, realms, clients, roles, organizations |
 
@@ -235,7 +224,7 @@ erDiagram
 | `FILE` | File upload reference |
 | `USER_PICKER` | User selection |
 
-**NotificationType** (notification-service):
+**NotificationType** (workflow-service):
 | Value | Triggered By |
 |-------|-------------|
 | `TASK_ASSIGNED` | TaskCreatedEvent, TaskAssignedEvent |
@@ -248,8 +237,8 @@ erDiagram
 
 Every entity (except `field_option`) carries a `tenant_id` column. Hibernate filters enforce row-level isolation:
 
-- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`, `Notification`, `AuditEntry`
-- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldSchema`, `FieldValue`, `NotificationPreference`
+- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`, `AuditEntry`
+- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldSchema`, `FieldValue`, `Notification`
 - The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (from `wfp-security`) supplies the tenant from `TenantContext` and throws when none is set
 
 ### Cross-Schema References

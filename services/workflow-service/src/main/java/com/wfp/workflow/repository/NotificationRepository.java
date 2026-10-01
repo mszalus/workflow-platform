@@ -1,6 +1,6 @@
-package com.wfp.notification.repository;
+package com.wfp.workflow.repository;
 
-import com.wfp.notification.entity.Notification;
+import com.wfp.workflow.entity.Notification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -145,7 +145,6 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
       WORKFLOW_SERVICE_URL: http://workflow-service:8081
-      NOTIFICATION_SERVICE_URL: http://notification-service:8083
       AUDIT_SERVICE_URL: http://audit-service:8084
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
@@ -179,34 +178,6 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
-      otel-collector:
-        condition: service_started
-
-  notification-service:
-    build:
-      context: ..
-      dockerfile: services/notification-service/Dockerfile
-    container_name: wfp-notification
-    healthcheck:
-      <<: *spring-healthcheck
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8083/actuator/health"]
-    ports:
-      - "8083:8083"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=notification
-      SPRING_DATASOURCE_USERNAME: wfp
-      SPRING_DATASOURCE_PASSWORD: wfp_secret
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: wfp
-      SPRING_RABBITMQ_PASSWORD: wfp_secret
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       otel-collector:
         condition: service_started
 

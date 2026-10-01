@@ -12,6 +12,7 @@ import org.flowable.engine.RuntimeService;
 import org.flowable.engine.runtime.ProcessInstance;
 import org.flowable.engine.runtime.ProcessInstanceQuery;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
@@ -25,6 +26,7 @@ public class ProcessService {
     private final IdentityService identityService;
     private final EventPublisher eventPublisher;
 
+    @Transactional
     public ProcessInstanceDto startProcess(String processDefinitionKey, String businessKey,
                                             Map<String, Object> variables, String userId) {
         String tenantId = TenantContext.requireCurrentTenantId();

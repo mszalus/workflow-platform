@@ -23,21 +23,8 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue notificationQueue() {
-        return new Queue(EventConstants.NOTIFICATION_QUEUE, true);
-    }
-
-    @Bean
     public Queue auditQueue() {
         return new Queue(EventConstants.AUDIT_QUEUE, true);
-    }
-
-    @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
-    public Binding notificationBinding(Queue notificationQueue, TopicExchange wfpEventsExchange) {
-        return BindingBuilder.bind(notificationQueue)
-                .to(wfpEventsExchange)
-                .with("task.*");
     }
 
     @Bean

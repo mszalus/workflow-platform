@@ -1,8 +1,8 @@
-package com.wfp.notification.controller;
+package com.wfp.workflow.controller;
 
 import com.wfp.common.dto.PagedResponse;
-import com.wfp.notification.dto.NotificationDto;
-import com.wfp.notification.service.NotificationService;
+import com.wfp.workflow.dto.NotificationDto;
+import com.wfp.workflow.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;

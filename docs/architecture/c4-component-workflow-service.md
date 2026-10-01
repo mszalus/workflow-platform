@@ -22,6 +22,7 @@ C4Component
         Component(commentCtrl, "CommentController", "REST Controller", "GET /api/processes/{id}/comments<br/>POST /api/processes/{id}/comments")
 
         Component(historyCtrl, "HistoryController", "REST Controller", "GET /api/history/processes<br/>GET /api/history/tasks")
+        Component(notifCtrl, "NotificationController", "REST Controller", "GET /api/notifications<br/>GET /api/notifications/unread-count<br/>PUT mark-read, mark-all-read")
 
         Component(deploySvc, "DeploymentService", "Service", "Deploys BPMN XML to Flowable, retrieves process definitions and BPMN XML")
         Component(processSvc, "ProcessService", "Service", "Starts/cancels process instances via Flowable RuntimeService, sets authenticated user for initiator")
@@ -29,7 +30,8 @@ C4Component
         Component(commentSvc, "CommentService", "Service", "CRUD for comments (JPA, not Flowable comments)")
         Component(historySvc, "ProcessHistoryService", "Service", "Queries Flowable HistoryService for completed processes/tasks")
 
-        Component(eventPub, "EventPublisher", "Service", "Publishes domain events to RabbitMQ. Handles null RabbitTemplate gracefully in test contexts.")
+        Component(notifSvc, "NotificationService", "Service", "Turns task events into in-app notification rows, in the caller's transaction; lists and marks them read")
+        Component(eventPub, "EventPublisher", "Service", "Hands each domain event to NotificationService, then publishes it to RabbitMQ for audit. Handles null RabbitTemplate gracefully in test contexts.")
         Component(eventListener, "FlowableEventListener", "Flowable Listener", "Listens to Flowable engine events (TASK_CREATED, TASK_ASSIGNED, PROCESS_COMPLETED) and delegates to EventPublisher")
         Component(tenantResolver, "CurrentTenantIdResolver", "Hibernate filter parameter", "Supplies the tenant from TenantContext to the auto-enabled tenantFilter")
         Component(securityConfig, "SecurityConfig", "Spring Security", "OAuth2 resource server, JWT validation, public endpoint whitelist")
@@ -44,12 +46,14 @@ C4Component
     Rel(gateway, taskCtrl, "HTTP/JSON")
     Rel(gateway, commentCtrl, "HTTP/JSON")
     Rel(gateway, historyCtrl, "HTTP/JSON")
+    Rel(gateway, notifCtrl, "HTTP/JSON")
 
     Rel(deployCtrl, deploySvc, "Calls")
     Rel(processCtrl, processSvc, "Calls")
     Rel(taskCtrl, taskSvc, "Calls")
     Rel(commentCtrl, commentSvc, "Calls")
     Rel(historyCtrl, historySvc, "Calls")
+    Rel(notifCtrl, notifSvc, "Calls")
 
     Rel(deploySvc, flowableEngine, "RepositoryService")
     Rel(processSvc, flowableEngine, "RuntimeService, IdentityService")
@@ -59,7 +63,8 @@ C4Component
     Rel(taskSvc, eventPub, "Publishes task.completed, task.delegated")
     Rel(processSvc, eventPub, "Publishes process.started, process.cancelled")
     Rel(eventListener, eventPub, "Publishes task.created, task.assigned, process.completed")
-    Rel(eventPub, rabbitmq, "AMQP", "Routing keys: task.*, process.*")
+    Rel(eventPub, notifSvc, "notify(event)", "same transaction")
+    Rel(eventPub, rabbitmq, "AMQP", "Routing keys: task.*, process.* (audit)")
 
     Rel(commentSvc, commentRepo, "JPA")
     Rel(processMetaRepo, postgres, "JDBC")
@@ -78,12 +83,14 @@ C4Component
 | TaskController | REST | List, claim, unclaim, complete, delegate tasks |
 | CommentController | REST | Add/list comments on process instances |
 | HistoryController | REST | Query completed processes and tasks |
+| NotificationController | REST | List notifications, unread count, mark read |
 | DeploymentService | Service | Wraps Flowable RepositoryService |
 | ProcessService | Service | Wraps Flowable RuntimeService + IdentityService |
 | TaskService | Service | Wraps Flowable TaskService, publishes events |
 | CommentService | Service | JPA-based comment CRUD |
 | ProcessHistoryService | Service | Wraps Flowable HistoryService |
-| EventPublisher | Service | Publishes events to RabbitMQ (null-safe for tests) |
+| NotificationService | Service | Creates in-app notifications from task events in the same transaction; reads and marks them |
+| EventPublisher | Service | Notifies in-process, then publishes events to RabbitMQ for audit (null-safe for tests) |
 | FlowableEventListener | Engine Listener | Bridges Flowable engine events to EventPublisher |
 | CurrentTenantIdResolver | Hibernate filter parameter | Supplies the tenant from `TenantContext` to the auto-enabled `tenantFilter` |
 | SecurityConfig | Config | OAuth2 JWT resource server setup |

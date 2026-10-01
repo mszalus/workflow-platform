@@ -12,12 +12,15 @@ import org.springframework.stereotype.Service;
 public class EventPublisher {
 
     private final RabbitTemplate rabbitTemplate;
+    private final NotificationService notificationService;
 
-    public EventPublisher(@Nullable RabbitTemplate rabbitTemplate) {
+    public EventPublisher(@Nullable RabbitTemplate rabbitTemplate, NotificationService notificationService) {
         this.rabbitTemplate = rabbitTemplate;
+        this.notificationService = notificationService;
     }
 
     public void publish(String routingKey, BaseEvent event) {
+        notificationService.notify(event);
         if (rabbitTemplate == null) {
             log.warn("RabbitTemplate not available, skipping event [{}]", routingKey);
             return;

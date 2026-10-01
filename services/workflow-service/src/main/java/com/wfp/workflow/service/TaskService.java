@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.flowable.task.api.Task;
 import org.flowable.task.api.TaskQuery;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
@@ -58,6 +59,7 @@ public class TaskService {
         flowableTaskService.unclaim(taskId);
     }
 
+    @Transactional
     public void completeTask(String taskId, Map<String, Object> variables, String userId) {
         String tenantId = TenantContext.requireCurrentTenantId();
         Task task = requireTenantTask(taskId);
@@ -75,6 +77,7 @@ public class TaskService {
         eventPublisher.publish(EventConstants.TASK_COMPLETED, event);
     }
 
+    @Transactional
     public void delegateTask(String taskId, String fromUserId, String toUserId, String comment) {
         String tenantId = TenantContext.requireCurrentTenantId();
         Task task = requireTenantTask(taskId);
