@@ -71,6 +71,17 @@ public class DeploymentService {
     }
 
     public void deleteDeployment(String deploymentId) {
+        requireTenantDeployment(deploymentId);
         repositoryService.deleteDeployment(deploymentId, true);
+    }
+
+    private void requireTenantDeployment(String deploymentId) {
+        long matching = repositoryService.createDeploymentQuery()
+                .deploymentId(deploymentId)
+                .deploymentTenantId(TenantContext.requireCurrentTenantId())
+                .count();
+        if (matching == 0) {
+            throw new NotFoundException("Deployment", deploymentId);
+        }
     }
 }

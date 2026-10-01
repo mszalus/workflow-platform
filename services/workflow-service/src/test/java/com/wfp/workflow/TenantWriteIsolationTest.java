@@ -69,7 +69,9 @@ class TenantWriteIsolationTest {
 
     @AfterEach
     void deleteDeployment() {
-        repositoryService.deleteDeployment(deploymentId, true);
+        if (deploymentExists()) {
+            repositoryService.deleteDeployment(deploymentId, true);
+        }
     }
 
     @Test
@@ -113,6 +115,27 @@ class TenantWriteIsolationTest {
     }
 
     @Test
+    void otherTenantCannotDeleteDeployment() throws Exception {
+        perform(delete("/api/deployments/{id}", deploymentId), "tenant-b").andExpect(status().isNotFound());
+
+        assertThat(deploymentExists()).isTrue();
+    }
+
+    @Test
+    void ownTenantCancelsProcess() throws Exception {
+        perform(delete("/api/processes/{id}", processInstanceId), "tenant-a").andExpect(status().isNoContent());
+
+        assertThat(runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).count()).isZero();
+    }
+
+    @Test
+    void ownTenantDeletesDeployment() throws Exception {
+        perform(delete("/api/deployments/{id}", deploymentId), "tenant-a").andExpect(status().isNoContent());
+
+        assertThat(deploymentExists()).isFalse();
+    }
+
+    @Test
     void ownTenantCompletesTask() throws Exception {
         perform(post("/api/tasks/{id}/complete", taskId), "tenant-a").andExpect(status().isNoContent());
 
@@ -123,6 +146,10 @@ class TenantWriteIsolationTest {
             throws Exception {
         return mockMvc.perform(request.with(jwt().jwt(j -> j.claim("preferred_username", "user-" + tenantId)
                 .claim("tenant_id", tenantId))));
+    }
+
+    private boolean deploymentExists() {
+        return repositoryService.createDeploymentQuery().deploymentId(deploymentId).count() > 0;
     }
 
     private Task task() {
