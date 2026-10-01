@@ -50,8 +50,9 @@ parent `FieldSchema`, which is already filtered.
 
 ### Identity side
 
-Keycloak models tenants as **Organizations** inside a single realm, and stamps the
-`tenant_id` claim onto issued tokens. See Security and JWT and
+Each Keycloak user in the single realm carries a `tenant_id` **user attribute**, which a
+protocol mapper stamps onto issued tokens as the `tenant_id` claim. Moving tenants to
+Keycloak Organizations is planned (#76). See Security and JWT and
 Admin — Keycloak Administration.
 
 ### See also

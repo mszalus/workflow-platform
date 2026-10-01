@@ -1,6 +1,6 @@
 # Tracker Architecture
 
-Status: **removal candidates decided on 2026-10-01**: R-1 to R-12 approved, R-11 subject to a check in 20.a. Tenant identity and the delivery order are still open. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
+Status: **removal candidates decided on 2026-10-01**: R-1 to R-12 approved, R-11 subject to a check in 20.a. Tenant identity and the delivery order decided the same day. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
 
 ## Today
 
@@ -92,7 +92,7 @@ flowchart LR
 
 The chain is today's, minus the gateway:
 
-1. The Keycloak token carries `tenant_id`. Today it comes from a user attribute; the realm doesn't use Keycloak Organizations, although `concepts.md` says it does. **Decide:** keep the attribute, or move tenants to Organizations so tenant membership is managed in one place.
+1. The Keycloak token carries `tenant_id`, from a user attribute. **Decided 2026-10-01:** keep the attribute for now; moving tenants to Keycloak Organizations is in Phase 3 (#76). To keep that move free of data migration, each organization's alias will equal today's tenant id.
 2. `TenantInterceptor` puts the tenant in `TenantContext` and rejects a token without one.
 3. JPA: the auto-enabled Hibernate filter applies the tenant to every query and load by id, and fails closed without a tenant (#58, #66).
 4. Flowable: every call passes the tenant. The facade's `transition` and `cancel` must check that the run belongs to the caller's tenant, which is exactly what #71 fixes today.
@@ -100,7 +100,7 @@ The chain is today's, minus the gateway:
 
 ## Delivery order
 
-Folding the services should happen **before** the item model (20.c). Otherwise 20.c builds `item.*` events over RabbitMQ that R-2 to R-4 then delete.
+**Approved 2026-10-01.** Folding the services should happen **before** the item model (20.c). Otherwise 20.c builds `item.*` events over RabbitMQ that R-2 to R-4 then delete.
 
 | Step | Content | Done when |
 |---|---|---|
@@ -113,7 +113,7 @@ Folding the services should happen **before** the item model (20.c). Otherwise 2
 | 20.e | The new single app with the approved screens; delete `admin-portal` and `user-portal` (R-6, R-8 UI parts) | Playwright flow from 20.6 |
 | 20.f | Moving items to a new version | as in 20.6 |
 
-20.g is absorbed into C-1. #71 and #72 are live security gaps in today's code, so they shouldn't wait for this order.
+20.g is absorbed into C-1. #71 is fixed now, ahead of this order; #72 (roles) is part of 20.e.
 
 ## Risks
 
