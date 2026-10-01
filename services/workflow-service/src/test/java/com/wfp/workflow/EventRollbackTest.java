@@ -1,6 +1,7 @@
 package com.wfp.workflow;
 
 import com.wfp.workflow.event.TaskCompletedEvent;
+import com.wfp.workflow.event.TaskCreatedEvent;
 import com.wfp.workflow.service.AuditService;
 import com.wfp.workflow.service.NotificationService;
 import org.flowable.engine.RepositoryService;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -91,6 +93,23 @@ class EventRollbackTest {
                 .andExpect(status().is5xxServerError());
 
         assertThat(flowableTaskService.createTaskQuery().taskId(taskId).count()).isEqualTo(1);
+    }
+
+    @Test
+    void aFailedAuditEntryForANewTaskRollsBackTheProcessStart() throws Exception {
+        doThrow(new IllegalStateException("audit store down"))
+                .when(auditService).record(any(TaskCreatedEvent.class));
+        long runsBefore = runtimeService.createProcessInstanceQuery().processDefinitionKey("notificationRollback").count();
+
+        mockMvc.perform(post("/api/processes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processDefinitionKey\":\"notificationRollback\"}")
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
+                                .claim("tenant_id", "tenant-rollback"))))
+                .andExpect(status().is5xxServerError());
+
+        assertThat(runtimeService.createProcessInstanceQuery().processDefinitionKey("notificationRollback").count())
+                .isEqualTo(runsBefore);
     }
 
     @Test

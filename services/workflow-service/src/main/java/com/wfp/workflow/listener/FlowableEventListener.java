@@ -65,7 +65,7 @@ public class FlowableEventListener implements org.flowable.common.engine.api.del
 
     @Override
     public boolean isFailOnException() {
-        return false;
+        return true;
     }
 
     @Override

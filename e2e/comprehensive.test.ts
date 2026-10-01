@@ -130,8 +130,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   return JSON.parse(payload);
 }
 
-// Small helper to give the engine a moment between steps
-async function waitForEventPropagation(ms = 2000) {
+async function waitForEngine(ms = 2000) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -157,7 +156,7 @@ test.describe('1. Infrastructure Tests', () => {
     expect(body.status).toBe('UP');
   });
 
-  test('All backend services healthy (ports 8081-8084)', async ({ request }) => {
+  test('Backend service healthy (port 8081)', async ({ request }) => {
     const services = [
       { port: 8081, name: 'workflow-service' },
     ];
@@ -314,7 +313,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
 
   test('Verify process completes (no more tasks for this process instance)', async ({ request }) => {
     // Give the engine a moment to finalize
-    await waitForEventPropagation(1000);
+    await waitForEngine(1000);
 
     const response = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=admin-a`, {
       headers: authHeaders(token),
@@ -430,7 +429,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
   test('Verify "Manager Approval" task exists (unassigned, candidateGroup=managers)', async ({ request }) => {
     // Small delay for engine to advance to next task
-    await waitForEventPropagation(1000);
+    await waitForEngine(1000);
 
     // Query tasks by candidateGroup — the task should be unassigned
     const response = await request.get(
@@ -479,7 +478,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
   });
 
   test('Verify process completed (no remaining tasks)', async ({ request }) => {
-    await waitForEventPropagation(1000);
+    await waitForEngine(1000);
 
     // Check that no tasks remain for this process instance
     const tasksResponse = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=user-a`, {

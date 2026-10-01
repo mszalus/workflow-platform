@@ -1,7 +1,5 @@
 package com.wfp.workflow.event;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,16 +14,6 @@ import java.util.UUID;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "eventType")
-@JsonSubTypes({
-    @JsonSubTypes.Type(value = ProcessStartedEvent.class, name = EventConstants.PROCESS_STARTED),
-    @JsonSubTypes.Type(value = ProcessCompletedEvent.class, name = EventConstants.PROCESS_COMPLETED),
-    @JsonSubTypes.Type(value = ProcessCancelledEvent.class, name = EventConstants.PROCESS_CANCELLED),
-    @JsonSubTypes.Type(value = TaskCreatedEvent.class, name = EventConstants.TASK_CREATED),
-    @JsonSubTypes.Type(value = TaskAssignedEvent.class, name = EventConstants.TASK_ASSIGNED),
-    @JsonSubTypes.Type(value = TaskCompletedEvent.class, name = EventConstants.TASK_COMPLETED),
-    @JsonSubTypes.Type(value = TaskDelegatedEvent.class, name = EventConstants.TASK_DELEGATED),
-})
 public abstract class BaseEvent {
 
     private String eventId;
