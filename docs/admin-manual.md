@@ -59,13 +59,13 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
 
 ### API Routing
 
-Each portal's nginx proxies `/api/` unchanged to `workflow-service:8081`. The service serves the
+Each portal's nginx proxies `/api/` unchanged to `app:8081`. The service serves the
 external paths itself (`/api/workflow/**`, `/api/fields/**`, `/api/notifications/**`, `/api/audit/**`)
 and validates the JWT on every request. In development, Vite proxies `/api` to `localhost:8081`.
 
 ### Events
 
-Workflow events (`task.created`, `task.assigned`, `task.completed`, `task.delegated`, `process.started`) are handled inside workflow-service: each one creates its in-app notification and its audit entry in the same transaction as the change. There is no message broker.
+Workflow events (`task.created`, `task.assigned`, `task.completed`, `task.delegated`, `process.started`) are handled inside app: each one creates its in-app notification and its audit entry in the same transaction as the change. There is no message broker.
 
 ---
 
@@ -174,7 +174,7 @@ From the Process Definitions list, click **Edit** on any process to load its BPM
 1. Create or import your BPMN diagram in the editor
 2. Enter a **process name** in the top-right input
 3. Click **Deploy**
-4. The process is sent to the workflow-service and deployed to the Flowable engine
+4. The process is sent to the app and deployed to the Flowable engine
 5. You'll be redirected to the Process Definitions list
 
 > **Important:** The BPMN process must have `isExecutable="true"` and a valid process `id` for deployment to succeed.
@@ -232,7 +232,7 @@ The table shows all field schemas for the selected process:
 
 ### How Custom Fields Work
 
-- Schemas are stored in workflow-service, next to the workflow engine
+- Schemas are stored in app, next to the workflow engine
 - Field values are associated with process instances
 - The User Portal displays custom fields on the Task Detail page
 - Fields are queried with `GET /api/fields/values?processInstanceId=...`
@@ -352,7 +352,7 @@ The docker-compose file defines dependencies:
 1. **PostgreSQL** starts first (health check: `pg_isready`)
 2. **Keycloak** starts after PostgreSQL is healthy
 3. **Backend services** start after PostgreSQL is healthy
-4. **Frontend containers** start after workflow-service
+4. **Frontend containers** start after app
 
 ### Viewing Logs
 
@@ -361,10 +361,10 @@ The docker-compose file defines dependencies:
 docker compose -f docker/docker-compose.yml logs -f
 
 # Single service
-docker compose -f docker/docker-compose.yml logs -f workflow-service
+docker compose -f docker/docker-compose.yml logs -f app
 
 # Last 100 lines
-docker compose -f docker/docker-compose.yml logs --tail=100 workflow-service
+docker compose -f docker/docker-compose.yml logs --tail=100 app
 ```
 
 ### Database Schemas
@@ -373,7 +373,7 @@ PostgreSQL uses separate schemas per service (created by `docker/init-db.sql`):
 
 | Schema          | Service              |
 |----------------|----------------------|
-| `workflow`     | workflow-service (including custom fields, notifications and audit) |
+| `workflow`     | app (including custom fields, notifications and audit) |
 | `keycloak`     | Keycloak             |
 
 
@@ -388,7 +388,7 @@ The platform includes Helm charts for Kubernetes deployment.
 ```
 helm/
 ├── charts/
-│   ├── workflow-service/
+│   ├── app/
 │   ├── admin-portal/
 │   └── user-portal/
 └── workflow-platform/          # Umbrella chart
@@ -417,7 +417,7 @@ Override values in `values-local.yaml` or pass `--set` flags:
 
 ```yaml
 # Example: override image tag
-workflow-service:
+app:
   image:
     tag: "latest"
 
@@ -436,9 +436,9 @@ global:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Service fails to start with `DataSource` error | Missing database schema | Run `docker/init-db.sql` against PostgreSQL |
-| Duplicate `@FilterDef` error | Two entities define `@FilterDef(name = "tenantFilter")` | Only ONE entity per persistence unit should have `@FilterDef`; others use `@Filter` only |
+| Duplicate `@FilterDef` error | An entity declares `@FilterDef(name = "tenantFilter")` | The filter is defined once in `entity/package-info.java`; entities use `@Filter` only |
 | JWT validation fails | Keycloak not reachable | Check Keycloak is running and `issuer-uri` is correct |
-| Frontend shows "Loading..." | API calls failing | Check browser console for errors; verify workflow-service is running |
+| Frontend shows "Loading..." | API calls failing | Check browser console for errors; verify app is running |
 | Port 5432 conflict | Local PostgreSQL running | Docker maps PG to port 5433 to avoid conflicts |
 | `gradlew` permission denied | File not executable | Run `git update-index --chmod=+x gradlew` |
 | Flowable + H2 test failures | Wrong H2 mode | Use `MODE=LEGACY` in JDBC URL, not `MODE=PostgreSQL` |
@@ -448,7 +448,7 @@ global:
 Verify all services are healthy:
 
 ```bash
-curl http://localhost:8081/actuator/health  # workflow-service
+curl http://localhost:8081/actuator/health  # app
 ```
 
 ### Useful Commands

@@ -16,7 +16,7 @@ C4Container
         Container(adminPortal, "Admin Portal", "React 18, TypeScript, Vite, nginx", "BPMN process designer, custom field editor, deployment management, audit log viewer")
         Container(userPortal, "User Portal", "React 18, TypeScript, Vite, nginx", "Task inbox, start process, notifications, dynamic forms")
 
-        Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
+        Container(workflowSvc, "App", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
 
         ContainerDb(postgres, "PostgreSQL 16", "2 schemas: workflow, keycloak", "Shared instance, one schema per service")
     }
@@ -44,17 +44,17 @@ C4Container
 |-----------|-----------|------|----------------|-------------|
 | Admin Portal | React 18 + nginx | 5173 (host) | - | Process designer, field editor, audit viewer |
 | User Portal | React 18 + nginx | 5174 (host) | - | Task inbox, start process, notifications |
-| Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
+| App | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
 | PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 2 schemas | Shared database instance |
 | Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
 
 ## API Routing
 
-The portals' nginx proxies `/api/` to workflow-service unchanged; the service serves `/api/workflow/**`, `/api/fields/**`, `/api/notifications/**` and `/api/audit/**` itself.
+The portals' nginx proxies `/api/` to app unchanged; the service serves `/api/workflow/**`, `/api/fields/**`, `/api/notifications/**` and `/api/audit/**` itself.
 
 ## Events
 
-Workflow Service is the only producer and consumer. `EventPublisher` hands each event (`process.started`, `task.created`, `task.assigned`, `task.completed`, `task.delegated`) to `NotificationService` and `AuditService`, which write their rows in the same transaction as the change. There is no message broker.
+App is the only producer and consumer. `EventPublisher` hands each event (`process.started`, `task.created`, `task.assigned`, `task.completed`, `task.delegated`) to `NotificationService` and `AuditService`, which write their rows in the same transaction as the change. There is no message broker.
 
 ## Notes for Editors
 

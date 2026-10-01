@@ -7,19 +7,9 @@ Entity-relationship diagram covering all JPA entities across the platform's 4 da
 ```mermaid
 erDiagram
     %% ============================================================
-    %% WORKFLOW SCHEMA (workflow-service)
+    %% WORKFLOW SCHEMA (app)
     %% ============================================================
 
-    wf_process_metadata {
-        uuid id PK
-        string process_definition_key "NOT NULL"
-        string tenant_id "NOT NULL, filtered"
-        string description
-        string category
-        string icon_url
-        instant created_at "NOT NULL, immutable"
-        instant updated_at "NOT NULL"
-    }
 
     wf_comments {
         uuid id PK
@@ -31,18 +21,6 @@ erDiagram
         string tenant_id "NOT NULL, filtered"
     }
 
-    wf_attachments {
-        uuid id PK
-        string process_instance_id "NOT NULL"
-        string task_id "nullable"
-        string file_name "NOT NULL"
-        string content_type "NOT NULL"
-        long file_size "NOT NULL"
-        string storage_key "NOT NULL"
-        string uploaded_by "NOT NULL"
-        instant created_at "NOT NULL, immutable"
-        string tenant_id "NOT NULL, filtered"
-    }
 
     %% ============================================================
     %% FLOWABLE ENGINE TABLES (managed by Flowable, same schema)
@@ -107,7 +85,7 @@ erDiagram
     }
 
     %% ============================================================
-    %% CUSTOM FIELDS (workflow schema, workflow-service)
+    %% CUSTOM FIELDS (workflow schema, app)
     %% ============================================================
 
     field_schema {
@@ -145,7 +123,7 @@ erDiagram
     }
 
     %% ============================================================
-    %% NOTIFICATIONS (workflow schema, workflow-service)
+    %% NOTIFICATIONS (workflow schema, app)
     %% ============================================================
 
     notification {
@@ -162,7 +140,7 @@ erDiagram
     }
 
     %% ============================================================
-    %% AUDIT (workflow schema, workflow-service)
+    %% AUDIT (workflow schema, app)
     %% ============================================================
 
     audit_entry {
@@ -194,22 +172,20 @@ erDiagram
     field_schema ||--o{ field_value : "values reference schema (logical FK)"
 
     %% Cross-schema logical relationships (no physical FK)
-    wf_process_metadata ||--o{ wf_comments : "process has comments (via process_instance_id)"
-    wf_process_metadata ||--o{ wf_attachments : "process has attachments (via process_instance_id)"
 ```
 
 ## Schema Overview
 
 | Schema | Service | Tables | Description |
 |--------|---------|--------|-------------|
-| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments`, `field_schema`, `field_option`, `field_value`, `notification`, `audit_entry` + ~60 `ACT_*` tables | Process metadata, comments, attachments, custom field definitions and values, in-app notifications, audit trail + Flowable engine |
+| `workflow` | app | `wf_comments`, `field_schema`, `field_option`, `field_value`, `notification`, `audit_entry` + ~60 `ACT_*` tables | Comments, custom field definitions and values, in-app notifications, audit trail + Flowable engine |
 | `keycloak` | Keycloak | (managed by Keycloak) | Users, realms, clients, roles, organizations |
 
 ## Entity Details
 
 ### Enumerations
 
-**FieldType** (workflow-service):
+**FieldType** (app):
 | Value | Description |
 |-------|-------------|
 | `TEXT` | Single-line text input |
@@ -223,7 +199,7 @@ erDiagram
 | `FILE` | File upload reference |
 | `USER_PICKER` | User selection |
 
-**NotificationType** (workflow-service):
+**NotificationType** (app):
 | Value | Triggered By |
 |-------|-------------|
 | `TASK_ASSIGNED` | TaskCreatedEvent, TaskAssignedEvent |
@@ -236,9 +212,9 @@ erDiagram
 
 Every entity (except `field_option`) carries a `tenant_id` column. Hibernate filters enforce row-level isolation:
 
-- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`
-- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldSchema`, `FieldValue`, `Notification`, `AuditEntry`
-- The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (from `wfp-security`) supplies the tenant from `TenantContext` and throws when none is set
+- **One package-level `@FilterDef`** in `com/wfp/workflow/entity/package-info.java`
+- **`@Filter` only** on every tenant-scoped entity: `Comment`, `FieldSchema`, `FieldValue`, `Notification`, `AuditEntry`
+- The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (`com.wfp.security`) supplies the tenant from `TenantContext` and throws when none is set
 
 ### Cross-Schema References
 

@@ -151,7 +151,7 @@ test.describe('1. Infrastructure Tests', () => {
 
   test('Backend service healthy (port 8081)', async ({ request }) => {
     const services = [
-      { port: 8081, name: 'workflow-service' },
+      { port: 8081, name: 'app' },
     ];
 
     for (const svc of services) {

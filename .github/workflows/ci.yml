@@ -79,7 +79,7 @@ jobs:
         run: docker compose -f docker/docker-compose.yml config --quiet
 
       - name: Build service images
-        run: docker compose -f docker/docker-compose.yml build workflow-service
+        run: docker compose -f docker/docker-compose.yml build app
 
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@v0.3.1
@@ -89,7 +89,7 @@ jobs:
       - name: Scan images for CRITICAL CVEs
         run: |
           IMAGES=(
-            docker-workflow-service
+            docker-app
           )
           failed=()
           for image in "${IMAGES[@]}"; do
@@ -115,10 +115,10 @@ jobs:
           cache: gradle
 
       - name: Build backend Docker images
-        run: docker compose -f docker/docker-compose.yml build workflow-service
+        run: docker compose -f docker/docker-compose.yml build app
 
       - name: Start backend stack and wait until healthy
-        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres keycloak workflow-service
+        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres keycloak app
 
       - name: Run BDD acceptance tests
         run: ./gradlew :tests:bdd-acceptance:test
@@ -158,10 +158,10 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Build images
-        run: docker compose -f docker/docker-compose.yml build workflow-service admin-portal user-portal
+        run: docker compose -f docker/docker-compose.yml build app admin-portal user-portal
 
       - name: Start stack and wait until healthy
-        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres keycloak workflow-service admin-portal user-portal
+        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres keycloak app admin-portal user-portal
 
       - name: Run Playwright E2E tests
         working-directory: e2e

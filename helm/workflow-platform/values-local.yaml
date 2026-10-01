@@ -20,7 +20,7 @@ keycloak:
       cpu: 100m
       memory: 512Mi
 
-workflow-service:
+app:
   replicaCount: 1
   resources:
     requests: { cpu: 200m, memory: 256Mi }
