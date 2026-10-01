@@ -1,6 +1,6 @@
 # Tracker Architecture
 
-Status: **draft for approval** (2026-09-30). Mark each row in [Removal candidates](#removal-candidates) as approved or changed. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
+Status: **removal candidates decided on 2026-10-01**: R-1 to R-10 and R-12 approved, R-11 not approved. Tenant identity and the delivery order are still open. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
 
 ## Today
 
@@ -71,20 +71,20 @@ flowchart LR
 
 ## Removal candidates
 
-| # | Candidate | Proposal | What we give up | Recommendation |
-|---|---|---|---|---|
-| R-1 | `custom-fields-service` | Fold into `app`. Definitions move into `app`, and values become a `jsonb` column on `wf_item` (already decided, 20.1 and 20.g) | Nothing | **Remove** |
-| R-2 | `notification-service` | Fold into `app`. A `notification` row is written in the same transaction as the change that causes it; the bell polls (screen S-7). Watchers and @mentions (20.8) later land in the same place | Independent scaling of notifications, which isn't needed at this size | **Remove** |
-| R-3 | `audit-service` | Fold into `app`. Item history is `wf_item_transition` plus field-change rows; admin actions (deploy, fields, projects) write an `audit_entry` row in their own transaction. Audit can no longer miss a change or record one that rolled back | A separate audit store that application code can't touch | **Remove** |
-| R-4 | RabbitMQ and `wfp-events` | Remove once R-2 and R-3 land, when nothing consumes events any more. That also closes #65 (dead-letter queue) and makes #30 (trace propagation across RabbitMQ) moot | An integration point for future external consumers. If one appears, add a transactional outbox then | **Remove** |
-| R-5 | `gateway` | Remove. The web container proxies `/api` locally, an Ingress does it in Kubernetes, and `app` keeps validating the JWT | A central place for rate limiting or request filtering; neither is used today | **Remove** |
-| R-6 | Two portals, `shared-ui`, `bpmn-editor` packages | One app (screen S-1). The two packages become folders in the app, which removes the build-order pitfall | Separately deployable admin and user UIs | **Remove** |
-| R-7 | `wfp-common`, `wfp-security`, `wfp-test-support` | Become packages in `app`; they only existed to share code between services | Nothing, with one service | **Remove** |
-| R-8 | Dead code | Remove `Attachment` (screen S-5), `ProcessMetadata` (projects replace it), `NotificationPreference`, the mail and Thymeleaf dependencies, the empty email templates, and the process, task and history endpoints and DTOs that the item API replaces (20.7) | Nothing in use | **Remove** |
-| R-9 | Per-service database schemas | One schema, one Flyway history. **Assumption: no environment holds data worth migrating** (nothing is deployed; GCP is parked), so the local database is recreated instead of migrated | Nothing, if the assumption holds | **Remove, confirm the assumption** |
-| R-10 | Local observability stack (otel-collector, Tempo, Prometheus, Grafana) | Move to an optional compose profile (`--profile observability`). With one service, request tracing across services is gone, but database and HTTP spans stay. Rescope Phase 2 afterwards | Always-on local traces and dashboards | **Make optional** (not delete) |
-| R-11 | Flowable history tables | The platform never reads engine history (20.2), so set `flowable.history-level: none`. First verify in the 20.a spike that moving items between versions (20.4) doesn't need it | The engine's own audit trail, which duplicates `wf_item_transition` | **Decide in 20.a** |
-| R-12 | The `manager` role | Unused. Proposed roles: `admin` (tenant administration: projects, workflows, fields, audit log) and `user` (items). Enforced in the backend (#72) | A middle role, until someone needs one | **Remove** |
+| # | Candidate | Proposal | What we give up | Recommendation | Decision (2026-10-01) |
+|---|---|---|---|---|---|
+| R-1 | `custom-fields-service` | Fold into `app`. Definitions move into `app`, and values become a `jsonb` column on `wf_item` (already decided, 20.1 and 20.g) | Nothing | **Remove** | Approved |
+| R-2 | `notification-service` | Fold into `app`. A `notification` row is written in the same transaction as the change that causes it; the bell polls (screen S-7). Watchers and @mentions (20.8) later land in the same place | Independent scaling of notifications, which isn't needed at this size | **Remove** | Approved |
+| R-3 | `audit-service` | Fold into `app`. Item history is `wf_item_transition` plus field-change rows; admin actions (deploy, fields, projects) write an `audit_entry` row in their own transaction. Audit can no longer miss a change or record one that rolled back | A separate audit store that application code can't touch | **Remove** | Approved |
+| R-4 | RabbitMQ and `wfp-events` | Remove once R-2 and R-3 land, when nothing consumes events any more. That also closes #65 (dead-letter queue) and makes #30 (trace propagation across RabbitMQ) moot | An integration point for future external consumers. If one appears, add a transactional outbox then | **Remove** | Approved |
+| R-5 | `gateway` | Remove. The web container proxies `/api` locally, an Ingress does it in Kubernetes, and `app` keeps validating the JWT | A central place for rate limiting or request filtering; neither is used today | **Remove** | Approved |
+| R-6 | Two portals, `shared-ui`, `bpmn-editor` packages | One app (screen S-1). The two packages become folders in the app, which removes the build-order pitfall | Separately deployable admin and user UIs | **Remove** | Approved |
+| R-7 | `wfp-common`, `wfp-security`, `wfp-test-support` | Become packages in `app`; they only existed to share code between services | Nothing, with one service | **Remove** | Approved |
+| R-8 | Dead code | Remove `Attachment` (screen S-5), `ProcessMetadata` (projects replace it), `NotificationPreference`, the mail and Thymeleaf dependencies, the empty email templates, and the process, task and history endpoints and DTOs that the item API replaces (20.7) | Nothing in use | **Remove** | Approved |
+| R-9 | Per-service database schemas | One schema, one Flyway history. **Assumption: no environment holds data worth migrating** (nothing is deployed; GCP is parked), so the local database is recreated instead of migrated | Nothing, if the assumption holds | **Remove, confirm the assumption** | Approved |
+| R-10 | Local observability stack (otel-collector, Tempo, Prometheus, Grafana) | Move to an optional compose profile (`--profile observability`). With one service, request tracing across services is gone, but database and HTTP spans stay. Rescope Phase 2 afterwards | Always-on local traces and dashboards | **Make optional** (not delete) | Approved |
+| R-11 | Flowable history tables | The platform never reads engine history (20.2), so set `flowable.history-level: none`. First verify in the 20.a spike that moving items between versions (20.4) doesn't need it | The engine's own audit trail, which duplicates `wf_item_transition` | **Decide in 20.a** | **Not approved.** Flowable history stays on. Item transition history (`wf_item_transition`) is recorded from 20.c either way; the history view on the item moves to a later phase (#75) |
+| R-12 | The `manager` role | Unused. Proposed roles: `admin` (tenant administration: projects, workflows, fields, audit log) and `user` (items). Enforced in the backend (#72) | A middle role, until someone needs one | **Remove** | Approved |
 
 **Kept, because each is a standard the stack already relies on:** BPMN with Flowable behind the facade, bpmn-js, Keycloak, PostgreSQL with `jsonb`, Flyway, and the Hibernate tenant filter.
 
@@ -104,7 +104,7 @@ Folding the services should happen **before** the item model (20.c). Otherwise 2
 
 | Step | Content | Done when |
 |---|---|---|
-| 20.a | Spike, unchanged: parser, profile validator, `describe()`. Also answers R-11 | as in 20.6 |
+| 20.a | Spike, unchanged: parser, profile validator, `describe()` | as in 20.6 |
 | C-1 | Fold custom-fields, notification and audit into `workflow-service` (renamed `app`); remove RabbitMQ and `wfp-events`; libraries become packages; one schema (R-1 to R-4, R-7, R-9). Today's screens keep working | BDD and Playwright green; 2 backend containers left (gateway, app) |
 | C-2 | Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
 | 20.b | Facade extraction, with the tenant check from #71 inside `transition` and `cancel` | as in 20.6 |

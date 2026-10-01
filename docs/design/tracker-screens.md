@@ -131,7 +131,7 @@ Fix login redirect
 | +------------------------------------------------+ | Due date   2026-10-05 [..] |
 | [Add a comment...                     ] [Post]     |                             |
 |                                                    | Workflow  (bug-flow v3)     |
-| History                                            |  (O)->[Open]->[Doing]->     |
+| History  (later phase, #75)                        |  (O)->[Open]->[Doing]->     |
 |  2h ago  user-a  Doing -> In Review (Submit)       |   [*In Review*]->[Done]     |
 |  1d ago  user-a  Priority Medium -> High           |                             |
 |  1d ago  user-b  created                           |                             |
@@ -139,7 +139,7 @@ Fix login redirect
 ```
 
 - The transition buttons are the named outgoing flows of the current status (20.1). A transition may ask for a reason when the model requires one.
-- History merges status transitions (`wf_item_transition`) with field changes.
+- History merges status transitions (`wf_item_transition`) with field changes. **The panel comes in a later phase (#75)**, together with attachments (#74). The first version records the history but doesn't show it.
 
 ### 5. Create item (dialog)
 
