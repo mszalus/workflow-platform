@@ -13,7 +13,7 @@
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx}": [
-      "npx --prefix frontend eslint --fix",
+      "npx --prefix frontend eslint --config frontend/eslint.config.mjs --fix",
       "npx --prefix frontend prettier --write"
     ],
     "frontend/**/*.{json,css,md}": [
