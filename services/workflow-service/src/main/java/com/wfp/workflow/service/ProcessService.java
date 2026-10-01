@@ -68,6 +68,15 @@ public class ProcessService {
     }
 
     public ProcessInstanceDto getInstance(String processInstanceId) {
+        return toDto(requireTenantInstance(processInstanceId));
+    }
+
+    public void cancelProcess(String processInstanceId, String reason) {
+        requireTenantInstance(processInstanceId);
+        runtimeService.deleteProcessInstance(processInstanceId, reason);
+    }
+
+    private ProcessInstance requireTenantInstance(String processInstanceId) {
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .processInstanceTenantId(TenantContext.requireCurrentTenantId())
@@ -75,11 +84,7 @@ public class ProcessService {
         if (pi == null) {
             throw new NotFoundException("ProcessInstance", processInstanceId);
         }
-        return toDto(pi);
-    }
-
-    public void cancelProcess(String processInstanceId, String reason) {
-        runtimeService.deleteProcessInstance(processInstanceId, reason);
+        return pi;
     }
 
     private ProcessInstanceDto toDto(ProcessInstance pi) {

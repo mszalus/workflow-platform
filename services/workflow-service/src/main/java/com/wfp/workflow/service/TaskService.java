@@ -45,34 +45,29 @@ public class TaskService {
     }
 
     public TaskDto getTask(String taskId) {
-        Task task = flowableTaskService.createTaskQuery()
-                .taskId(taskId)
-                .taskTenantId(TenantContext.requireCurrentTenantId())
-                .singleResult();
-        if (task == null) {
-            throw new NotFoundException("Task", taskId);
-        }
-        return toDto(task);
+        return toDto(requireTenantTask(taskId));
     }
 
     public void claimTask(String taskId, String userId) {
+        requireTenantTask(taskId);
         flowableTaskService.claim(taskId, userId);
     }
 
     public void unclaimTask(String taskId) {
+        requireTenantTask(taskId);
         flowableTaskService.unclaim(taskId);
     }
 
     public void completeTask(String taskId, Map<String, Object> variables, String userId) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        Task task = flowableTaskService.createTaskQuery().taskId(taskId).singleResult();
+        Task task = requireTenantTask(taskId);
 
         flowableTaskService.complete(taskId, variables != null ? variables : Map.of());
 
         TaskCompletedEvent event = TaskCompletedEvent.builder()
                 .taskId(taskId)
-                .taskName(task != null ? task.getName() : null)
-                .processInstanceId(task != null ? task.getProcessInstanceId() : null)
+                .taskName(task.getName())
+                .processInstanceId(task.getProcessInstanceId())
                 .completedBy(userId)
                 .outcome(variables)
                 .build();
@@ -82,19 +77,30 @@ public class TaskService {
 
     public void delegateTask(String taskId, String fromUserId, String toUserId, String comment) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        Task task = flowableTaskService.createTaskQuery().taskId(taskId).singleResult();
+        Task task = requireTenantTask(taskId);
         flowableTaskService.delegateTask(taskId, toUserId);
 
         TaskDelegatedEvent event = TaskDelegatedEvent.builder()
                 .taskId(taskId)
-                .taskName(task != null ? task.getName() : null)
-                .processInstanceId(task != null ? task.getProcessInstanceId() : null)
+                .taskName(task.getName())
+                .processInstanceId(task.getProcessInstanceId())
                 .delegatedFrom(fromUserId)
                 .delegatedTo(toUserId)
                 .comment(comment)
                 .build();
         event.initDefaults(EventConstants.TASK_DELEGATED, tenantId, fromUserId);
         eventPublisher.publish(EventConstants.TASK_DELEGATED, event);
+    }
+
+    private Task requireTenantTask(String taskId) {
+        Task task = flowableTaskService.createTaskQuery()
+                .taskId(taskId)
+                .taskTenantId(TenantContext.requireCurrentTenantId())
+                .singleResult();
+        if (task == null) {
+            throw new NotFoundException("Task", taskId);
+        }
+        return task;
     }
 
     private String extractProcessDefinitionKey(String processDefinitionId) {
