@@ -45,7 +45,11 @@ public class FlowableWorkflowParser {
     public WorkflowGraph parse(String bpmnXml) {
         Map<String, String> statusCategories = readStatusCategories(bpmnXml);
         BpmnModel model = new BpmnXMLConverter().convertToBpmnModel(new StringStreamSource(bpmnXml), false, false);
-        Process process = model.getMainProcess();
+        if (model.getProcesses().size() != 1) {
+            throw new IllegalArgumentException(
+                    "A tracker workflow needs exactly one process, found " + model.getProcesses().size());
+        }
+        Process process = model.getProcesses().getFirst();
         List<Node> nodes = new ArrayList<>();
         List<Flow> flows = new ArrayList<>();
         collect(process.getFlowElements(), null, statusCategories, nodes, flows);
@@ -59,8 +63,9 @@ public class FlowableWorkflowParser {
                 flows.add(new Flow(flow.getId(), flow.getName(), flow.getSourceRef(), flow.getTargetRef()));
                 continue;
             }
-            nodes.add(toNode(element, parentId, statusCategories.get(element.getId())));
-            if (element instanceof SubProcess subProcess) {
+            Node node = toNode(element, parentId, statusCategories.get(element.getId()));
+            nodes.add(node);
+            if (element instanceof SubProcess subProcess && node.type() != NodeType.UNSUPPORTED) {
                 collect(subProcess.getFlowElements(), subProcess.getId(), statusCategories, nodes, flows);
             }
         }
@@ -84,19 +89,25 @@ public class FlowableWorkflowParser {
             case ExclusiveGateway gateway -> NodeType.EXCLUSIVE_GATEWAY;
             case ParallelGateway gateway -> NodeType.PARALLEL_GATEWAY;
             case EventSubProcess eventSubProcess ->
-                    startsOnMessage(eventSubProcess) ? NodeType.EVENT_SUBPROCESS : NodeType.UNSUPPORTED;
+                    startsOnInterruptingMessage(eventSubProcess) ? NodeType.EVENT_SUBPROCESS : NodeType.UNSUPPORTED;
             case SubProcess subProcess when subProcess.getClass() == SubProcess.class -> NodeType.SUBPROCESS;
-            case BoundaryEvent boundary -> hasTimer(boundary) ? NodeType.BOUNDARY_TIMER : NodeType.UNSUPPORTED;
+            case BoundaryEvent boundary ->
+                    isInterruptingTimer(boundary) ? NodeType.BOUNDARY_TIMER : NodeType.UNSUPPORTED;
             default -> NodeType.UNSUPPORTED;
         };
     }
 
-    private boolean startsOnMessage(EventSubProcess eventSubProcess) {
+    private boolean startsOnInterruptingMessage(EventSubProcess eventSubProcess) {
         return eventSubProcess.getFlowElements().stream()
                 .filter(StartEvent.class::isInstance)
                 .map(StartEvent.class::cast)
+                .filter(StartEvent::isInterrupting)
                 .flatMap(start -> start.getEventDefinitions().stream())
                 .anyMatch(MessageEventDefinition.class::isInstance);
+    }
+
+    private boolean isInterruptingTimer(BoundaryEvent boundary) {
+        return hasTimer(boundary) && boundary.isCancelActivity();
     }
 
     private boolean hasTimer(BoundaryEvent boundary) {
@@ -104,8 +115,15 @@ public class FlowableWorkflowParser {
     }
 
     private String elementType(FlowElement element) {
-        String className = element.getClass().getSimpleName();
-        return Character.toLowerCase(className.charAt(0)) + className.substring(1);
+        return switch (element) {
+            case BoundaryEvent boundary when hasTimer(boundary) && !boundary.isCancelActivity() ->
+                    "non-interrupting boundary timer";
+            case EventSubProcess eventSubProcess -> "eventSubProcess without an interrupting message start";
+            default -> {
+                String className = element.getClass().getSimpleName();
+                yield Character.toLowerCase(className.charAt(0)) + className.substring(1);
+            }
+        };
     }
 
     private Map<String, String> readStatusCategories(String bpmnXml) {

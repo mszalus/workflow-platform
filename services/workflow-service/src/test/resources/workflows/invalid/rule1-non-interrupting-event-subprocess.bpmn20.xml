@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <message id="cancelMessage" name="cancel"/>
+  <process id="nonInterruptingEventSubprocess" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="f2" name="Finish" sourceRef="open" targetRef="done"/>
+    <sequenceFlow id="f3" name="Close" sourceRef="done" targetRef="closed"/>
+    <subProcess id="note" name="Add note" triggeredByEvent="true">
+      <startEvent id="noteStart" isInterrupting="false"><messageEventDefinition messageRef="cancelMessage"/></startEvent>
+      <endEvent id="noteEnd"/>
+      <sequenceFlow id="n1" sourceRef="noteStart" targetRef="noteEnd"/>
+    </subProcess>
+  </process>
+</definitions>

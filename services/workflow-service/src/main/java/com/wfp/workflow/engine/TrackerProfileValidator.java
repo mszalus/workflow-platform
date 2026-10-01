@@ -76,13 +76,12 @@ public class TrackerProfileValidator {
     }
 
     private void checkTransitionNames(WorkflowGraph graph, List<Violation> violations) {
-        for (Node status : graph.statuses()) {
-            for (Flow leaving : graph.outgoing(status.id())) {
-                graph.node(leaving.targetId())
-                        .filter(target -> target.type() == NodeType.EXCLUSIVE_GATEWAY)
-                        .ifPresent(gateway -> checkGatewayFlowNames(graph, gateway, violations));
-            }
-        }
+        graph.statuses().stream()
+                .flatMap(status -> graph.outgoing(status.id()).stream())
+                .flatMap(leaving -> graph.node(leaving.targetId()).stream())
+                .filter(target -> target.type() == NodeType.EXCLUSIVE_GATEWAY)
+                .distinct()
+                .forEach(gateway -> checkGatewayFlowNames(graph, gateway, violations));
     }
 
     private void checkGatewayFlowNames(WorkflowGraph graph, Node gateway, List<Violation> violations) {

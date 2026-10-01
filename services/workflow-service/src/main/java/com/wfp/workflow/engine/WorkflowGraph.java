@@ -56,6 +56,12 @@ public record WorkflowGraph(String processId, List<Node> nodes, List<Flow> flows
                 .toList();
     }
 
+    public List<Node> topLevelEventSubprocessStartEvents() {
+        return eventSubprocessStartEvents().stream()
+                .filter(start -> parentOf(start).map(subprocess -> subprocess.parentId() == null).orElse(false))
+                .toList();
+    }
+
     public boolean isTerminalEnd(Node node) {
         return node.type() == NodeType.END && successors(node).isEmpty();
     }
@@ -78,7 +84,7 @@ public record WorkflowGraph(String processId, List<Node> nodes, List<Flow> flows
             } else if (isTerminalEnd(node.get())) {
                 reached.add(END);
             } else {
-                pending.addAll(successors(node.get()));
+                pending.addAll(next(node.get(), false));
             }
         }
         return reached;
@@ -97,25 +103,26 @@ public record WorkflowGraph(String processId, List<Node> nodes, List<Flow> flows
     }
 
     public List<String> successors(Node node) {
-        return switch (node.type()) {
+        return next(node, true);
+    }
+
+    private List<String> next(Node node, boolean followBoundaryEvents) {
+        Stream<String> boundaryEvents = followBoundaryEvents ? boundaryEventsOn(node) : Stream.empty();
+        List<String> viaFlows = switch (node.type()) {
             case END -> endsPlainSubprocess(node) ? targetsOf(node.parentId()) : List.of();
-            case SUBPROCESS -> isStatus(node) ? leaving(node) : startsInside(node);
+            case SUBPROCESS -> isStatus(node) ? targetsOf(node.id()) : startsInside(node);
             case EVENT_SUBPROCESS -> List.of();
-            default -> leaving(node);
+            default -> targetsOf(node.id());
         };
+        return Stream.concat(viaFlows.stream(), boundaryEvents).toList();
     }
 
     private boolean endsPlainSubprocess(Node end) {
         return parentOf(end).map(parent -> parent.type() == NodeType.SUBPROCESS && !isStatus(parent)).orElse(false);
     }
 
-    private List<String> leaving(Node node) {
-        Stream<String> flowTargets = targetsOf(node.id()).stream();
-        Stream<String> attachedTimers = nodes.stream()
-                .filter(candidate -> candidate.type() == NodeType.BOUNDARY_TIMER)
-                .filter(timer -> node.id().equals(timer.attachedToId()))
-                .map(Node::id);
-        return Stream.concat(flowTargets, attachedTimers).toList();
+    private Stream<String> boundaryEventsOn(Node node) {
+        return nodes.stream().filter(candidate -> node.id().equals(candidate.attachedToId())).map(Node::id);
     }
 
     private List<String> targetsOf(String nodeId) {

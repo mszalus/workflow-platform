@@ -2,6 +2,7 @@ package com.wfp.workflow.engine.flowable;
 
 import com.wfp.workflow.engine.Node;
 import com.wfp.workflow.engine.NodeType;
+import com.wfp.workflow.engine.Samples;
 import com.wfp.workflow.engine.WorkflowGraph;
 import org.junit.jupiter.api.Test;
 
@@ -53,6 +54,16 @@ class FlowableWorkflowParserTest {
                 + "<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">&x;</definitions>";
 
         assertThatThrownBy(() -> new FlowableWorkflowParser().parse(withDoctype))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsDocumentsWithoutExactlyOneProcess() {
+        String twoProcesses = Samples.xml("valid/simple")
+                .replace("</definitions>", "<process id=\"second\"><startEvent id=\"s2\"/></process></definitions>");
+
+        assertThatThrownBy(() -> graph("invalid/no-process")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new FlowableWorkflowParser().parse(twoProcesses))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

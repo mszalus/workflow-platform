@@ -7,6 +7,7 @@ import java.util.List;
 import static com.wfp.workflow.engine.Samples.graph;
 import static com.wfp.workflow.engine.WorkflowGraph.END;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 
 class WorkflowDescriberTest {
@@ -67,6 +68,27 @@ class WorkflowDescriberTest {
 
         assertThat(transitions(descriptor, "open")).extracting(Transition::id).containsExactly("startWork");
         assertThat(descriptor.statuses()).extracting(Status::id).contains("escalated");
+    }
+
+    @Test
+    void offersOnlyTopLevelEventSubprocessesFromAnyStatus() {
+        assertThat(describer.describe(graph("valid/nested-event-subprocess")).anyStatusTransitions()).isEmpty();
+    }
+
+    @Test
+    void entersPlainSubprocessesAndNamesUnnamedTransitionsAfterTheirFlow() {
+        WorkflowDescriptor descriptor = describer.describe(graph("valid/plain-subprocess-timer"));
+
+        assertThat(transitions(descriptor, "open")).containsExactly(new Transition("f2", "Start", List.of("doing")));
+        assertThat(transitions(descriptor, "doing")).containsExactly(new Transition("w2", "Finish", List.of("done")));
+        assertThat(transitions(descriptor, "done")).containsExactly(new Transition("f6", "f6", List.of(END)));
+    }
+
+    @Test
+    void refusesToDescribeAnInvalidWorkflow() {
+        assertThatThrownBy(() -> describer.describe(graph("invalid/rule3-missing-category")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("doing");
     }
 
     private List<Transition> transitions(WorkflowDescriptor descriptor, String statusId) {

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="plainSubprocessTimer" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <subProcess id="work" name="Work">
+      <startEvent id="workStart"/>
+      <userTask id="doing" name="Doing" wfp:statusCategory="IN_PROGRESS"/>
+      <endEvent id="workEnd"/>
+      <sequenceFlow id="w1" sourceRef="workStart" targetRef="doing"/>
+      <sequenceFlow id="w2" name="Finish" sourceRef="doing" targetRef="workEnd"/>
+    </subProcess>
+    <boundaryEvent id="tooSlow" attachedToRef="work" cancelActivity="true">
+      <timerEventDefinition><timeDuration>P5D</timeDuration></timerEventDefinition>
+    </boundaryEvent>
+    <userTask id="escalated" name="Escalated" wfp:statusCategory="TODO"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="f2" name="Start" sourceRef="open" targetRef="work"/>
+    <sequenceFlow id="f3" sourceRef="work" targetRef="done"/>
+    <sequenceFlow id="f4" sourceRef="tooSlow" targetRef="escalated"/>
+    <sequenceFlow id="f5" name="Finish" sourceRef="escalated" targetRef="done"/>
+    <sequenceFlow id="f6" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>
