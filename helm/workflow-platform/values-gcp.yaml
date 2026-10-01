@@ -40,7 +40,7 @@ otel-collector:
 # Backend services — Cloud SQL connection + observability
 # DB password comes from the ExternalSecret-created K8s secret.
 # ---------------------------------------------------------------------------
-workflow-service:
+app:
   replicaCount: 2
   autoscaling:
     enabled: true
@@ -68,7 +68,7 @@ workflow-service:
     GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
   secretEnv:
     - name: SPRING_DATASOURCE_PASSWORD
-      secretName: workflow-service-secrets
+      secretName: app-secrets
       secretKey: db-password
 
 admin-portal:

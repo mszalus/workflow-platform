@@ -10,7 +10,7 @@ import org.junit.platform.suite.api.Suite;
  * JUnit Platform Suite runner for all BDD acceptance tests.
  *
  * Prerequisites: the full Docker stack must be running on localhost
- * (workflow-service on port 8081, Keycloak on port 8180).
+ * (app on port 8081, Keycloak on port 8180).
  *
  * Run:  ./gradlew :tests:bdd-acceptance:test
  */

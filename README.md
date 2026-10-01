@@ -13,7 +13,7 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React
           └────────┬────────┘
                    │
        ┌───────────┴───────────┐
-       │   Workflow Service    │
+       │   App                 │
        │        :8081          │
        │ + custom fields,      │
        │   notifications,      │
@@ -67,7 +67,7 @@ Once running, the services are available at:
 | Keycloak Admin | http://localhost:8180 (admin/admin) |
 | Admin Portal | http://localhost:5173 |
 | User Portal | http://localhost:5174 |
-| Workflow Service (API) | http://localhost:8081 |
+| App (API) | http://localhost:8081 |
 | PostgreSQL | localhost:5433 (wfp/wfp_secret) |
 
 ## Local Development
@@ -79,13 +79,13 @@ Once running, the services are available at:
 ./gradlew build
 
 # Build a single service JAR (skip tests)
-./gradlew :services:workflow-service:bootJar -x test
+./gradlew :services:app:bootJar -x test
 
 # Run tests for a single service
-./gradlew :services:workflow-service:test
+./gradlew :services:app:test
 
 # Start a service locally (requires PG and Keycloak running)
-./gradlew :services:workflow-service:bootRun
+./gradlew :services:app:bootRun
 ```
 
 ### Frontend
@@ -146,12 +146,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 ```
 workflow-platform/
 ├── buildSrc/                    # Gradle convention plugins (Java 21, Spring Boot, Lombok)
-├── libs/                        # Shared libraries
-│   ├── wfp-common/              # DTOs, exception handling
-│   ├── wfp-security/            # JWT auth, tenant context, Hibernate tenant filter
-│   └── wfp-test-support/        # Test helpers (JWT mocking, Testcontainers)
 ├── services/
-│   └── workflow-service/        # Flowable BPMN engine, custom fields, notifications, audit, REST API
+│   └── app/                     # Flowable BPMN engine, custom fields, notifications, audit, REST API
 ├── frontend/
 │   ├── packages/shared-ui/      # Shared components, API client, auth
 │   ├── packages/bpmn-editor/    # bpmn-js wrapper
@@ -173,14 +169,14 @@ Tenant isolation is enforced at every layer:
 ## Testing
 
 ```bash
-# Run all backend tests (uses Testcontainers — requires Docker)
+# Run all backend tests (H2, no Docker needed)
 ./gradlew build
 
 # Run frontend type checks
 cd frontend && npm run typecheck --workspaces --if-present
 ```
 
-Backend integration tests use Testcontainers to spin up PostgreSQL automatically. No manual infrastructure setup needed.
+Backend integration tests run the full Spring context against an in-memory H2 database. No infrastructure setup needed.
 
 ## CI/CD
 

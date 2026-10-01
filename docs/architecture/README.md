@@ -8,7 +8,7 @@ C4 model diagrams and data model for the Workflow Platform. All diagrams use [Me
 |---------|-------|------|-------------|
 | **System Context** | C4 L1 | [c4-context.md](c4-context.md) | Users, external systems, platform boundary |
 | **Container** | C4 L2 | [c4-container.md](c4-container.md) | All services, databases, frontends |
-| **Component: Workflow Service** | C4 L3 | [c4-component-workflow-service.md](c4-component-workflow-service.md) | Controllers, services, Flowable engine, event publisher |
+| **Component: App** | C4 L3 | [c4-component-app.md](c4-component-app.md) | Controllers, services, Flowable engine, event publisher |
 | **Deployment** | C4 L4 | [c4-deployment.md](c4-deployment.md) | Docker Compose, GCP VM, Kubernetes/Helm topologies |
 | **Data Model** | ERD | [data-model.md](data-model.md) | All JPA entities, Flowable tables, cross-schema references |
 

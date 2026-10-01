@@ -112,11 +112,11 @@ services:
   # Application services
   # ---------------------------------------------------------------------------
 
-  workflow-service:
+  app:
     build:
       context: ..
-      dockerfile: services/workflow-service/Dockerfile
-    container_name: wfp-workflow
+      dockerfile: services/app/Dockerfile
+    container_name: wfp-app
     healthcheck:
       <<: *spring-healthcheck
       test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8081/actuator/health"]
@@ -145,7 +145,7 @@ services:
     ports:
       - "5173:8080"
     depends_on:
-      - workflow-service
+      - app
 
   user-portal:
     build:
@@ -155,7 +155,7 @@ services:
     ports:
       - "5174:8080"
     depends_on:
-      - workflow-service
+      - app
 
 volumes:
   postgres_data:

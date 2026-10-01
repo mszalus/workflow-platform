@@ -108,15 +108,15 @@ Sessions, branches and merging, gates, review and subagent delegation are descri
 
 Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), deploy them, and end users complete tasks through a task inbox. Every action is audited, custom fields can be attached to any process, and notifications are delivered in real-time.
 
-Services: `workflow-service` (8081: Flowable, custom fields, notifications and audit), reached through the portals' nginx `/api` proxy. Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
+Services: `app` (8081: Flowable, custom fields, notifications and audit), reached through the portals' nginx `/api` proxy. The React apps are in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
 
 ## Build Commands
 
 ### Backend (requires JDK 21)
 ```bash
 ./gradlew build                                    # compile + test all modules
-./gradlew :services:workflow-service:bootJar -x test  # build single service JAR
-./gradlew :services:workflow-service:test           # test single service
+./gradlew :services:app:bootJar -x test  # build single service JAR
+./gradlew :services:app:test           # test single service
 ```
 
 ### Frontend
@@ -152,7 +152,7 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 
 1. **Gradle requires all project directories**: `settings.gradle` includes all modules — Dockerfiles must copy the entire `services/` directory, not just the target service
 2. **Port conflicts**: Local PostgreSQL on 5432 conflicts with Docker. Docker compose maps PG to `5433` externally
-3. **Hibernate @FilterDef**: Only one per persistence unit, not per entity. Second entity → use `@Filter` only
+3. **Hibernate tenant filter**: `tenantFilter` is defined once, at package level in `com/wfp/workflow/entity/package-info.java`. Entities declare `@Filter` only; a second `@FilterDef` with that name throws at boot
 4. **Flowable + H2 tests**: Requires `MODE=LEGACY` in the JDBC URL, not `MODE=PostgreSQL`
 5. **Frontend build order**: `shared-ui` → `bpmn-editor` → apps (apps depend on packages)
 6. **CI gradlew permission**: The `gradlew` file must have execute permission in git (`git update-index --chmod=+x gradlew`)
@@ -160,10 +160,9 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 
 ## Testing
 
-- Backend integration tests use **Testcontainers** (PostgreSQL)
+- Backend integration tests run the full Spring context on H2 (`@SpringBootTest`, `MODE=LEGACY`)
 - Test config: `src/test/resources/application-test.yml` with `SPRING_PROFILES_ACTIVE=test`
-- `JwtTestHelper` generates mock JWTs for authenticated endpoint tests
-- `TenantTestHelper` sets up `TenantContext` for service-layer tests
+- Authenticated endpoint tests use Spring Security's `jwt()` request post-processor with a `tenant_id` claim; service-layer tests use `TenantContext.runAs`
 - Frontend: TypeScript typecheck only (no unit test framework yet)
 - Acceptance: Cucumber BDD in `tests/bdd-acceptance` and Playwright in `e2e/` (`npm test`), both run in CI against a fresh Docker stack. `npm run screenshots` in `e2e/` refreshes `docs/screenshots/`
 

@@ -20,24 +20,19 @@ flowchart LR
 
 | Layer | Mechanism | Lives in |
 |---|---|---|
-| Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | wfp-security |
-| JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id from the database gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none. Inserts are not filtered: the entity's own `tenant_id` is written | entity classes, wfp-security |
+| Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | `com.wfp.security` in app |
+| JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id from the database gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none. Inserts are not filtered: the entity's own `tenant_id` is written | entity classes, `com.wfp.security` |
 | Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
 
 ### The @FilterDef rule
 
 > [!CAUTION]
-> **One `@FilterDef` per persistence unit — not per entity**
-> Hibernate registers filter definitions globally. A second `@FilterDef(name = "tenantFilter")`
-> in the same service throws at boot. Additional entities declare `@Filter` **only**.
+> **`tenantFilter` is defined once, at package level**
+> `com/wfp/workflow/entity/package-info.java` holds the only `@FilterDef`. Every
+> tenant-scoped entity (Comment, FieldSchema, FieldValue, Notification, AuditEntry)
+> declares `@Filter` **only**; a second `@FilterDef` with the same name throws at boot.
 
-Current owners of the single `@FilterDef` in each service:
-
-| Service | Declares `@FilterDef` | Declare `@Filter` only |
-|---|---|---|
-| Workflow Service | ProcessMetadata | Comment, Attachment, FieldSchema, FieldValue, Notification, AuditEntry |
-
-The single `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `resolver = CurrentTenantIdResolver.class`; without them the filter silently stops applying.
+The `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `resolver = CurrentTenantIdResolver.class`; without them the filter silently stops applying.
 
 Code that runs outside a request (Flowable async jobs, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a query without a tenant throws.
 
@@ -57,7 +52,7 @@ Known Pitfalls · Data Model ERD · User — Multi-Tenant Isolation
 
 ## Event System
 
-Events are **in-process**: Workflow Service is the only producer and the only consumer,
+Events are **in-process**: App is the only producer and the only consumer,
 and there is no message broker. `EventPublisher` hands each event to
 `NotificationService` and then to `AuditService`. Both write their rows in the caller's
 transaction, so a change, its notification and its audit entry commit or roll back
@@ -100,8 +95,8 @@ none of them holds a session.
 1. The browser runs an OIDC Authorization Code flow against Keycloak
    (realm `workflow-platform`) from Admin Portal or User Portal.
 2. The SPA sends the access token as `Authorization: Bearer …` with each `/api` call; the
-   portal's nginx proxies it to workflow-service.
-3. workflow-service validates the signature against the Keycloak JWK Set and accepts no
+   portal's nginx proxies it to app.
+3. app validates the signature against the Keycloak JWK Set and accepts no
    unauthenticated traffic, whether it's reached through a portal or directly.
 4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`; the
    tenant comes only from the JWT, never from a header — see Multi-Tenancy.
@@ -118,8 +113,8 @@ Admin — Keycloak Administration · User — Login
 
 ## API Routing
 
-There is no gateway. Each portal's nginx proxies `/api/` to workflow-service unchanged,
-Vite does the same in development, and workflow-service serves the external paths
+There is no gateway. Each portal's nginx proxies `/api/` to app unchanged,
+Vite does the same in development, and app serves the external paths
 itself:
 
 | External path | Served by |
@@ -129,12 +124,12 @@ itself:
 | `/api/notifications/**` | `NotificationController` |
 | `/api/audit/**` | `AuditController` |
 
-BDD and the Playwright API tests call workflow-service directly on port 8081 with the
+BDD and the Playwright API tests call app directly on port 8081 with the
 same paths.
 
 ## Flowable Engine
 
-Flowable 7.1.0 runs **embedded, in-process** inside Workflow Service — it is not a
+Flowable 7.1.0 runs **embedded, in-process** inside App — it is not a
 separate container. It shares the `workflow` PostgreSQL schema, where its `ACT_*` tables
 sit alongside the application `wf_*` tables.
 
@@ -168,7 +163,7 @@ cannot be published from a controller. See Event System.
 
 ### See also
 
-Workflow Service · Admin — Process Designer · Data Model ERD
+App · Admin — Process Designer · Data Model ERD
 
 ## Frontend Architecture
 
@@ -214,21 +209,20 @@ Admin Portal · User Portal · shared-ui · bpmn-editor
 
 ## Build System
 
-Gradle 9.2 with the **Groovy DSL** and three convention plugins in `buildSrc/`. No module
+Gradle 9.2 with the **Groovy DSL** and two convention plugins in `buildSrc/`. No module
 configures Java, Lombok or the Spring BOM itself.
 
 | Plugin | Applies to | Provides |
 |---|---|---|
 | `wfp.java-conventions` | everything | Java 21 toolchain, UTF-8, JUnit 5 |
-| `wfp.library-conventions` | `libs/*` | `java-library` + Lombok |
-| `wfp.spring-boot-app` | `services/*` | Boot plugin + Lombok + Spring Cloud BOM |
+| `wfp.spring-boot-app` | `services/app` | Boot plugin + Lombok |
 
 ### Commands
 
 ```bash
 ./gradlew build                                       # compile + test everything
-./gradlew :services:workflow-service:bootJar -x test  # one service JAR
-./gradlew :services:workflow-service:test             # one service test suite
+./gradlew :services:app:bootJar -x test  # one service JAR
+./gradlew :services:app:test             # one service test suite
 ```
 
 > [!WARNING]
@@ -250,8 +244,8 @@ Backend build commands · CI Pipeline · Repository Layout
 | Layer | Tooling | Scope |
 |---|---|---|
 | Backend unit | JUnit 5 | services and mappers |
-| Backend integration | **Testcontainers** (PostgreSQL) | repositories, full Spring context |
-| Backend web | MockMvc + `JwtTestHelper` | authenticated endpoints |
+| Backend integration | `@SpringBootTest` on H2 | repositories, full Spring context |
+| Backend web | MockMvc + Spring Security `jwt()` | authenticated endpoints |
 | BDD acceptance | Cucumber-style features under `tests/` | cross-service behaviour |
 | E2E | Playwright (`e2e/`) | both portals against the running stack |
 | Frontend | `tsc --noEmit` only | no unit test framework yet |
@@ -261,8 +255,8 @@ Integration tests activate `SPRING_PROFILES_ACTIVE=test` and read
 
 ### Fixtures
 
-wfp-test-support supplies `JwtTestHelper` (mock tokens with tenant and role claims),
-`TenantTestHelper` (sets and clears `TenantContext`) and `TestContainersConfig`.
+Tests build tokens with Spring Security's `jwt()` request post-processor (with a `tenant_id`
+claim) and set a tenant for service-level work with `TenantContext.runAs`.
 
 ### Traps
 

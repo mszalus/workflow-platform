@@ -28,16 +28,16 @@ architecture-beta
 |-----------|-------|-----------|---------------|------------|
 | `wfp-postgres` | postgres:16-alpine | 5433 | 5432 | - |
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
-| `wfp-workflow` | wfp/workflow-service | 8081 | 8081 | postgres (healthy) |
-| `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | workflow-service (started) |
-| `wfp-user-portal` | wfp/user-portal | 5174 | 80 | workflow-service (started) |
+| `wfp-app` | wfp/app | 8081 | 8081 | postgres (healthy) |
+| `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | app (started) |
+| `wfp-user-portal` | wfp/user-portal | 5174 | 80 | app (started) |
 
 ### Startup Order
 
 ```mermaid
 flowchart LR
     PG[PostgreSQL] --> KC[Keycloak]
-    PG --> WF[Workflow Service]
+    PG --> WF[App]
     WF --> AP[Admin Portal]
     WF --> UP[User Portal]
 ```
@@ -50,11 +50,11 @@ Single PostgreSQL instance with 2 schemas:
 flowchart TD
     subgraph "PostgreSQL (wfp database)"
         KS["keycloak schema<br/>Keycloak managed tables"]
-        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments,<br/>field_schema, field_option, field_value, notification, audit_entry<br/>+ Flowable ACT_* tables"]
+        WS["workflow schema<br/>wf_comments,<br/>field_schema, field_option, field_value, notification, audit_entry<br/>+ Flowable ACT_* tables"]
     end
 
     KC[Keycloak] --> KS
-    WF[Workflow Service] --> WS
+    WF[App] --> WS
 ```
 
 ### Network Topology (Docker)
@@ -67,7 +67,7 @@ flowchart TD
     Browser -->|":5174"| UP["User Portal<br/>(nginx)"]
     Browser -->|":8180"| KC["Keycloak"]
 
-    AP -->|"/api/* proxy"| WF["Workflow Service :8081"]
+    AP -->|"/api/* proxy"| WF["App :8081"]
     UP -->|"/api/* proxy"| WF
 
 
@@ -145,7 +145,7 @@ flowchart TD
         end
 
         subgraph "Application Pods"
-            WF["Workflow Service<br/>2-5 replicas (HPA)"]
+            WF["App<br/>2-5 replicas (HPA)"]
             AP["Admin Portal<br/>2 replicas"]
             UP["User Portal<br/>2 replicas"]
         end
@@ -181,7 +181,7 @@ flowchart TD
 
 | Service | CPU Request | CPU Limit | Memory Request | Memory Limit | Min/Max Replicas |
 |---------|------------|-----------|---------------|-------------|-----------------|
-| Workflow Service | 500m | 1000m | 512Mi | 1Gi | 2 / 5 |
+| App | 500m | 1000m | 512Mi | 1Gi | 2 / 5 |
 | Admin Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
 | User Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
 
