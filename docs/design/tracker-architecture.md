@@ -1,6 +1,6 @@
 # Tracker Architecture
 
-Status: **removal candidates decided on 2026-10-01**: R-1 to R-12 approved, R-11 subject to a check in 20.a. Tenant identity and the delivery order decided the same day. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
+Status: **removal candidates decided on 2026-10-01**: R-1 to R-12 approved; R-11 verified in 20.a. Tenant identity and the delivery order decided the same day. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
 
 ## Today
 
@@ -83,7 +83,7 @@ flowchart LR
 | R-8 | Dead code | Remove `Attachment` (screen S-5), `ProcessMetadata` (projects replace it), `NotificationPreference`, the mail and Thymeleaf dependencies, the empty email templates, and the process, task and history endpoints and DTOs that the item API replaces (20.7) | Nothing in use | **Remove** | Approved |
 | R-9 | Per-service database schemas | One schema, one Flyway history. **Assumption: no environment holds data worth migrating** (nothing is deployed; GCP is parked), so the local database is recreated instead of migrated | Nothing, if the assumption holds | **Remove, confirm the assumption** | Approved |
 | R-10 | Local observability stack (otel-collector, Tempo, Prometheus, Grafana) | Move to an optional compose profile (`--profile observability`). With one service, request tracing across services is gone, but database and HTTP spans stay. Rescope the GCP observability phase (now Phase 3) afterwards | Always-on local traces and dashboards | **Make optional** (not delete) | Approved |
-| R-11 | Flowable history tables | The platform never reads engine history (20.2), so set `flowable.history-level: none`. First verify in the 20.a spike that moving items between versions (20.4) doesn't need it | The engine's own audit trail, which duplicates `wf_item_transition` | **Decide in 20.a** | **Approved, verify in 20.a**: moving an item to a new version (`moveActivityIdTo`) must work with history off; if it doesn't, history stays on. `wf_item_transition` is the item history either way; its view comes in a later phase (#75) |
+| R-11 | Flowable history tables | The platform never reads engine history (20.2), so set `flowable.history-level: none`. First verify in the 20.a spike that moving items between versions (20.4) doesn't need it | The engine's own audit trail, which duplicates `wf_item_transition` | **Decide in 20.a** | **Approved and verified in 20.a** (`HistoryOffMoveTest`, #36): cancelling a run, starting one on the new version and `moveActivityIdTo` all work with `flowable.history-level: none`. `wf_item_transition` is the item history either way; its view comes in a later phase (#75) |
 | R-12 | The `manager` role | Unused. Proposed roles: `admin` (tenant administration: projects, workflows, fields, audit log) and `user` (items). Enforced in the backend (#72) | A middle role, until someone needs one | **Remove** | Approved |
 
 **Kept, because each is a standard the stack already relies on:** BPMN with Flowable behind the facade, bpmn-js, Keycloak, PostgreSQL with `jsonb`, Flyway, and the Hibernate tenant filter.
@@ -104,7 +104,7 @@ The chain is today's, minus the gateway:
 
 | Step | Content | Done when |
 |---|---|---|
-| 20.a | Spike, unchanged: parser, profile validator, `describe()`. Also verifies R-11 | as in 20.6, plus R-11 confirmed or reverted |
+| 20.a | Spike, unchanged: parser, profile validator, `describe()`. Also verifies R-11 (confirmed) | as in 20.6, plus R-11 confirmed or reverted |
 | C-1 | Fold custom-fields, notification and audit into `workflow-service` (renamed `app`); remove RabbitMQ and `wfp-events`; libraries become packages; one schema (R-1 to R-4, R-7, R-9). Today's screens keep working | BDD and Playwright green; 2 backend containers left (gateway, app) |
 | C-2 | Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
 | 20.b | Facade extraction, with the tenant check from #71 inside `transition` and `cancel` | as in 20.6 |
