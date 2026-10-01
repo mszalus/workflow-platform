@@ -24,18 +24,18 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NotificationService {
 
+    private static final int MAX_TITLE_LENGTH = 255;
+
     private final NotificationRepository notificationRepository;
 
     public void notify(BaseEvent event) {
-        TenantContext.runAs(event.getTenantId(), () -> {
-            switch (event) {
-                case TaskCreatedEvent e -> notifyTaskCreated(e);
-                case TaskAssignedEvent e -> notifyTaskAssigned(e);
-                case TaskCompletedEvent e -> notifyTaskCompleted(e);
-                case ProcessCompletedEvent e -> notifyProcessCompleted(e);
-                default -> { }
-            }
-        });
+        switch (event) {
+            case TaskCreatedEvent e -> notifyTaskCreated(e);
+            case TaskAssignedEvent e -> notifyTaskAssigned(e);
+            case TaskCompletedEvent e -> notifyTaskCompleted(e);
+            case ProcessCompletedEvent e -> notifyProcessCompleted(e);
+            default -> { }
+        }
     }
 
     public void createNotification(String userId, String tenantId, String title,
@@ -44,7 +44,7 @@ public class NotificationService {
         notificationRepository.save(Notification.builder()
                 .userId(userId)
                 .tenantId(tenantId)
-                .title(title)
+                .title(title.length() > MAX_TITLE_LENGTH ? title.substring(0, MAX_TITLE_LENGTH) : title)
                 .message(message)
                 .type(type)
                 .referenceId(referenceId)

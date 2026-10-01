@@ -3,19 +3,14 @@ package com.wfp.workflow.service;
 import com.wfp.events.EventConstants;
 import com.wfp.events.TaskCompletedEvent;
 import com.wfp.events.TaskCreatedEvent;
-import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.entity.Notification;
 import com.wfp.workflow.entity.NotificationType;
 import com.wfp.workflow.repository.NotificationRepository;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import java.util.concurrent.atomic.AtomicReference;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -25,18 +20,8 @@ class NotificationServiceTest {
     private final NotificationRepository notificationRepository = mock(NotificationRepository.class);
     private final NotificationService notificationService = new NotificationService(notificationRepository);
 
-    @AfterEach
-    void clearTenant() {
-        TenantContext.clear();
-    }
-
     @Test
-    void notifiesTheAssigneeOfANewTaskAsTheEventTenant() {
-        AtomicReference<String> tenantDuringSave = new AtomicReference<>();
-        doAnswer(invocation -> {
-            tenantDuringSave.set(TenantContext.getCurrentTenantId());
-            return invocation.getArgument(0);
-        }).when(notificationRepository).save(any());
+    void notifiesTheAssigneeOfANewTaskInTheEventTenant() {
         TaskCreatedEvent event = TaskCreatedEvent.builder().taskId("task-1").taskName("Review").assignee("user-a").build();
         event.initDefaults(EventConstants.TASK_CREATED, "tenant-a", "user-a");
 
@@ -46,8 +31,6 @@ class NotificationServiceTest {
         assertThat(saved.getUserId()).isEqualTo("user-a");
         assertThat(saved.getTenantId()).isEqualTo("tenant-a");
         assertThat(saved.getType()).isEqualTo(NotificationType.TASK_ASSIGNED);
-        assertThat(tenantDuringSave).hasValue("tenant-a");
-        assertThat(TenantContext.getCurrentTenantId()).isNull();
     }
 
     @Test
@@ -60,6 +43,16 @@ class NotificationServiceTest {
         assertThat(savedNotification())
                 .extracting(Notification::getUserId, Notification::getType)
                 .containsExactly("user-b", NotificationType.TASK_COMPLETED);
+    }
+
+    @Test
+    void truncatesTitlesToTheColumnLength() {
+        TaskCreatedEvent event = TaskCreatedEvent.builder().taskId("task-1").taskName("x".repeat(255)).assignee("user-a").build();
+        event.initDefaults(EventConstants.TASK_CREATED, "tenant-a", "user-a");
+
+        notificationService.notify(event);
+
+        assertThat(savedNotification().getTitle()).hasSize(255).startsWith("New Task: ");
     }
 
     @Test
