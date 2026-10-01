@@ -16,8 +16,6 @@ C4Container
         Container(adminPortal, "Admin Portal", "React 18, TypeScript, Vite, nginx", "BPMN process designer, custom field editor, deployment management, audit log viewer")
         Container(userPortal, "User Portal", "React 18, TypeScript, Vite, nginx", "Task inbox, start process, notifications, dynamic forms")
 
-        Container(gateway, "API Gateway", "Spring Cloud Gateway MVC, Java 21", "JWT validation, path routing. Port 8080")
-
         Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
 
         ContainerDb(postgres, "PostgreSQL 16", "2 schemas: workflow, keycloak", "Shared instance, one schema per service")
@@ -26,16 +24,12 @@ C4Container
     Rel(admin, adminPortal, "Uses", "HTTPS")
     Rel(endUser, userPortal, "Uses", "HTTPS")
 
-    Rel(adminPortal, gateway, "API calls", "/api/* via nginx proxy")
-    Rel(userPortal, gateway, "API calls", "/api/* via nginx proxy")
+    Rel(adminPortal, workflowSvc, "API calls", "/api/* via nginx proxy")
+    Rel(userPortal, workflowSvc, "API calls", "/api/* via nginx proxy")
     Rel(adminPortal, keycloak, "OAuth2 login", "OIDC Code Flow")
     Rel(userPortal, keycloak, "OAuth2 login", "OIDC Code Flow")
 
-    Rel(gateway, workflowSvc, "Routes", "/api/workflow/** -> /api/**")
-    Rel(gateway, workflowSvc, "Routes", "/api/fields/** -> /api/**")
-    Rel(gateway, workflowSvc, "Routes", "/api/notifications/**")
-    Rel(gateway, workflowSvc, "Routes", "/api/audit/**")
-    Rel(gateway, keycloak, "Validates JWTs", "JWK Set endpoint")
+    Rel(workflowSvc, keycloak, "Validates JWTs", "JWK Set endpoint")
 
     Rel(workflowSvc, postgres, "Reads/Writes", "JDBC, schema: workflow")
     Rel(keycloak, postgres, "Reads/Writes", "JDBC, schema: keycloak")
@@ -50,19 +44,13 @@ C4Container
 |-----------|-----------|------|----------------|-------------|
 | Admin Portal | React 18 + nginx | 5173 (host) | - | Process designer, field editor, audit viewer |
 | User Portal | React 18 + nginx | 5174 (host) | - | Task inbox, start process, notifications |
-| API Gateway | Spring Cloud Gateway MVC | 9080 (host) / 8080 | - (no DB) | JWT validation, routing |
 | Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
 | PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 2 schemas | Shared database instance |
 | Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
 
-## Gateway Routing Rules
+## API Routing
 
-| External Path | Target Service | Rewrite Rule |
-|---------------|---------------|-------------|
-| `/api/workflow/**` | workflow-service:8081 | `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}` |
-| `/api/fields/**` | workflow-service:8081 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
-| `/api/notifications/**` | workflow-service:8081 | Pass-through (no rewrite) |
-| `/api/audit/**` | workflow-service:8081 | Pass-through (no rewrite) |
+The portals' nginx proxies `/api/` to workflow-service unchanged; the service serves `/api/workflow/**`, `/api/fields/**`, `/api/notifications/**` and `/api/audit/**` itself.
 
 ## Events
 
@@ -70,5 +58,5 @@ Workflow Service is the only producer and consumer. `EventPublisher` hands each 
 
 ## Notes for Editors
 
-- **Adding a new service**: Add a `Container` node, a `Rel` to `postgres` (with its schema name), a `Rel` from `gateway`, and update the gateway routing table. 
+- **Adding a new service**: Add a `Container` node, a `Rel` to `postgres` (with its schema name), and the `Rel` edges from the portals. 
 - **Splitting the database**: If a service needs its own PostgreSQL instance, replace the single `ContainerDb` with multiple and update the `Rel` edges accordingly.

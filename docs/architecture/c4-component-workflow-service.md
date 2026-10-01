@@ -6,7 +6,7 @@ The workflow service is the core of the platform. It wraps the Flowable 7.1 BPMN
 C4Component
     title Workflow Service — Component Diagram
 
-    Container_Ext(gateway, "API Gateway", "Routes /api/workflow/** to this service")
+    Container_Ext(portals, "Admin and User Portal", "nginx proxies /api/** to this service")
     ContainerDb_Ext(postgres, "PostgreSQL", "Schema: workflow")
     System_Ext(flowableEngine, "Flowable Engine", "Embedded BPMN engine (in-process)")
 
@@ -42,13 +42,13 @@ C4Component
         Component(attachmentRepo, "AttachmentRepository", "JPA Repository", "CRUD for Attachment entity")
     }
 
-    Rel(gateway, deployCtrl, "HTTP/JSON")
-    Rel(gateway, processCtrl, "HTTP/JSON")
-    Rel(gateway, taskCtrl, "HTTP/JSON")
-    Rel(gateway, commentCtrl, "HTTP/JSON")
-    Rel(gateway, historyCtrl, "HTTP/JSON")
-    Rel(gateway, notifCtrl, "HTTP/JSON")
-    Rel(gateway, auditCtrl, "HTTP/JSON")
+    Rel(portals, deployCtrl, "HTTP/JSON")
+    Rel(portals, processCtrl, "HTTP/JSON")
+    Rel(portals, taskCtrl, "HTTP/JSON")
+    Rel(portals, commentCtrl, "HTTP/JSON")
+    Rel(portals, historyCtrl, "HTTP/JSON")
+    Rel(portals, notifCtrl, "HTTP/JSON")
+    Rel(portals, auditCtrl, "HTTP/JSON")
 
     Rel(deployCtrl, deploySvc, "Calls")
     Rel(processCtrl, processSvc, "Calls")
@@ -102,6 +102,6 @@ C4Component
 
 ## Notes for Editors
 
-- **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the gateway and the service to the relevant repository/Flowable service.
+- **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the portals and the service to the relevant repository/Flowable service.
 - **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `com.wfp.workflow.event`.
 - **Flowable engine is embedded** (in-process, not a separate container). It uses the same PostgreSQL schema (`workflow`) and manages its own `ACT_*` tables alongside the application's `wf_*` tables.

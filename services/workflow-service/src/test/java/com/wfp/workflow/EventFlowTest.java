@@ -73,7 +73,7 @@ class EventFlowTest {
 
     @Test
     void completingATaskNotifiesTheCompleter() throws Exception {
-        perform(post("/api/tasks/{id}/complete", taskId)).andExpect(status().isNoContent());
+        perform(post("/api/workflow/tasks/{id}/complete", taskId)).andExpect(status().isNoContent());
 
         perform(get("/api/notifications"))
                 .andExpect(status().isOk())
@@ -83,7 +83,7 @@ class EventFlowTest {
 
     @Test
     void completingATaskRecordsAnAuditEntryInTheSameService() throws Exception {
-        perform(post("/api/tasks/{id}/complete", taskId)).andExpect(status().isNoContent());
+        perform(post("/api/workflow/tasks/{id}/complete", taskId)).andExpect(status().isNoContent());
 
         perform(get("/api/audit").param("entityId", taskId))
                 .andExpect(status().isOk())

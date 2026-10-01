@@ -76,7 +76,7 @@ class TenantWriteIsolationTest {
 
     @Test
     void otherTenantCannotClaimTask() throws Exception {
-        perform(post("/api/tasks/{id}/claim", taskId), "tenant-b").andExpect(status().isNotFound());
+        perform(post("/api/workflow/tasks/{id}/claim", taskId), "tenant-b").andExpect(status().isNotFound());
 
         assertThat(task().getAssignee()).isNull();
     }
@@ -85,21 +85,21 @@ class TenantWriteIsolationTest {
     void otherTenantCannotUnclaimTask() throws Exception {
         flowableTaskService.claim(taskId, "user-a");
 
-        perform(post("/api/tasks/{id}/unclaim", taskId), "tenant-b").andExpect(status().isNotFound());
+        perform(post("/api/workflow/tasks/{id}/unclaim", taskId), "tenant-b").andExpect(status().isNotFound());
 
         assertThat(task().getAssignee()).isEqualTo("user-a");
     }
 
     @Test
     void otherTenantCannotCompleteTask() throws Exception {
-        perform(post("/api/tasks/{id}/complete", taskId), "tenant-b").andExpect(status().isNotFound());
+        perform(post("/api/workflow/tasks/{id}/complete", taskId), "tenant-b").andExpect(status().isNotFound());
 
         assertThat(task()).isNotNull();
     }
 
     @Test
     void otherTenantCannotDelegateTask() throws Exception {
-        perform(post("/api/tasks/{id}/delegate", taskId)
+        perform(post("/api/workflow/tasks/{id}/delegate", taskId)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"delegateToUserId\":\"user-b\"}"), "tenant-b")
                 .andExpect(status().isNotFound());
@@ -109,35 +109,35 @@ class TenantWriteIsolationTest {
 
     @Test
     void otherTenantCannotCancelProcess() throws Exception {
-        perform(delete("/api/processes/{id}", processInstanceId), "tenant-b").andExpect(status().isNotFound());
+        perform(delete("/api/workflow/processes/{id}", processInstanceId), "tenant-b").andExpect(status().isNotFound());
 
         assertThat(runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).count()).isEqualTo(1);
     }
 
     @Test
     void otherTenantCannotDeleteDeployment() throws Exception {
-        perform(delete("/api/deployments/{id}", deploymentId), "tenant-b").andExpect(status().isNotFound());
+        perform(delete("/api/workflow/deployments/{id}", deploymentId), "tenant-b").andExpect(status().isNotFound());
 
         assertThat(deploymentExists()).isTrue();
     }
 
     @Test
     void ownTenantCancelsProcess() throws Exception {
-        perform(delete("/api/processes/{id}", processInstanceId), "tenant-a").andExpect(status().isNoContent());
+        perform(delete("/api/workflow/processes/{id}", processInstanceId), "tenant-a").andExpect(status().isNoContent());
 
         assertThat(runtimeService.createProcessInstanceQuery().processInstanceId(processInstanceId).count()).isZero();
     }
 
     @Test
     void ownTenantDeletesDeployment() throws Exception {
-        perform(delete("/api/deployments/{id}", deploymentId), "tenant-a").andExpect(status().isNoContent());
+        perform(delete("/api/workflow/deployments/{id}", deploymentId), "tenant-a").andExpect(status().isNoContent());
 
         assertThat(deploymentExists()).isFalse();
     }
 
     @Test
     void ownTenantCompletesTask() throws Exception {
-        perform(post("/api/tasks/{id}/complete", taskId), "tenant-a").andExpect(status().isNoContent());
+        perform(post("/api/workflow/tasks/{id}/complete", taskId), "tenant-a").andExpect(status().isNoContent());
 
         assertThat(task()).isNull();
     }

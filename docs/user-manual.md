@@ -186,7 +186,7 @@ The platform supports multiple tenants (organizations). Each tenant's data is co
 
 | Issue | Solution |
 |-------|----------|
-| "Loading..." stuck on screen | Check that all backend services are running. Verify gateway health at `http://localhost:9080/actuator/health` |
+| "Loading..." stuck on screen | Check that all backend services are running. Verify the API health at `http://localhost:8081/actuator/health` |
 | Redirected to login repeatedly | Your JWT token may have expired. Clear browser cookies and log in again |
 | No processes available to start | Ask an administrator to deploy a BPMN process definition |
 | Tasks not appearing | Verify you're logged in as the correct user. Tasks are filtered by assignee |

@@ -15,7 +15,6 @@ architecture-beta
         service keycloak(server)[Keycloak 25] in infra
 
     group backends(server)[Backend Services] in dockerHost
-        service gateway(server)[Gateway :9080] in backends
         service workflow(server)[Workflow, custom fields, notifications, audit :8081] in backends
 
     group frontends(server)[Frontends] in dockerHost
@@ -29,10 +28,9 @@ architecture-beta
 |-----------|-------|-----------|---------------|------------|
 | `wfp-postgres` | postgres:16-alpine | 5433 | 5432 | - |
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
-| `wfp-gateway` | wfp/gateway | 9080 | 8080 | keycloak (started) |
 | `wfp-workflow` | wfp/workflow-service | - | 8081 | postgres (healthy) |
-| `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | gateway (started) |
-| `wfp-user-portal` | wfp/user-portal | 5174 | 80 | gateway (started) |
+| `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | workflow-service (started) |
+| `wfp-user-portal` | wfp/user-portal | 5174 | 80 | workflow-service (started) |
 
 ### Startup Order
 
@@ -40,9 +38,8 @@ architecture-beta
 flowchart LR
     PG[PostgreSQL] --> KC[Keycloak]
     PG --> WF[Workflow Service]
-    KC --> GW[Gateway]
-    GW --> AP[Admin Portal]
-    GW --> UP[User Portal]
+    WF --> AP[Admin Portal]
+    WF --> UP[User Portal]
 ```
 
 ### Database Schemas
@@ -70,15 +67,11 @@ flowchart TD
     Browser -->|":5174"| UP["User Portal<br/>(nginx)"]
     Browser -->|":8180"| KC["Keycloak"]
 
-    AP -->|"/api/* proxy"| GW["Gateway :9080"]
-    UP -->|"/api/* proxy"| GW
+    AP -->|"/api/* proxy"| WF["Workflow Service :8081"]
+    UP -->|"/api/* proxy"| WF
 
-    GW -->|"/api/workflow/**"| WF["Workflow Service :8081"]
-    GW -->|"/api/fields/**"| WF
-    GW -->|"/api/notifications/**"| WF
-    GW -->|"/api/audit/**"| WF
 
-    GW -.->|"JWK Set"| KC
+    WF -.->|"JWK Set"| KC
 
     WF --> PG["PostgreSQL :5432"]
     KC --> PG
@@ -109,7 +102,7 @@ flowchart TD
             end
         end
 
-        FW["Firewall Rule: allow-wfp<br/>Ports: 5173, 5174, 8180, 9080"]
+        FW["Firewall Rule: allow-wfp<br/>Ports: 5173, 5174, 8180"]
         CS["Cloud Scheduler<br/>Auto-stop VM at midnight UTC"]
     end
 
@@ -126,7 +119,7 @@ flowchart TD
 | VM Instance | `e2-medium` (2 vCPU, 4GB) | Min viable for 10 containers; e2-small causes OOM |
 | Disk | 30 GB `pd-standard` | OS + Docker images + data |
 | Region | `us-central1-a` | - |
-| Firewall | Ports 5173, 5174, 8180, 9080 | Tag: `wfp-server` |
+| Firewall | Ports 5173, 5174, 8180 | Tag: `wfp-server` |
 | Auto-stop | Cloud Scheduler at midnight UTC | Cost savings (~$1/month when stopped) |
 | Running cost | ~$25/month | e2-medium on-demand |
 
@@ -152,7 +145,6 @@ flowchart TD
         end
 
         subgraph "Application Pods"
-            GW["Gateway<br/>2 replicas (GCP)"]
             WF["Workflow Service<br/>2-5 replicas (HPA)"]
             AP["Admin Portal<br/>2 replicas"]
             UP["User Portal<br/>2 replicas"]
@@ -168,10 +160,10 @@ flowchart TD
         end
     end
 
-    ING --> GW
     ING --> AP
     ING --> UP
-    GW --> WF
+    AP --> WF
+    UP --> WF
     WF --> PG
     WF -.-> CSQL
 
@@ -189,7 +181,6 @@ flowchart TD
 
 | Service | CPU Request | CPU Limit | Memory Request | Memory Limit | Min/Max Replicas |
 |---------|------------|-----------|---------------|-------------|-----------------|
-| Gateway | 250m | 500m | 256Mi | 512Mi | 2 / 5 |
 | Workflow Service | 500m | 1000m | 512Mi | 1Gi | 2 / 5 |
 | Admin Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
 | User Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |

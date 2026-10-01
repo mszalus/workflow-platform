@@ -5,34 +5,26 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React
 ## Architecture
 
 ```
-                         ┌──────────────┐
-                         │   Keycloak   │
-                         │   (OIDC/JWT) │
-                         └──────┬───────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        │                  API Gateway (:8080)           │
-        │          JWT validation + tenant routing       │
-        └───────────────────────┬───────────────────────┘
-                                │
-                    ┌───────────┴───────────┐
-                    │   Workflow Service    │
-                    │        :8081          │
-                    │ + custom fields,      │
-                    │   notifications,      │
-                    │   audit               │
-                    └───────────┬───────────┘
-                                │
-                         ┌──────┴──────┐
-                         │ PostgreSQL  │
-                         │   :5432     │
-                         │  (workflow) │
-                         └─────────────┘
-
-        ┌─────────────┐    ┌─────────────┐
-        │Admin Portal │    │ User Portal │
-        │   :5173     │    │   :5174     │
-        └─────────────┘    └─────────────┘
+   ┌─────────────┐   ┌─────────────┐        ┌──────────────┐
+   │Admin Portal │   │ User Portal │        │   Keycloak   │
+   │   :5173     │   │   :5174     │        │  (OIDC/JWT)  │
+   └──────┬──────┘   └──────┬──────┘        └──────────────┘
+          │ nginx /api proxy│
+          └────────┬────────┘
+                   │
+       ┌───────────┴───────────┐
+       │   Workflow Service    │
+       │        :8081          │
+       │ + custom fields,      │
+       │   notifications,      │
+       │   audit               │
+       └───────────┬───────────┘
+                   │
+            ┌──────┴──────┐
+            │ PostgreSQL  │
+            │   :5432     │
+            │  (workflow) │
+            └─────────────┘
 ```
 
 ## Tech Stack
@@ -40,8 +32,7 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React
 | Layer | Technology |
 |-------|-----------|
 | BPMN Engine | Flowable 7.1.0 |
-| Backend | Java 21, Spring Boot 3.5, Spring Cloud 2025.0 |
-| API Gateway | Spring Cloud Gateway MVC |
+| Backend | Java 21, Spring Boot 3.5 |
 | Database | PostgreSQL 16 |
 | Identity | Keycloak 25 (OIDC/JWT, tenant as a user attribute) |
 | Frontend | React 18, TypeScript, Vite, bpmn-js |
@@ -73,11 +64,10 @@ Once running, the services are available at:
 
 | Service | URL |
 |---------|-----|
-| API Gateway | http://localhost:9080 |
 | Keycloak Admin | http://localhost:8180 (admin/admin) |
 | Admin Portal | http://localhost:5173 |
 | User Portal | http://localhost:5174 |
-| Workflow Service (direct) | http://localhost:8081 |
+| Workflow Service (API) | http://localhost:8081 |
 | PostgreSQL | localhost:5433 (wfp/wfp_secret) |
 
 ## Local Development
@@ -161,7 +151,6 @@ workflow-platform/
 │   ├── wfp-security/            # JWT auth, tenant context, Hibernate tenant filter
 │   └── wfp-test-support/        # Test helpers (JWT mocking, Testcontainers)
 ├── services/
-│   ├── gateway/                 # API Gateway (routing, JWT validation)
 │   └── workflow-service/        # Flowable BPMN engine, custom fields, notifications, audit, REST API
 ├── frontend/
 │   ├── packages/shared-ui/      # Shared components, API client, auth
@@ -177,10 +166,9 @@ workflow-platform/
 Tenant isolation is enforced at every layer:
 
 1. **JWT** — Keycloak issues tokens with a `tenant_id` claim
-2. **Gateway** — strips any client-supplied `X-Tenant-Id` header; it never decides the tenant
-3. **Services** — `TenantInterceptor` reads `tenant_id` from the validated JWT into `TenantContext` (ThreadLocal) and rejects a token without it (403)
-4. **JPA** — Hibernate `@Filter` automatically adds `WHERE tenant_id = :tenantId` to all queries
-5. **Flowable** — all engine API calls include `tenantId`
+2. **Service** — `TenantInterceptor` reads `tenant_id` from the validated JWT into `TenantContext` (ThreadLocal) and rejects a token without it (403)
+3. **JPA** — Hibernate `@Filter` automatically adds `WHERE tenant_id = :tenantId` to all queries
+4. **Flowable** — all engine API calls include `tenantId`
 
 ## Testing
 

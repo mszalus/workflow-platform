@@ -12,11 +12,6 @@ global:
     environment: local
 
 scrape_configs:
-  - job_name: gateway
-    static_configs:
-      - targets: ['gateway:8080']
-    metrics_path: /actuator/prometheus
-
   - job_name: workflow-service
     static_configs:
       - targets: ['workflow-service:8081']

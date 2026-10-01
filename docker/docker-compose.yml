@@ -112,25 +112,6 @@ services:
   # Application services
   # ---------------------------------------------------------------------------
 
-  gateway:
-    build:
-      context: ..
-      dockerfile: services/gateway/Dockerfile
-    container_name: wfp-gateway
-    healthcheck:
-      <<: *spring-healthcheck
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8080/actuator/health"]
-    ports:
-      - "9080:8080"
-    environment:
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
-      WORKFLOW_SERVICE_URL: http://workflow-service:8081
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-    depends_on:
-      - keycloak
-      - otel-collector
-
   workflow-service:
     build:
       context: ..
@@ -164,7 +145,7 @@ services:
     ports:
       - "5173:8080"
     depends_on:
-      - gateway
+      - workflow-service
 
   user-portal:
     build:
@@ -174,7 +155,7 @@ services:
     ports:
       - "5174:8080"
     depends_on:
-      - gateway
+      - workflow-service
 
 volumes:
   postgres_data:

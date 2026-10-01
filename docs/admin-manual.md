@@ -41,11 +41,6 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
        │ nginx /api proxy  │
        └────────┬──────────┘
                 │
-         ┌──────▼──────┐
-         │   Gateway   │
-         │   :9080     │
-         └──────┬──────┘
-                │
          ┌──────▼───────┐
          │   Workflow   │
          │custom fields,│
@@ -62,14 +57,11 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
     └────────┘    └────────┘
 ```
 
-### Gateway Routing
+### API Routing
 
-| Frontend Path          | Gateway Route           | Backend Service        |
-|-----------------------|-------------------------|------------------------|
-| `/api/workflow/**`    | `RewritePath → /api/**` | workflow-service:8081  |
-| `/api/fields/**`      | `RewritePath → /api/**` | workflow-service:8081  |
-| `/api/notifications/**` | Pass-through          | workflow-service:8081  |
-| `/api/audit/**`       | Pass-through            | workflow-service:8081  |
+Each portal's nginx proxies `/api/` unchanged to `workflow-service:8081`. The service serves the
+external paths itself (`/api/workflow/**`, `/api/fields/**`, `/api/notifications/**`, `/api/audit/**`)
+and validates the JWT on every request. In development, Vite proxies `/api` to `localhost:8081`.
 
 ### Events
 
@@ -243,7 +235,7 @@ The table shows all field schemas for the selected process:
 - Schemas are stored in workflow-service, next to the workflow engine
 - Field values are associated with process instances
 - The User Portal displays custom fields on the Task Detail page
-- Fields are queried via the gateway: `GET /api/fields/values?processInstanceId=...`
+- Fields are queried with `GET /api/fields/values?processInstanceId=...`
 
 ---
 
@@ -349,7 +341,6 @@ docker compose -f docker/docker-compose.yml ps
 |-------------------|--------------------|-------|------------------------|
 | wfp-postgres      | postgres:16-alpine | 5433  | Database (all schemas) |
 | wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
-| wfp-gateway       | (built)            | 9080  | API gateway            |
 | wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields, notifications, audit |
 | wfp-admin-portal  | (built)            | 5173  | Admin frontend         |
 | wfp-user-portal   | (built)            | 5174  | User frontend          |
@@ -361,7 +352,7 @@ The docker-compose file defines dependencies:
 1. **PostgreSQL** starts first (health check: `pg_isready`)
 2. **Keycloak** starts after PostgreSQL is healthy
 3. **Backend services** start after PostgreSQL is healthy
-4. **Frontend containers** start after gateway is running
+4. **Frontend containers** start after workflow-service
 
 ### Viewing Logs
 
@@ -385,13 +376,6 @@ PostgreSQL uses separate schemas per service (created by `docker/init-db.sql`):
 | `workflow`     | workflow-service (including custom fields, notifications and audit) |
 | `keycloak`     | Keycloak             |
 
-### Environment Variables
-
-Backend service URIs are configured via environment variables in `docker-compose.yml`:
-
-| Variable                | Default                | Description               |
-|------------------------|------------------------|---------------------------|
-| `WORKFLOW_SERVICE_URL` | `http://workflow:8081` | Workflow service URI      |
 
 ---
 
@@ -405,7 +389,6 @@ The platform includes Helm charts for Kubernetes deployment.
 helm/
 ├── charts/
 │   ├── workflow-service/
-│   ├── gateway/
 │   ├── admin-portal/
 │   └── user-portal/
 └── workflow-platform/          # Umbrella chart
@@ -453,10 +436,9 @@ global:
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Service fails to start with `DataSource` error | Missing database schema | Run `docker/init-db.sql` against PostgreSQL |
-| `Failed to configure a DataSource` on gateway | Gateway doesn't need a DB | Verify gateway excludes `DataSourceAutoConfiguration` |
 | Duplicate `@FilterDef` error | Two entities define `@FilterDef(name = "tenantFilter")` | Only ONE entity per persistence unit should have `@FilterDef`; others use `@Filter` only |
 | JWT validation fails | Keycloak not reachable | Check Keycloak is running and `issuer-uri` is correct |
-| Frontend shows "Loading..." | API calls failing | Check browser console for errors; verify gateway is running |
+| Frontend shows "Loading..." | API calls failing | Check browser console for errors; verify workflow-service is running |
 | Port 5432 conflict | Local PostgreSQL running | Docker maps PG to port 5433 to avoid conflicts |
 | `gradlew` permission denied | File not executable | Run `git update-index --chmod=+x gradlew` |
 | Flowable + H2 test failures | Wrong H2 mode | Use `MODE=LEGACY` in JDBC URL, not `MODE=PostgreSQL` |
@@ -466,11 +448,7 @@ global:
 Verify all services are healthy:
 
 ```bash
-# Gateway
-curl http://localhost:9080/actuator/health
-
-# Individual services
-curl http://localhost:8081/actuator/health  # workflow
+curl http://localhost:8081/actuator/health  # workflow-service
 ```
 
 ### Useful Commands
@@ -482,16 +460,16 @@ curl -s -X POST 'http://localhost:8180/realms/workflow-platform/protocol/openid-
   | jq .access_token -r
 
 # Deploy a BPMN process
-curl -X POST http://localhost:9080/api/workflow/deployments \
+curl -X POST http://localhost:8081/api/workflow/deployments \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"My Process","bpmnXml":"<xml>..."}'
 
 # List tasks
-curl http://localhost:9080/api/workflow/tasks?assignee=admin-a \
+curl http://localhost:8081/api/workflow/tasks?assignee=admin-a \
   -H "Authorization: Bearer $TOKEN"
 
 # View audit log
-curl http://localhost:9080/api/audit \
+curl http://localhost:8081/api/audit \
   -H "Authorization: Bearer $TOKEN"
 ```

@@ -93,8 +93,4 @@ test.describe('Screenshot Capture', () => {
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'user-notifications.png'), fullPage: true });
   });
 
-  test('Gateway Health', async ({ page }) => {
-    await page.goto('http://localhost:9080/actuator/health');
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'gateway-health.png') });
-  });
 });
