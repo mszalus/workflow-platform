@@ -105,7 +105,7 @@ The chain is today's, minus the gateway:
 | Step | Content | Done when |
 |---|---|---|
 | 20.a | Spike, unchanged: parser, profile validator, `describe()`. Also verifies R-11 (confirmed) | as in 20.6, plus R-11 confirmed or reverted |
-| C-1 | Fold custom-fields, notification and audit into `workflow-service` (renamed `app`); remove RabbitMQ and `wfp-events`; libraries become packages; one schema (R-1 to R-4, R-7, R-9). Today's screens keep working | BDD and Playwright green; 2 backend containers left (gateway, app) |
+| C-1 | Fold custom-fields (C-1a, #42: done), notification (C-1b, #78) and audit (C-1c, #79) into `workflow-service` (renamed `app`); remove RabbitMQ and `wfp-events`; libraries become packages; one schema (R-1 to R-4, R-7, R-9). Today's screens keep working | BDD and Playwright green; 2 backend containers left (gateway, app) |
 | C-2 | Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
 | 20.b | Facade extraction, with the tenant check from #71 inside `transition` and `cancel` | as in 20.6 |
 | 20.c | Item model. History, notification and audit rows are written in the same transaction, with no events | as in 20.6 |

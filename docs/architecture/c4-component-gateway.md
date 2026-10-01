@@ -10,8 +10,7 @@ C4Component
     Container_Ext(userPortal, "User Portal", "nginx reverse proxy")
     Container_Ext(keycloak, "Keycloak", "JWK Set endpoint")
 
-    Container_Ext(workflowSvc, "Workflow Service", "Port 8081")
-    Container_Ext(fieldsSvc, "Custom Fields Service", "Port 8082")
+    Container_Ext(workflowSvc, "Workflow Service", "Port 8081, including custom fields")
     Container_Ext(notifSvc, "Notification Service", "Port 8083")
     Container_Ext(auditSvc, "Audit Service", "Port 8084")
 
@@ -36,7 +35,7 @@ C4Component
     Rel(jwtFilter, tenantFilter, "Authenticated request")
 
     Rel(tenantFilter, workflowSvc, "/api/workflow/**", "RewritePath -> /api/**")
-    Rel(tenantFilter, fieldsSvc, "/api/fields/**", "RewritePath -> /api/**")
+    Rel(tenantFilter, workflowSvc, "/api/fields/**", "RewritePath -> /api/**")
     Rel(tenantFilter, notifSvc, "/api/notifications/**", "Pass-through")
     Rel(tenantFilter, auditSvc, "/api/audit/**", "Pass-through")
 

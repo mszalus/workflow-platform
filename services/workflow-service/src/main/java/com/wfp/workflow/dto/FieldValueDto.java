@@ -1,6 +1,6 @@
-package com.wfp.customfields.dto;
+package com.wfp.workflow.dto;
 
-import com.wfp.customfields.entity.FieldType;
+import com.wfp.workflow.entity.FieldType;
 import lombok.Builder;
 import lombok.Data;
 

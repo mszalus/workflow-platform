@@ -36,8 +36,7 @@ Current owners of the single `@FilterDef` in each service:
 
 | Service | Declares `@FilterDef` | Declare `@Filter` only |
 |---|---|---|
-| Workflow Service | ProcessMetadata | Comment, Attachment |
-| Custom Fields Service | FieldSchema | FieldValue |
+| Workflow Service | ProcessMetadata | Comment, Attachment, FieldSchema, FieldValue |
 | Notification Service | Notification | NotificationPreference |
 | Audit Service | AuditEntry | — |
 
@@ -153,14 +152,14 @@ Admin — Keycloak Administration · API Gateway · User — Login
 ## Gateway Routing
 
 Four routes, two of which rewrite the path. The asymmetry is deliberate:
-Workflow Service and Custom Fields Service expose generic `/api/**` paths that
-would collide, so the gateway namespaces them; Notification Service and
+Workflow Service exposes generic `/api/**` paths for both workflows and custom fields,
+so the gateway namespaces them under `/api/workflow` and `/api/fields`; Notification Service and
 Audit Service already expose distinct prefixes and pass through untouched.
 
 | External path | Target | Rewrite |
 |---|---|---|
 | `/api/workflow/**` | workflow-service:8081 | `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}` |
-| `/api/fields/**` | custom-fields-service:8082 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
+| `/api/fields/**` | workflow-service:8081 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
 | `/api/notifications/**` | notification-service:8083 | pass-through |
 | `/api/audit/**` | audit-service:8084 | pass-through |
 
@@ -170,8 +169,8 @@ So `/api/workflow/tasks` reaches the backend as `/api/tasks`, but
 ### Overriding URIs in Docker
 
 Compose sets `SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_URI` per route index. The project also
-defines named vars (`WORKFLOW_SERVICE_URL`, `CUSTOM_FIELDS_SERVICE_URL`,
-`NOTIFICATION_SERVICE_URL`, `AUDIT_SERVICE_URL`) referenced from `application.yml`,
+defines named vars (`WORKFLOW_SERVICE_URL`, `NOTIFICATION_SERVICE_URL`,
+`AUDIT_SERVICE_URL`) referenced from `application.yml`,
 because indexed env vars silently drop the rest of a route definition when partially
 overridden.
 

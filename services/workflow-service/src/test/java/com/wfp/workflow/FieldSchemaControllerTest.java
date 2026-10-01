@@ -1,8 +1,8 @@
-package com.wfp.customfields;
+package com.wfp.workflow;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wfp.customfields.dto.CreateFieldSchemaRequest;
-import com.wfp.customfields.entity.FieldType;
+import com.wfp.workflow.dto.CreateFieldSchemaRequest;
+import com.wfp.workflow.entity.FieldType;
 import com.wfp.security.context.TenantContext;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

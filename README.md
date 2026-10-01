@@ -13,24 +13,25 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot microserv
         ┌───────────────────────┼───────────────────────┐
         │                  API Gateway (:8080)           │
         │          JWT validation + tenant routing       │
-        └──┬──────────┬──────────┬──────────┬───────────┘
-           │          │          │          │
-     ┌─────┴──┐ ┌─────┴──┐ ┌────┴───┐ ┌───┴────┐
-     │Workflow│ │Custom  │ │Notif.  │ │ Audit  │
-     │Service │ │Fields  │ │Service │ │Service │
-     │ :8081  │ │Service │ │ :8083  │ │ :8084  │
-     │        │ │ :8082  │ │        │ │        │
-     └──┬──┬──┘ └──┬─────┘ └──┬─────┘ └──┬────┘
-        │  │       │          │           │
-        │  │  ┌────┴──────────┴───────────┘
+        └──┬─────────────────────┬──────────┬───────────┘
+           │                     │          │
+     ┌─────┴──────┐         ┌────┴───┐ ┌───┴────┐
+     │ Workflow   │         │Notif.  │ │ Audit  │
+     │ Service    │         │Service │ │Service │
+     │ :8081      │         │ :8083  │ │ :8084  │
+     │ + custom   │         │        │ │        │
+     │   fields   │         │        │ │        │
+     └──┬──┬──────┘         └──┬─────┘ └──┬────┘
+        │  │                   │          │
+        │  │  ┌────────────────┴──────────┘
         │  │  │         RabbitMQ
         │  │  │      (async events)
         │  │  └─────────────────────────────
         │  │
      ┌──┴──┴──┐
      │PostgreSQL│  ← schema-per-service
-     │  :5432   │    (workflow, custom_fields,
-     └─────────┘     notification, audit)
+     │  :5432   │    (workflow, notification,
+     └─────────┘     audit)
 
         ┌─────────────┐    ┌─────────────┐
         │Admin Portal │    │ User Portal │
@@ -83,7 +84,6 @@ Once running, the services are available at:
 | Admin Portal | http://localhost:5173 |
 | User Portal | http://localhost:5174 |
 | Workflow Service (direct) | http://localhost:8081 |
-| Custom Fields Service (direct) | http://localhost:8082 |
 | Notification Service (direct) | http://localhost:8083 |
 | Audit Service (direct) | http://localhost:8084 |
 | PostgreSQL | localhost:5433 (wfp/wfp_secret) |
@@ -171,8 +171,7 @@ workflow-platform/
 │   └── wfp-test-support/        # Test helpers (JWT mocking, Testcontainers)
 ├── services/
 │   ├── gateway/                 # API Gateway (routing, JWT validation)
-│   ├── workflow-service/        # Flowable BPMN engine + REST API
-│   ├── custom-fields-service/   # Dynamic field schemas and values
+│   ├── workflow-service/        # Flowable BPMN engine, custom fields, REST API
 │   ├── notification-service/    # Event-driven notifications
 │   └── audit-service/           # Event-driven audit trail
 ├── frontend/

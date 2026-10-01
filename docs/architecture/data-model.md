@@ -107,7 +107,7 @@ erDiagram
     }
 
     %% ============================================================
-    %% CUSTOM_FIELDS SCHEMA (custom-fields-service)
+    %% CUSTOM FIELDS (workflow schema, workflow-service)
     %% ============================================================
 
     field_schema {
@@ -212,8 +212,7 @@ erDiagram
 
 | Schema | Service | Tables | Description |
 |--------|---------|--------|-------------|
-| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments` + ~60 `ACT_*` tables | Process metadata, comments, attachments + Flowable engine |
-| `custom_fields` | custom-fields-service | `field_schema`, `field_option`, `field_value` | Dynamic field definitions and values |
+| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments`, `field_schema`, `field_option`, `field_value` + ~60 `ACT_*` tables | Process metadata, comments, attachments, custom field definitions and values + Flowable engine |
 | `notification` | notification-service | `notification`, `notification_preference` | User notifications and delivery preferences |
 | `audit` | audit-service | `audit_entry` | Immutable audit trail |
 | `keycloak` | Keycloak | (managed by Keycloak) | Users, realms, clients, roles, organizations |
@@ -222,7 +221,7 @@ erDiagram
 
 ### Enumerations
 
-**FieldType** (custom-fields-service):
+**FieldType** (workflow-service):
 | Value | Description |
 |-------|-------------|
 | `TEXT` | Single-line text input |
@@ -249,8 +248,8 @@ erDiagram
 
 Every entity (except `field_option`) carries a `tenant_id` column. Hibernate filters enforce row-level isolation:
 
-- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`, `FieldSchema`, `Notification`, `AuditEntry`
-- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldValue`, `NotificationPreference`
+- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`, `Notification`, `AuditEntry`
+- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldSchema`, `FieldValue`, `NotificationPreference`
 - The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (from `wfp-security`) supplies the tenant from `TenantContext` and throws when none is set
 
 ### Cross-Schema References

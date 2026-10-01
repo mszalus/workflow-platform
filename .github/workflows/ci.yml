@@ -79,7 +79,7 @@ jobs:
         run: docker compose -f docker/docker-compose.yml config --quiet
 
       - name: Build service images
-        run: docker compose -f docker/docker-compose.yml build workflow-service custom-fields-service notification-service audit-service gateway
+        run: docker compose -f docker/docker-compose.yml build workflow-service notification-service audit-service gateway
 
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@v0.3.1
@@ -90,7 +90,6 @@ jobs:
         run: |
           IMAGES=(
             docker-workflow-service
-            docker-custom-fields-service
             docker-notification-service
             docker-audit-service
             docker-gateway
@@ -119,10 +118,10 @@ jobs:
           cache: gradle
 
       - name: Build backend Docker images
-        run: docker compose -f docker/docker-compose.yml build gateway workflow-service custom-fields-service notification-service audit-service
+        run: docker compose -f docker/docker-compose.yml build gateway workflow-service notification-service audit-service
 
       - name: Start backend stack and wait until healthy
-        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres rabbitmq keycloak gateway workflow-service custom-fields-service notification-service audit-service
+        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres rabbitmq keycloak gateway workflow-service notification-service audit-service
 
       - name: Run BDD acceptance tests
         run: ./gradlew :tests:bdd-acceptance:test
@@ -162,10 +161,10 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Build images
-        run: docker compose -f docker/docker-compose.yml build gateway workflow-service custom-fields-service notification-service audit-service admin-portal user-portal
+        run: docker compose -f docker/docker-compose.yml build gateway workflow-service notification-service audit-service admin-portal user-portal
 
       - name: Start stack and wait until healthy
-        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres rabbitmq keycloak gateway workflow-service custom-fields-service notification-service audit-service admin-portal user-portal
+        run: docker compose -f docker/docker-compose.yml up -d --wait --wait-timeout 600 postgres rabbitmq keycloak gateway workflow-service notification-service audit-service admin-portal user-portal
 
       - name: Run Playwright E2E tests
         working-directory: e2e

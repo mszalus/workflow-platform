@@ -12,9 +12,6 @@ dependencies:
   - name: workflow-service
     version: 0.1.0
     repository: file://../charts/workflow-service
-  - name: custom-fields-service
-    version: 0.1.0
-    repository: file://../charts/custom-fields-service
   - name: notification-service
     version: 0.1.0
     repository: file://../charts/notification-service

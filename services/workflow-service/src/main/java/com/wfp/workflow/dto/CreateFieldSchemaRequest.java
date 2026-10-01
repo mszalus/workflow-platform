@@ -1,19 +1,18 @@
-package com.wfp.customfields.dto;
+package com.wfp.workflow.dto;
 
-import com.wfp.customfields.entity.FieldType;
-import lombok.Builder;
+import com.wfp.workflow.entity.FieldType;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-@Builder
-public class FieldSchemaDto {
-    private String id;
-    private String processDefinitionKey;
-    private String fieldKey;
-    private String label;
-    private FieldType fieldType;
+public class CreateFieldSchemaRequest {
+    @NotBlank private String processDefinitionKey;
+    @NotBlank private String fieldKey;
+    @NotBlank private String label;
+    @NotNull private FieldType fieldType;
     private boolean required;
     private int sortOrder;
     private String defaultValue;
@@ -22,9 +21,7 @@ public class FieldSchemaDto {
     private List<OptionDto> options;
 
     @Data
-    @Builder
     public static class OptionDto {
-        private String id;
         private String label;
         private String value;
         private int sortOrder;

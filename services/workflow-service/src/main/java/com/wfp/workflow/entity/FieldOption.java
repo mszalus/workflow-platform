@@ -1,4 +1,4 @@
-package com.wfp.customfields.entity;
+package com.wfp.workflow.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
