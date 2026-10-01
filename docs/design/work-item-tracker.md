@@ -16,7 +16,7 @@ Design agreed 2026-09-26, moved from `PLAN.md` step 20. Delivery is tracked in t
 | Fixed fields | `key` (`PROJ-123`, per-project sequence), `project`, `type`, `title`, `description`, `status`, `priority`, `assignee`, `reporter`, `created_at`, `updated_at` | Everything else is a custom field |
 | Custom field values | `jsonb` column on `wf_item`: GIN index for filters, expression indexes for sorted fields | Lists filter and sort on fixed and custom fields in one SQL query |
 | Custom field definitions | Move `FieldSchema`/`FieldOption` into `workflow-service` and scope them by project + item type. Retire `custom-fields-service` | Values and definitions sit next to the items; one service fewer |
-| Status | A BPMN **user task** (a wait state) marked with `wfp:statusCategory` = `TODO` \| `IN_PROGRESS` \| `DONE` | The category drives board columns and "resolved" semantics |
+| Status | A BPMN **user task** (a wait state) marked with `wfp:statusCategory` = `OPEN` \| `TODO` \| `IN_PROGRESS` \| `DONE` (`OPEN` added 2026-10-01, screen decision S-2) | The category drives board columns and "resolved" semantics |
 | Transitions | The **named outgoing flows** of the exclusive gateway directly after a status. The user picks one, and the editor generates the condition `${transition == '<flowId>'}`. A status with a single outgoing flow has one transition | Multiple paths = multiple buttons. Gateways after service tasks remain automatic routing |
 | Transitions from any status | An interrupting message event subprocess (e.g. *Cancel*) | Avoids drawing an arrow from every status |
 | Reopen | *Done* is a user task with a *Reopen* flow. The process ends only at an end event (*Closed*) | A finished process cannot be resumed |

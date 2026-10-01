@@ -1,20 +1,20 @@
 # Tracker Screens
 
-Status: **draft for approval** (2026-09-30). Mark each decision in the table below as approved or changed, and edit the wireframes directly. Behaviour behind the screens is in [work-item-tracker.md](work-item-tracker.md); the architecture is in [tracker-architecture.md](tracker-architecture.md).
+Status: **decisions S-1 to S-9 approved on 2026-10-01** (S-2 changed, S-5 moved to the backlog). The wireframes are still under review. Behaviour behind the screens is in [work-item-tracker.md](work-item-tracker.md); the architecture is in [tracker-architecture.md](tracker-architecture.md).
 
 ## Decisions to approve
 
-| # | Question | Proposal | Alternative |
-|---|---|---|---|
-| S-1 | One app or two portals | **One app.** An *Admin* section appears only for the `admin` role | Keep `admin-portal` and `user-portal` |
-| S-2 | Board columns | **The three status categories** (To do, In progress, Done). The item's own status shows as a badge on the card. This works across item types that use different workflows | One column per workflow status, for boards filtered to one item type |
-| S-3 | Drag and drop on the board | **Yes.** Dropping on a column runs the transition into that category. If several transitions fit, a picker asks which one; if none fits, the drop is refused | Buttons on the item only |
-| S-4 | Item types | **Defined by the admin per project** (for example Task, Bug), each mapped to one workflow | A fixed global list |
-| S-5 | Attachments | **Not in the first version.** The `wf_attachments` table exists, but there is no API | Upload and download on the item |
-| S-6 | Workflow diagram on the item | **Yes, read-only.** A small bpmn-js viewer highlights the current status | Leave it out |
-| S-7 | Notifications | **Bell with a dropdown, polled every 30 s.** No separate page | Real-time push (SSE), which needs new infrastructure |
-| S-8 | Users and groups | **Managed in the Keycloak admin console**, linked from Admin | Our own user screens |
-| S-9 | Dashboards and reports | **Not in the first version** | A project summary page |
+| # | Question | Proposal | Alternative | Decision (2026-10-01) |
+|---|---|---|---|---|
+| S-1 | One app or two portals | **One app.** An *Admin* section appears only for the `admin` role | Keep `admin-portal` and `user-portal` | Approved |
+| S-2 | Board columns | **The status categories** (proposed: To do, In progress, Done). The item's own status shows as a badge on the card. This works across item types that use different workflows | One column per workflow status, for boards filtered to one item type | **Changed:** four columns, with *Open* before *To do*: Open, To do, In progress, Done. The status categories become `OPEN`, `TODO`, `IN_PROGRESS`, `DONE` |
+| S-3 | Drag and drop on the board | **Yes.** Dropping on a column runs the transition into that category. If several transitions fit, a picker asks which one; if none fits, the drop is refused | Buttons on the item only | Approved |
+| S-4 | Item types | **Defined by the admin per project** (for example Task, Bug), each mapped to one workflow | A fixed global list | Approved |
+| S-5 | Attachments | **Not in the first version.** The `wf_attachments` table exists, but there is no API | Upload and download on the item | Approved; attachments go to the backlog (#74) |
+| S-6 | Workflow diagram on the item | **Yes, read-only.** A small bpmn-js viewer highlights the current status | Leave it out | Approved |
+| S-7 | Notifications | **Bell with a dropdown, polled every 30 s.** No separate page | Real-time push (SSE), which needs new infrastructure | Approved |
+| S-8 | Users and groups | **Managed in the Keycloak admin console**, linked from Admin | Our own user screens | Approved |
+| S-9 | Dashboards and reports | **Not in the first version** | A project summary page | Approved |
 
 ## Navigation
 
@@ -53,7 +53,9 @@ My work
 |  PROJ-12  Fix login redirect       Bug    In Review     High    updated 2h ago  |
 |  OPS-3    Rotate DB credentials    Task   Doing         Medium  updated 1d ago  |
 | TO DO (1)                                                                        |
-|  PROJ-15  Add CSV export           Story  Open          Low     updated 3d ago  |
+|  PROJ-15  Add CSV export           Story  Ready         Low     updated 3d ago  |
+| OPEN (1)                                                                         |
+|  PROJ-17  Crash when saving draft  Bug    New           High    updated 1h ago  |
 | DONE, last 7 days (4)                                                [show all] |
 +----------------------------------------------------------------------------------+
 Recently updated items I reported                                        [show all]
@@ -67,14 +69,14 @@ The structured filter builder from 20.e: each row is field / operator / value, a
 ```
 Items · PROJ
 +----------------------------------------------------------------------------------+
-| [Status category v] [is      v] [To do, In progress v]                      [x] |
+| [Status category v] [is      v] [Open, To do, In progress v]                [x] |
 | [Assignee        v] [is      v] [me                 v]                      [x] |
 | [Severity (cf)   v] [>=      v] [High               v]                      [x] |
 | [+ Add filter]                                            [Clear]  [Apply]      |
 +----------------------------------------------------------------------------------+
 | Key v    | Title                   | Type  | Status    | Assignee | Priority | Updated |
 |----------|-------------------------|-------|-----------|----------|----------|---------|
-| PROJ-15  | Add CSV export          | Story | Open      | user-a   | Low      | 3d ago  |
+| PROJ-15  | Add CSV export          | Story | Ready     | user-a   | Low      | 3d ago  |
 | PROJ-12  | Fix login redirect      | Bug   | In Review | user-a   | High     | 2h ago  |
 | ...                                                                              |
 |                                              < 1 2 3 >     25 per page [v]      |
@@ -87,17 +89,18 @@ Items · PROJ
 ### 3. Board
 
 ```
-Board · PROJ                                   [Type: All v] [Assignee: All v]
-+--------------------------+--------------------------+--------------------------+
-| TO DO (3)                | IN PROGRESS (2)          | DONE (5)                 |
-| +----------------------+ | +----------------------+ | +----------------------+ |
-| | PROJ-15   Story      | | | PROJ-12   Bug        | | | PROJ-9    Bug        | |
-| | Add CSV export       | | | Fix login redirect   | | | Timeout on board ... | |
-| | [Open]     user-a    | | | [In Review] user-a   | | | [Done]     user-b    | |
-| +----------------------+ | +----------------------+ | +----------------------+ |
-| +----------------------+ | +----------------------+ |                          |
-| | PROJ-16   Task  ...  | | | ...                  | |                          |
-+--------------------------+--------------------------+--------------------------+
+Board · PROJ                                         [Type: All v] [Assignee: All v]
++-------------------+-------------------+-------------------+-------------------+
+| OPEN (2)          | TO DO (3)         | IN PROGRESS (2)   | DONE (5)          |
+| +---------------+ | +---------------+ | +---------------+ | +---------------+ |
+| | PROJ-17   Bug | | | PROJ-15 Story | | | PROJ-12   Bug | | | PROJ-9    Bug | |
+| | Crash when    | | | Add CSV export| | | Fix login     | | | Timeout on    | |
+| | saving draft  | | |               | | | redirect      | | | board load    | |
+| | [New]      -- | | | [Ready]user-a | | | [In Review]   | | | [Done] user-b | |
+| +---------------+ | +---------------+ | +---------------+ | +---------------+ |
+| +---------------+ | +---------------+ | +---------------+ |                   |
+| | PROJ-18 ...   | | | PROJ-16 ...   | | | ...           | |                   |
++-------------------+-------------------+-------------------+-------------------+
 
 Drop PROJ-15 on IN PROGRESS, when two transitions lead there:
         +------------------------------------+
@@ -108,7 +111,7 @@ Drop PROJ-15 on IN PROGRESS, when two transitions lead there:
         +------------------------------------+
 ```
 
-`[Open]` and `[In Review]` are the item's actual status (its BPMN user task); the column is its category.
+`[New]`, `[Ready]` and `[In Review]` are the item's actual status (its BPMN user task); the column is its category. A new item starts in the workflow's first status, which is usually in *Open*.
 
 ### 4. Item detail
 
