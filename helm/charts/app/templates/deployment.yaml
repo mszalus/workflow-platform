@@ -23,6 +23,7 @@ spec:
       labels:
         app: {{ include "chart.fullname" . }}
     spec:
+      enableServiceLinks: false
       {{- if .Values.serviceAccount.create }}
       serviceAccountName: {{ include "chart.fullname" . }}
       {{- end }}

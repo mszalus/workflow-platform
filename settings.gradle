@@ -14,8 +14,6 @@ dependencyResolutionManagement {
 
 rootProject.name = 'workflow-platform'
 
-// Shared libraries
-
 // BDD acceptance tests (require live Docker stack on localhost)
 include 'tests:bdd-acceptance'
 

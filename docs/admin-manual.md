@@ -341,7 +341,7 @@ docker compose -f docker/docker-compose.yml ps
 |-------------------|--------------------|-------|------------------------|
 | wfp-postgres      | postgres:16-alpine | 5433  | Database (all schemas) |
 | wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
-| wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields, notifications, audit |
+| wfp-app           | (built)            | 8081  | Workflow engine, custom fields, notifications, audit |
 | wfp-admin-portal  | (built)            | 5173  | Admin frontend         |
 | wfp-user-portal   | (built)            | 5174  | User frontend          |
 

@@ -13,7 +13,7 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React
           └────────┬────────┘
                    │
        ┌───────────┴───────────┐
-       │   App    │
+       │   App                 │
        │        :8081          │
        │ + custom fields,      │
        │   notifications,      │
