@@ -10,9 +10,6 @@
 postgresql:
   enabled: false   # Using Cloud SQL via private IP
 
-rabbitmq:
-  enabled: false   # Using a managed RabbitMQ or Cloud AMQP
-
 keycloak:
   enabled: false   # Deployed separately or as managed identity provider
 
@@ -119,39 +116,6 @@ workflow-service:
     - name: SPRING_DATASOURCE_PASSWORD
       secretName: workflow-service-secrets
       secretKey: db-password
-    - name: SPRING_RABBITMQ_PASSWORD
-      secretName: workflow-service-secrets
-      secretKey: rabbitmq-password
-
-audit-service:
-  replicaCount: 2
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 3
-  serviceAccount:
-    create: true
-    annotations:
-      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
-  resources:
-    requests: { cpu: 250m, memory: 512Mi }
-    limits: { cpu: 500m, memory: 1Gi }
-  externalSecrets:
-    enabled: true
-    environment: "dev"
-  env:
-    SPRING_DATASOURCE_URL: "jdbc:postgresql://REPLACE_WITH_CLOUDSQL_PRIVATE_IP:5432/wfp?currentSchema=audit"
-    SPRING_DATASOURCE_USERNAME: "wfp"
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
-    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
-  secretEnv:
-    - name: SPRING_DATASOURCE_PASSWORD
-      secretName: audit-service-secrets
-      secretKey: db-password
-    - name: SPRING_RABBITMQ_PASSWORD
-      secretName: audit-service-secrets
-      secretKey: rabbitmq-password
 
 admin-portal:
   replicaCount: 2

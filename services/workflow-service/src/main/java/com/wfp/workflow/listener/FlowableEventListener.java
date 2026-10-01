@@ -1,8 +1,8 @@
 package com.wfp.workflow.listener;
 
-import com.wfp.events.EventConstants;
-import com.wfp.events.TaskAssignedEvent;
-import com.wfp.events.TaskCreatedEvent;
+import com.wfp.workflow.event.EventConstants;
+import com.wfp.workflow.event.TaskAssignedEvent;
+import com.wfp.workflow.event.TaskCreatedEvent;
 import com.wfp.workflow.service.EventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +45,7 @@ public class FlowableEventListener implements org.flowable.common.engine.api.del
                     .priority(task.getPriority())
                     .build();
             e.initDefaults(EventConstants.TASK_CREATED, task.getTenantId(), task.getAssignee());
-            eventPublisher.publish(EventConstants.TASK_CREATED, e);
+            eventPublisher.publish(e);
         }
     }
 
@@ -59,7 +59,7 @@ public class FlowableEventListener implements org.flowable.common.engine.api.del
                     .assignee(task.getAssignee())
                     .build();
             e.initDefaults(EventConstants.TASK_ASSIGNED, task.getTenantId(), task.getAssignee());
-            eventPublisher.publish(EventConstants.TASK_ASSIGNED, e);
+            eventPublisher.publish(e);
         }
     }
 

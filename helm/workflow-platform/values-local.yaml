@@ -10,16 +10,6 @@ postgresql:
         cpu: 100m
         memory: 256Mi
 
-rabbitmq:
-  enabled: true
-  auth:
-    username: wfp
-    password: wfp_secret
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-
 keycloak:
   enabled: true
   auth:
@@ -45,19 +35,6 @@ workflow-service:
     SPRING_DATASOURCE_URL: jdbc:postgresql://wfp-postgresql:5432/wfp?currentSchema=workflow
     SPRING_DATASOURCE_USERNAME: wfp
     SPRING_DATASOURCE_PASSWORD: wfp_secret
-    SPRING_RABBITMQ_HOST: wfp-rabbitmq
-    SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://wfp-keycloak:8080/realms/workflow-platform
-
-audit-service:
-  replicaCount: 1
-  resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { cpu: 300m, memory: 512Mi }
-  env:
-    SPRING_DATASOURCE_URL: jdbc:postgresql://wfp-postgresql:5432/wfp?currentSchema=audit
-    SPRING_DATASOURCE_USERNAME: wfp
-    SPRING_DATASOURCE_PASSWORD: wfp_secret
-    SPRING_RABBITMQ_HOST: wfp-rabbitmq
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://wfp-keycloak:8080/realms/workflow-platform
 
 admin-portal:

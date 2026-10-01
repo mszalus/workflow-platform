@@ -19,11 +19,6 @@ spring:
   flyway:
     schemas: workflow
     default-schema: workflow
-  rabbitmq:
-    host: localhost
-    port: 5672
-    username: wfp
-    password: wfp_secret
   security:
     oauth2:
       resourceserver:

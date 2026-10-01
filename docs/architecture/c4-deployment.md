@@ -12,13 +12,11 @@ architecture-beta
 
     group infra(server)[Infrastructure] in dockerHost
         service postgres(database)[PostgreSQL 16] in infra
-        service rabbitmq(server)[RabbitMQ 3.13] in infra
         service keycloak(server)[Keycloak 25] in infra
 
     group backends(server)[Backend Services] in dockerHost
         service gateway(server)[Gateway :9080] in backends
-        service workflow(server)[Workflow, custom fields, notifications :8081] in backends
-        service audit(server)[Audit :8084] in backends
+        service workflow(server)[Workflow, custom fields, notifications, audit :8081] in backends
 
     group frontends(server)[Frontends] in dockerHost
         service adminPortal(server)[Admin Portal :5173] in frontends
@@ -30,11 +28,9 @@ architecture-beta
 | Container | Image | Host Port | Container Port | Depends On |
 |-----------|-------|-----------|---------------|------------|
 | `wfp-postgres` | postgres:16-alpine | 5433 | 5432 | - |
-| `wfp-rabbitmq` | rabbitmq:3.13-management-alpine | 5672, 15672 | 5672, 15672 | - |
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
 | `wfp-gateway` | wfp/gateway | 9080 | 8080 | keycloak (started) |
-| `wfp-workflow` | wfp/workflow-service | - | 8081 | postgres (healthy), rabbitmq (healthy) |
-| `wfp-audit` | wfp/audit-service | - | 8084 | postgres (healthy), rabbitmq (healthy) |
+| `wfp-workflow` | wfp/workflow-service | - | 8081 | postgres (healthy) |
 | `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | gateway (started) |
 | `wfp-user-portal` | wfp/user-portal | 5174 | 80 | gateway (started) |
 
@@ -44,10 +40,6 @@ architecture-beta
 flowchart LR
     PG[PostgreSQL] --> KC[Keycloak]
     PG --> WF[Workflow Service]
-    PG --> AS[Audit Service]
-    RMQ[RabbitMQ] --> WF
-    RMQ --> NS
-    RMQ --> AS
     KC --> GW[Gateway]
     GW --> AP[Admin Portal]
     GW --> UP[User Portal]
@@ -55,19 +47,17 @@ flowchart LR
 
 ### Database Schemas
 
-Single PostgreSQL instance with 3 schemas:
+Single PostgreSQL instance with 2 schemas:
 
 ```mermaid
 flowchart TD
     subgraph "PostgreSQL (wfp database)"
         KS["keycloak schema<br/>Keycloak managed tables"]
-        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments,<br/>field_schema, field_option, field_value, notification<br/>+ Flowable ACT_* tables"]
-        AS["audit schema<br/>audit_entry"]
+        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments,<br/>field_schema, field_option, field_value, notification, audit_entry<br/>+ Flowable ACT_* tables"]
     end
 
     KC[Keycloak] --> KS
     WF[Workflow Service] --> WS
-    AU[Audit Service] --> AS
 ```
 
 ### Network Topology (Docker)
@@ -86,18 +76,13 @@ flowchart TD
     GW -->|"/api/workflow/**"| WF["Workflow Service :8081"]
     GW -->|"/api/fields/**"| WF
     GW -->|"/api/notifications/**"| WF
-    GW -->|"/api/audit/**"| AS["Audit :8084"]
+    GW -->|"/api/audit/**"| WF
 
     GW -.->|"JWK Set"| KC
 
     WF --> PG["PostgreSQL :5432"]
-    NS --> PG
-    AS --> PG
     KC --> PG
 
-    WF -->|"publish"| RMQ["RabbitMQ :5672"]
-    RMQ -->|"wfp.notification"| NS
-    RMQ -->|"wfp.audit"| AS
 
     style Browser fill:#f9f,stroke:#333
     style PG fill:#336,stroke:#fff,color:#fff
@@ -169,15 +154,12 @@ flowchart TD
         subgraph "Application Pods"
             GW["Gateway<br/>2 replicas (GCP)"]
             WF["Workflow Service<br/>2-5 replicas (HPA)"]
-            NS["Notification<br/>2-3 replicas (HPA)"]
-            AS["Audit<br/>2-3 replicas (HPA)"]
             AP["Admin Portal<br/>2 replicas"]
             UP["User Portal<br/>2 replicas"]
         end
 
         subgraph "Infrastructure (local only)"
             PG["PostgreSQL<br/>(Bitnami chart)"]
-            RMQ["RabbitMQ<br/>(Bitnami chart)"]
             KC["Keycloak<br/>(Bitnami chart)"]
         end
 
@@ -189,10 +171,9 @@ flowchart TD
     ING --> GW
     ING --> AP
     ING --> UP
-    GW --> WF & NS & AS
-    WF & NS & AS --> PG
-    WF & NS & AS --> RMQ
-    WF & NS & AS -.-> CSQL
+    GW --> WF
+    WF --> PG
+    WF -.-> CSQL
 
     style CSQL fill:#4285f4,stroke:#fff,color:#fff
 ```
@@ -210,8 +191,6 @@ flowchart TD
 |---------|------------|-----------|---------------|-------------|-----------------|
 | Gateway | 250m | 500m | 256Mi | 512Mi | 2 / 5 |
 | Workflow Service | 500m | 1000m | 512Mi | 1Gi | 2 / 5 |
-| Notification | 250m | 500m | 512Mi | 1Gi | 2 / 3 |
-| Audit | 250m | 500m | 512Mi | 1Gi | 2 / 3 |
 | Admin Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
 | User Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
 
@@ -219,5 +198,5 @@ flowchart TD
 
 - **Adding a new service to Docker Compose**: Add the service definition to `docker/docker-compose.yml`, create its Dockerfile, and add the schema to `docker/init-db.sql` if it needs a database.
 - **Adding a new service to Helm**: Create a sub-chart under `helm/charts/`, add it as a dependency in `helm/workflow-platform/Chart.yaml`, and add its configuration to both `values-local.yaml` and `values-gcp.yaml`.
-- **Switching GCP from VM to GKE**: Replace the Compute Engine section with a GKE cluster, use the Helm chart for deployment, and switch to Cloud SQL (via proxy) + Cloud Memorystore for RabbitMQ.
+- **Switching GCP from VM to GKE**: Replace the Compute Engine section with a GKE cluster, use the Helm chart for deployment, and switch to Cloud SQL (via proxy).
 - **Adding a CDN or Load Balancer**: Insert it before the frontend containers in the network topology diagram.

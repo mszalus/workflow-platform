@@ -8,7 +8,6 @@ C4Component
 
     Container_Ext(gateway, "API Gateway", "Routes /api/workflow/** to this service")
     ContainerDb_Ext(postgres, "PostgreSQL", "Schema: workflow")
-    ContainerQueue_Ext(rabbitmq, "RabbitMQ", "Exchange: wfp.events")
     System_Ext(flowableEngine, "Flowable Engine", "Embedded BPMN engine (in-process)")
 
     Container_Boundary(workflowSvc, "Workflow Service") {
@@ -22,6 +21,7 @@ C4Component
         Component(commentCtrl, "CommentController", "REST Controller", "GET /api/processes/{id}/comments<br/>POST /api/processes/{id}/comments")
 
         Component(historyCtrl, "HistoryController", "REST Controller", "GET /api/history/processes<br/>GET /api/history/tasks")
+        Component(auditCtrl, "AuditController", "REST Controller", "GET /api/audit (filter by entity, user, event type, time)")
         Component(notifCtrl, "NotificationController", "REST Controller", "GET /api/notifications<br/>GET /api/notifications/unread-count<br/>PUT mark-read, mark-all-read")
 
         Component(deploySvc, "DeploymentService", "Service", "Deploys BPMN XML to Flowable, retrieves process definitions and BPMN XML")
@@ -31,7 +31,8 @@ C4Component
         Component(historySvc, "ProcessHistoryService", "Service", "Queries Flowable HistoryService for completed processes/tasks")
 
         Component(notifSvc, "NotificationService", "Service", "Turns task events into in-app notification rows, in the caller's transaction; lists and marks them read")
-        Component(eventPub, "EventPublisher", "Service", "Hands each domain event to NotificationService, then publishes it to RabbitMQ for audit. Handles null RabbitTemplate gracefully in test contexts.")
+        Component(auditSvc, "AuditService", "Service", "Records each domain event as an audit entry in the caller's transaction; queries the audit trail")
+        Component(eventPub, "EventPublisher", "Service", "In-process dispatcher: hands each domain event to NotificationService, then AuditService")
         Component(eventListener, "FlowableEventListener", "Flowable Listener", "Listens to Flowable engine events (TASK_CREATED, TASK_ASSIGNED, PROCESS_COMPLETED) and delegates to EventPublisher")
         Component(tenantResolver, "CurrentTenantIdResolver", "Hibernate filter parameter", "Supplies the tenant from TenantContext to the auto-enabled tenantFilter")
         Component(securityConfig, "SecurityConfig", "Spring Security", "OAuth2 resource server, JWT validation, public endpoint whitelist")
@@ -47,12 +48,14 @@ C4Component
     Rel(gateway, commentCtrl, "HTTP/JSON")
     Rel(gateway, historyCtrl, "HTTP/JSON")
     Rel(gateway, notifCtrl, "HTTP/JSON")
+    Rel(gateway, auditCtrl, "HTTP/JSON")
 
     Rel(deployCtrl, deploySvc, "Calls")
     Rel(processCtrl, processSvc, "Calls")
     Rel(taskCtrl, taskSvc, "Calls")
     Rel(commentCtrl, commentSvc, "Calls")
     Rel(historyCtrl, historySvc, "Calls")
+    Rel(auditCtrl, auditSvc, "Calls")
     Rel(notifCtrl, notifSvc, "Calls")
 
     Rel(deploySvc, flowableEngine, "RepositoryService")
@@ -64,7 +67,7 @@ C4Component
     Rel(processSvc, eventPub, "Publishes process.started, process.cancelled")
     Rel(eventListener, eventPub, "Publishes task.created, task.assigned, process.completed")
     Rel(eventPub, notifSvc, "notify(event)", "same transaction")
-    Rel(eventPub, rabbitmq, "AMQP", "Routing keys: task.*, process.* (audit)")
+    Rel(eventPub, auditSvc, "record(event)", "same transaction")
 
     Rel(commentSvc, commentRepo, "JPA")
     Rel(processMetaRepo, postgres, "JDBC")
@@ -84,13 +87,15 @@ C4Component
 | CommentController | REST | Add/list comments on process instances |
 | HistoryController | REST | Query completed processes and tasks |
 | NotificationController | REST | List notifications, unread count, mark read |
+| AuditController | REST | Query the audit trail |
 | DeploymentService | Service | Wraps Flowable RepositoryService |
 | ProcessService | Service | Wraps Flowable RuntimeService + IdentityService |
 | TaskService | Service | Wraps Flowable TaskService, publishes events |
 | CommentService | Service | JPA-based comment CRUD |
 | ProcessHistoryService | Service | Wraps Flowable HistoryService |
 | NotificationService | Service | Creates in-app notifications from task events in the same transaction; reads and marks them |
-| EventPublisher | Service | Notifies in-process, then publishes events to RabbitMQ for audit (null-safe for tests) |
+| AuditService | Service | Records audit entries from events in the same transaction; serves `/api/audit` |
+| EventPublisher | Service | In-process dispatcher to NotificationService and AuditService |
 | FlowableEventListener | Engine Listener | Bridges Flowable engine events to EventPublisher |
 | CurrentTenantIdResolver | Hibernate filter parameter | Supplies the tenant from `TenantContext` to the auto-enabled `tenantFilter` |
 | SecurityConfig | Config | OAuth2 JWT resource server setup |
@@ -98,5 +103,5 @@ C4Component
 ## Notes for Editors
 
 - **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the gateway and the service to the relevant repository/Flowable service.
-- **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `libs/wfp-events/`.
+- **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `com.wfp.workflow.event`.
 - **Flowable engine is embedded** (in-process, not a separate container). It uses the same PostgreSQL schema (`workflow`) and manages its own `ACT_*` tables alongside the application's `wf_*` tables.

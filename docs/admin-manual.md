@@ -11,9 +11,8 @@
 7. [Custom Field Schemas](#custom-field-schemas)
 8. [Audit Log](#audit-log)
 9. [Keycloak Administration](#keycloak-administration)
-10. [RabbitMQ Monitoring](#rabbitmq-monitoring)
-11. [Docker Deployment](#docker-deployment)
-12. [Kubernetes Deployment](#kubernetes-deployment)
+10. [Docker Deployment](#docker-deployment)
+11. [Kubernetes Deployment](#kubernetes-deployment)
 13. [Troubleshooting](#troubleshooting)
 
 ---
@@ -47,22 +46,20 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
          │   :9080     │
          └──────┬──────┘
                 │
-       ┌────────┴──────────────┐
-       ▼                       ▼
-┌──────────────┐          ┌─────────┐
-│  Workflow +  │          │  Audit  │
-│custom fields,│          │  :8084  │
-│notifications │          └────┬────┘
-│    :8081     │               │
-└──────┬───────┘               │
-       └────────────────┬──────┘
-                        │
-              ┌─────────┼──────────┐
-              ▼         ▼          ▼
-         ┌────────┐ ┌────────┐ ┌────────┐
-         │Postgres│ │RabbitMQ│ │Keycloak│
-         │ :5433  │ │ :5672  │ │ :8180  │
-         └────────┘ └────────┘ └────────┘
+         ┌──────▼───────┐
+         │   Workflow   │
+         │custom fields,│
+         │notifications,│
+         │    audit     │
+         │    :8081     │
+         └──────┬───────┘
+                │
+         ┌──────┴──────┐
+         ▼             ▼
+    ┌────────┐    ┌────────┐
+    │Postgres│    │Keycloak│
+    │ :5433  │    │ :8180  │
+    └────────┘    └────────┘
 ```
 
 ### Gateway Routing
@@ -72,17 +69,11 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
 | `/api/workflow/**`    | `RewritePath → /api/**` | workflow-service:8081  |
 | `/api/fields/**`      | `RewritePath → /api/**` | workflow-service:8081  |
 | `/api/notifications/**` | Pass-through          | workflow-service:8081  |
-| `/api/audit/**`       | Pass-through            | audit-service:8084    |
+| `/api/audit/**`       | Pass-through            | workflow-service:8081  |
 
-### Event System
+### Events
 
-Services communicate asynchronously via RabbitMQ:
-
-- **Exchange:** `wfp.events` (topic)
-- **Routing Keys:** `task.created`, `task.assigned`, `task.completed`, `process.started`, `process.completed`
-- **Queues:**
-  - `wfp.notification` — binds `task.*` + `process.completed` → creates user notifications
-  - `wfp.audit` — binds `#` (all events) → records audit entries
+Workflow events (`task.created`, `task.assigned`, `task.completed`, `task.delegated`, `process.started`) are handled inside workflow-service: each one creates its in-app notification and its audit entry in the same transaction as the change. There is no message broker.
 
 ---
 
@@ -260,7 +251,7 @@ The table shows all field schemas for the selected process:
 
 Navigate to **Audit Log** in the sidebar.
 
-The audit log captures every significant event in the platform, recorded asynchronously via RabbitMQ.
+The audit log captures every significant event in the platform, recorded in the same transaction as the change.
 
 ### Viewing the Audit Log
 
@@ -337,34 +328,6 @@ Tenant isolation is enforced through the `tenant_id` JWT claim:
 
 ---
 
-## RabbitMQ Monitoring
-
-**Management UI:** `http://localhost:15672`
-**Credentials:** `wfp` / `wfp_secret`
-
-### Key Resources
-
-| Resource | Type     | Description                           |
-|----------|----------|---------------------------------------|
-| `wfp.events` | Exchange (topic) | All platform events published here |
-| `wfp.notification` | Queue | Consumes task.* and process.completed events |
-| `wfp.audit` | Queue | Consumes all events (#)              |
-
-### Monitoring Checklist
-
-1. **Overview** — verify connections from all 4 backend services
-2. **Exchanges** — `wfp.events` should have bindings to both queues
-3. **Queues** — both queues should show 0 messages (consumed in real-time)
-4. **Connections** — 4 connections (one per service)
-
-### Troubleshooting
-
-- **Messages accumulating in queue:** Consumer service may be down. Check container logs.
-- **No bindings on exchange:** Services haven't started yet. Wait for Spring Boot initialization.
-- **Dead-lettered messages:** Check the service logs for deserialization errors. Ensure `Jackson2JsonMessageConverter` is configured.
-
----
-
 ## Docker Deployment
 
 ### Starting the Full Stack
@@ -385,11 +348,9 @@ docker compose -f docker/docker-compose.yml ps
 | Container          | Image              | Port  | Description            |
 |-------------------|--------------------|-------|------------------------|
 | wfp-postgres      | postgres:16-alpine | 5433  | Database (all schemas) |
-| wfp-rabbitmq      | rabbitmq:3.13-management | 5672, 15672 | Message broker |
 | wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
 | wfp-gateway       | (built)            | 9080  | API gateway            |
-| wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields, notifications |
-| wfp-audit         | (built)            | 8084  | Audit service          |
+| wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields, notifications, audit |
 | wfp-admin-portal  | (built)            | 5173  | Admin frontend         |
 | wfp-user-portal   | (built)            | 5174  | User frontend          |
 
@@ -398,10 +359,9 @@ docker compose -f docker/docker-compose.yml ps
 The docker-compose file defines dependencies:
 
 1. **PostgreSQL** starts first (health check: `pg_isready`)
-2. **RabbitMQ** starts first (health check: `rabbitmq-diagnostics -q ping`)
-3. **Keycloak** starts after PostgreSQL is healthy
-4. **Backend services** start after PostgreSQL and RabbitMQ are healthy
-5. **Frontend containers** start after gateway is running
+2. **Keycloak** starts after PostgreSQL is healthy
+3. **Backend services** start after PostgreSQL is healthy
+4. **Frontend containers** start after gateway is running
 
 ### Viewing Logs
 
@@ -422,8 +382,7 @@ PostgreSQL uses separate schemas per service (created by `docker/init-db.sql`):
 
 | Schema          | Service              |
 |----------------|----------------------|
-| `workflow`     | workflow-service (including custom fields and notifications) |
-| `audit`        | audit-service        |
+| `workflow`     | workflow-service (including custom fields, notifications and audit) |
 | `keycloak`     | Keycloak             |
 
 ### Environment Variables
@@ -433,7 +392,6 @@ Backend service URIs are configured via environment variables in `docker-compose
 | Variable                | Default                | Description               |
 |------------------------|------------------------|---------------------------|
 | `WORKFLOW_SERVICE_URL` | `http://workflow:8081` | Workflow service URI      |
-| `AUDIT_SERVICE_URL`    | `http://audit:8084`    | Audit service URI         |
 
 ---
 
@@ -447,7 +405,6 @@ The platform includes Helm charts for Kubernetes deployment.
 helm/
 ├── charts/
 │   ├── workflow-service/
-│   ├── audit-service/
 │   ├── gateway/
 │   ├── admin-portal/
 │   └── user-portal/
@@ -459,7 +416,7 @@ helm/
 ### Deploying
 
 ```bash
-# Update dependencies (pulls bitnami charts for PG, RabbitMQ)
+# Update dependencies (pulls bitnami charts for PG and Keycloak)
 helm dependency update helm/workflow-platform/
 
 # Install
@@ -498,7 +455,6 @@ global:
 | Service fails to start with `DataSource` error | Missing database schema | Run `docker/init-db.sql` against PostgreSQL |
 | `Failed to configure a DataSource` on gateway | Gateway doesn't need a DB | Verify gateway excludes `DataSourceAutoConfiguration` |
 | Duplicate `@FilterDef` error | Two entities define `@FilterDef(name = "tenantFilter")` | Only ONE entity per persistence unit should have `@FilterDef`; others use `@Filter` only |
-| RabbitMQ connection refused | RabbitMQ not ready | Wait for RabbitMQ health check to pass |
 | JWT validation fails | Keycloak not reachable | Check Keycloak is running and `issuer-uri` is correct |
 | Frontend shows "Loading..." | API calls failing | Check browser console for errors; verify gateway is running |
 | Port 5432 conflict | Local PostgreSQL running | Docker maps PG to port 5433 to avoid conflicts |
@@ -515,7 +471,6 @@ curl http://localhost:9080/actuator/health
 
 # Individual services
 curl http://localhost:8081/actuator/health  # workflow
-curl http://localhost:8084/actuator/health  # audit
 ```
 
 ### Useful Commands

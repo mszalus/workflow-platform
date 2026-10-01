@@ -24,25 +24,6 @@ services:
       retries: 20
       start_period: 30s
 
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    container_name: wfp-rabbitmq
-    hostname: wfp-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: wfp
-      RABBITMQ_DEFAULT_PASS: wfp_secret
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    tmpfs:
-      - /var/lib/rabbitmq:uid=999,gid=999
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
-      interval: 10s
-      timeout: 10s
-      retries: 20
-      start_period: 30s
-
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.6
     container_name: wfp-keycloak
@@ -145,7 +126,6 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
       WORKFLOW_SERVICE_URL: http://workflow-service:8081
-      AUDIT_SERVICE_URL: http://audit-service:8084
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
       - keycloak
@@ -165,47 +145,14 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=workflow
       SPRING_DATASOURCE_USERNAME: wfp
       SPRING_DATASOURCE_PASSWORD: wfp_secret
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: wfp
-      SPRING_RABBITMQ_PASSWORD: wfp_secret
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
       postgres:
-        condition: service_healthy
-      rabbitmq:
         condition: service_healthy
       keycloak:
         condition: service_started
-      otel-collector:
-        condition: service_started
-
-  audit-service:
-    build:
-      context: ..
-      dockerfile: services/audit-service/Dockerfile
-    container_name: wfp-audit
-    healthcheck:
-      <<: *spring-healthcheck
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8084/actuator/health"]
-    ports:
-      - "8084:8084"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wfp?currentSchema=audit
-      SPRING_DATASOURCE_USERNAME: wfp
-      SPRING_DATASOURCE_PASSWORD: wfp_secret
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: wfp
-      SPRING_RABBITMQ_PASSWORD: wfp_secret
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://localhost:8180/realms/workflow-platform
-      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/workflow-platform/protocol/openid-connect/certs
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
       otel-collector:
         condition: service_started
 

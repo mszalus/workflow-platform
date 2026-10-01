@@ -12,9 +12,6 @@ dependencies:
   - name: workflow-service
     version: 0.1.0
     repository: file://../charts/workflow-service
-  - name: audit-service
-    version: 0.1.0
-    repository: file://../charts/audit-service
   - name: admin-portal
     version: 0.1.0
     repository: file://../charts/admin-portal
@@ -29,10 +26,6 @@ dependencies:
     version: 16.2.1
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
-  - name: rabbitmq
-    version: 14.7.0
-    repository: https://charts.bitnami.com/bitnami
-    condition: rabbitmq.enabled
   - name: keycloak
     version: 22.2.5
     repository: https://charts.bitnami.com/bitnami

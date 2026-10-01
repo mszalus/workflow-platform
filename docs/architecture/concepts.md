@@ -36,12 +36,11 @@ Current owners of the single `@FilterDef` in each service:
 
 | Service | Declares `@FilterDef` | Declare `@Filter` only |
 |---|---|---|
-| Workflow Service | ProcessMetadata | Comment, Attachment, FieldSchema, FieldValue, Notification |
-| Audit Service | AuditEntry | — |
+| Workflow Service | ProcessMetadata | Comment, Attachment, FieldSchema, FieldValue, Notification, AuditEntry |
 
 The single `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `resolver = CurrentTenantIdResolver.class`; without them the filter silently stops applying.
 
-Code that runs outside a request (RabbitMQ listeners, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a query without a tenant throws.
+Code that runs outside a request (Flowable async jobs, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a query without a tenant throws.
 
 Note that FieldOption has no `tenant_id` at all — it is reached only through its
 parent `FieldSchema`, which is already filtered.
@@ -59,63 +58,38 @@ Known Pitfalls · Data Model ERD · User — Multi-Tenant Isolation
 
 ## Event System
 
-All inter-service communication is asynchronous. There are **no synchronous
-service-to-service HTTP calls** in the platform — services share a database instance but
-not schemas, and talk only over RabbitMQ.
-
-In-app notifications are not a RabbitMQ consumer any more: `EventPublisher` in Workflow
-Service hands every event to `NotificationService` in the same transaction, then
-publishes it. RabbitMQ now only carries events to Audit Service (until audit is folded in, #79).
-
-### Topology
+Events are **in-process**: Workflow Service is the only producer and the only consumer,
+and there is no message broker. `EventPublisher` hands each event to
+`NotificationService` and then to `AuditService`. Both write their rows in the caller's
+transaction, so a change, its notification and its audit entry commit or roll back
+together.
 
 ```mermaid
 flowchart LR
-    WF["Workflow Service<br/>(sole producer)"] -->|publish| EX{{"topic exchange<br/>wfp.events"}}
-    EX -->|"#  (everything)"| QA["queue<br/>wfp.audit"]
-    QA --> AS["Audit Service"]
+    API["ProcessService / TaskService"] --> EP["EventPublisher"]
+    FEL["FlowableEventListener"] --> EP
+    EP --> NS["NotificationService<br/>notification row"]
+    EP --> AS["AuditService<br/>audit_entry row"]
 ```
 
-| | |
-|---|---|
-| Exchange | `wfp.events` (topic) |
-| Producer | Workflow Service only |
-| Consumers | Audit Service (`wfp.audit`) |
-| Contract | wfp-events |
-
-### Routing keys
+### Event types
 
 `process.started` · `process.completed` · `process.cancelled` · `process.sla.breached`
 `task.created` · `task.assigned` · `task.completed` · `task.delegated`
 `field.schema.created` · `field.value.saved`
 
-The last four are declared in `EventConstants` but **not yet published by any service** —
-see Event Catalog for which are live.
-
-### Serialization
-
-`BaseEvent` is polymorphic via `@JsonTypeInfo(use = Id.NAME, property = "eventType")`, so
-the JSON body carries its own discriminator and consumers deserialize to the concrete type.
-
-> [!WARNING]
-> **Each consumer needs a `Jackson2JsonMessageConverter` bean**
-> Without it, Spring AMQP delivers a raw `byte[]` and the listener signature will not match.
-> See Known Pitfalls.
+The event classes live in `com.wfp.workflow.event`. `process.completed`,
+`process.sla.breached` and the two `field.*` types are declared in `EventConstants` but
+**not published yet**.
 
 ### Two publication paths
 
-Events reach the bus by two different routes inside Workflow Service:
-
-1. **Explicit** — `ProcessService` and `TaskService` call `EventPublisher` directly for
-   actions the API initiated (`process.started`, `process.cancelled`, `task.completed`,
-   `task.delegated`).
-2. **Engine-driven** — `FlowableEventListener` subscribes to the Flowable engine event bus
-   and forwards engine-originated transitions (`task.created`, `task.assigned`,
-   `process.completed`), which no API call directly causes.
-
-### See also
-
-Event Catalog · Admin — RabbitMQ Monitoring · C4 L2 Container
+1. **Explicit**: `ProcessService` and `TaskService` call `EventPublisher` for actions the
+   API initiated (`process.started`, `task.completed`, `task.delegated`). These methods are
+   `@Transactional`, so Flowable joins the same transaction.
+2. **Engine-driven**: `FlowableEventListener` subscribes to the Flowable engine event bus
+   and forwards engine-originated transitions (`task.created`, `task.assigned`), which no
+   API call directly causes. It runs inside the engine command's transaction.
 
 ## Security and JWT
 
@@ -155,14 +129,14 @@ Admin — Keycloak Administration · API Gateway · User — Login
 Four routes, two of which rewrite the path. The asymmetry is deliberate:
 Workflow Service exposes generic `/api/**` paths for both workflows and custom fields,
 so the gateway namespaces them under `/api/workflow` and `/api/fields`; notifications and
-Audit Service already expose distinct prefixes and pass through untouched.
+audit already expose distinct prefixes and pass through untouched.
 
 | External path | Target | Rewrite |
 |---|---|---|
 | `/api/workflow/**` | workflow-service:8081 | `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}` |
 | `/api/fields/**` | workflow-service:8081 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
 | `/api/notifications/**` | workflow-service:8081 | pass-through |
-| `/api/audit/**` | audit-service:8084 | pass-through |
+| `/api/audit/**` | workflow-service:8081 | pass-through |
 
 So `/api/workflow/tasks` reaches the backend as `/api/tasks`, but
 `/api/notifications/unread-count` arrives verbatim.
@@ -170,7 +144,7 @@ So `/api/workflow/tasks` reaches the backend as `/api/tasks`, but
 ### Overriding URIs in Docker
 
 Compose sets `SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_URI` per route index. The project also
-defines named vars (`WORKFLOW_SERVICE_URL`, `AUDIT_SERVICE_URL`) referenced from `application.yml`,
+defines a named var (`WORKFLOW_SERVICE_URL`) referenced from `application.yml`,
 because indexed env vars silently drop the rest of a route definition when partially
 overridden.
 
@@ -208,7 +182,7 @@ filter used for application entities. See Multi-Tenancy.
 ### Engine events
 
 `FlowableEventListener` subscribes to the engine event bus for `TASK_CREATED`,
-`TASK_ASSIGNED` and `PROCESS_COMPLETED` and republishes them to RabbitMQ. These
+`TASK_ASSIGNED` and `PROCESS_COMPLETED` and hands them to `EventPublisher`. These
 transitions are caused by the engine advancing a process, not by an API call, so they
 cannot be published from a controller. See Event System.
 
@@ -301,7 +275,7 @@ Backend build commands · CI Pipeline · Repository Layout
 | Layer | Tooling | Scope |
 |---|---|---|
 | Backend unit | JUnit 5 | services and mappers |
-| Backend integration | **Testcontainers** (PostgreSQL + RabbitMQ) | repositories, listeners, full Spring context |
+| Backend integration | **Testcontainers** (PostgreSQL) | repositories, full Spring context |
 | Backend web | MockMvc + `JwtTestHelper` | authenticated endpoints |
 | BDD acceptance | Cucumber-style features under `tests/` | cross-service behaviour |
 | E2E | Playwright (`e2e/`) | both portals against the running stack |
@@ -318,7 +292,6 @@ wfp-test-support supplies `JwtTestHelper` (mock tokens with tenant and role clai
 ### Traps
 
 - Flowable on H2 requires `MODE=LEGACY` — see Known Pitfalls.
-- `EventPublisher` takes a `@Nullable RabbitTemplate` so contexts without RabbitMQ start.
 - React component tests must pre-seed the QueryClient cache; a `useQuery` + `useEffect`
   pair otherwise loops forever.
 

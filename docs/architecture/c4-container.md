@@ -18,11 +18,9 @@ C4Container
 
         Container(gateway, "API Gateway", "Spring Cloud Gateway MVC, Java 21", "JWT validation, path routing. Port 8080")
 
-        Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values; in-app notifications. Port 8081")
-        Container(auditSvc, "Audit Service", "Spring Boot 3.3, Java 21", "Event-driven audit trail, queryable by entity/user/time. Port 8084")
+        Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
 
-        ContainerDb(postgres, "PostgreSQL 16", "3 schemas: workflow, audit, keycloak", "Shared instance, one schema per service")
-        ContainerQueue(rabbitmq, "RabbitMQ 3.13", "Topic exchange: wfp.events", "Async event bus between services")
+        ContainerDb(postgres, "PostgreSQL 16", "2 schemas: workflow, keycloak", "Shared instance, one schema per service")
     }
 
     Rel(admin, adminPortal, "Uses", "HTTPS")
@@ -36,15 +34,12 @@ C4Container
     Rel(gateway, workflowSvc, "Routes", "/api/workflow/** -> /api/**")
     Rel(gateway, workflowSvc, "Routes", "/api/fields/** -> /api/**")
     Rel(gateway, workflowSvc, "Routes", "/api/notifications/**")
-    Rel(gateway, auditSvc, "Routes", "/api/audit/**")
+    Rel(gateway, workflowSvc, "Routes", "/api/audit/**")
     Rel(gateway, keycloak, "Validates JWTs", "JWK Set endpoint")
 
     Rel(workflowSvc, postgres, "Reads/Writes", "JDBC, schema: workflow")
-    Rel(auditSvc, postgres, "Reads/Writes", "JDBC, schema: audit")
     Rel(keycloak, postgres, "Reads/Writes", "JDBC, schema: keycloak")
 
-    Rel(workflowSvc, rabbitmq, "Publishes events", "task.*, process.*")
-    Rel(rabbitmq, auditSvc, "Delivers events", "queue: wfp.audit<br/>binds: # (all)")
 
     UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
 ```
@@ -56,10 +51,8 @@ C4Container
 | Admin Portal | React 18 + nginx | 5173 (host) | - | Process designer, field editor, audit viewer |
 | User Portal | React 18 + nginx | 5174 (host) | - | Task inbox, start process, notifications |
 | API Gateway | Spring Cloud Gateway MVC | 9080 (host) / 8080 | - (no DB) | JWT validation, routing |
-| Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications |
-| Audit Service | Spring Boot | 8084 | `audit` | Event-driven audit trail |
-| PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 3 schemas | Shared database instance |
-| RabbitMQ | RabbitMQ 3.13 | 5672 / 15672 | - | Async event bus |
+| Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
+| PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 2 schemas | Shared database instance |
 | Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
 
 ## Gateway Routing Rules
@@ -69,24 +62,13 @@ C4Container
 | `/api/workflow/**` | workflow-service:8081 | `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}` |
 | `/api/fields/**` | workflow-service:8081 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
 | `/api/notifications/**` | workflow-service:8081 | Pass-through (no rewrite) |
-| `/api/audit/**` | audit-service:8084 | Pass-through (no rewrite) |
+| `/api/audit/**` | workflow-service:8081 | Pass-through (no rewrite) |
 
-## Event Flows (RabbitMQ)
+## Events
 
-| Producer | Routing Key | Consumer(s) | Purpose |
-|----------|------------|-------------|---------|
-| Workflow Service | `process.started` | Audit Service | Audit trail |
-| Workflow Service | `process.completed` | Audit Service | Audit trail (declared, not yet published) |
-| Workflow Service | `process.cancelled` | Audit Service | Audit trail |
-| Workflow Service | `task.created` | Audit Service | Audit trail |
-| Workflow Service | `task.assigned` | Audit Service | Audit trail |
-| Workflow Service | `task.completed` | Audit Service | Audit trail |
-| Workflow Service | `task.delegated` | Audit Service | Audit trail |
-
-Notifications no longer travel over RabbitMQ: `EventPublisher` hands every event to `NotificationService` in the same transaction before publishing it.
+Workflow Service is the only producer and consumer. `EventPublisher` hands each event (`process.started`, `task.created`, `task.assigned`, `task.completed`, `task.delegated`) to `NotificationService` and `AuditService`, which write their rows in the same transaction as the change. There is no message broker.
 
 ## Notes for Editors
 
-- **Adding a new service**: Add a `Container` node, a `Rel` to `postgres` (with its schema name), a `Rel` from `gateway`, and update the gateway routing table. If it consumes events, add a `Rel` from `rabbitmq`.
-- **Adding direct inter-service calls**: Currently services communicate only via RabbitMQ (async). If you add synchronous service-to-service HTTP calls, add `Rel` edges between the service containers and note the coupling trade-off.
+- **Adding a new service**: Add a `Container` node, a `Rel` to `postgres` (with its schema name), a `Rel` from `gateway`, and update the gateway routing table. 
 - **Splitting the database**: If a service needs its own PostgreSQL instance, replace the single `ContainerDb` with multiple and update the `Rel` edges accordingly.

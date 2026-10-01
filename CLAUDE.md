@@ -108,7 +108,7 @@ Sessions, branches and merging, gates, review and subagent delegation are descri
 
 Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), deploy them, and end users complete tasks through a task inbox. Every action is audited, custom fields can be attached to any process, and notifications are delivered in real-time.
 
-Services: `gateway` (8080), `workflow-service` (8081, Flowable, custom fields and notifications), `audit-service` (8084). Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
+Services: `gateway` (8080), `workflow-service` (8081: Flowable, custom fields, notifications and audit). Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
 
 ## Build Commands
 
@@ -153,16 +153,14 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 1. **Gradle requires all project directories**: `settings.gradle` includes all modules — Dockerfiles must copy the entire `services/` directory, not just the target service
 2. **Port conflicts**: Local PostgreSQL on 5432 conflicts with Docker. Docker compose maps PG to `5433` externally
 3. **Hibernate @FilterDef**: Only one per persistence unit, not per entity. Second entity → use `@Filter` only
-4. **RabbitMQ Jackson**: Messages need `Jackson2JsonMessageConverter` bean in the RabbitMQ config
-5. **Flowable + H2 tests**: Requires `MODE=LEGACY` in the JDBC URL, not `MODE=PostgreSQL`
-6. **EventPublisher**: Inject `@Nullable RabbitTemplate` — test contexts may not have RabbitMQ
-7. **Frontend build order**: `shared-ui` → `bpmn-editor` → apps (apps depend on packages)
-8. **CI gradlew permission**: The `gradlew` file must have execute permission in git (`git update-index --chmod=+x gradlew`)
-9. **Gradle daemon JDK**: Gradle 9.2 cannot run on JDK 26+. `gradle/gradle-daemon-jvm.properties` pins the daemon to Java 21, which Gradle picks from locally installed JDKs whatever `JAVA_HOME` says
+4. **Flowable + H2 tests**: Requires `MODE=LEGACY` in the JDBC URL, not `MODE=PostgreSQL`
+5. **Frontend build order**: `shared-ui` → `bpmn-editor` → apps (apps depend on packages)
+6. **CI gradlew permission**: The `gradlew` file must have execute permission in git (`git update-index --chmod=+x gradlew`)
+7. **Gradle daemon JDK**: Gradle 9.2 cannot run on JDK 26+. `gradle/gradle-daemon-jvm.properties` pins the daemon to Java 21, which Gradle picks from locally installed JDKs whatever `JAVA_HOME` says
 
 ## Testing
 
-- Backend integration tests use **Testcontainers** (PostgreSQL + RabbitMQ)
+- Backend integration tests use **Testcontainers** (PostgreSQL)
 - Test config: `src/test/resources/application-test.yml` with `SPRING_PROFILES_ACTIVE=test`
 - `JwtTestHelper` generates mock JWTs for authenticated endpoint tests
 - `TenantTestHelper` sets up `TenantContext` for service-layer tests
@@ -171,4 +169,4 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 
 ## MCP Servers
 
-- **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, RabbitMQ management UI, frontend portals, and gateway health endpoints.
+- **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, frontend portals, and gateway health endpoints.

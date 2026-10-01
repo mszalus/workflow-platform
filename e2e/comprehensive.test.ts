@@ -8,7 +8,6 @@ const KEYCLOAK_URL = 'http://localhost:8180';
 const GATEWAY_URL = 'http://localhost:9080';
 const ADMIN_PORTAL_URL = 'http://localhost:5173';
 const USER_PORTAL_URL = 'http://localhost:5174';
-const RABBITMQ_URL = 'http://localhost:15672';
 const TOKEN_ENDPOINT = `${KEYCLOAK_URL}/realms/workflow-platform/protocol/openid-connect/token`;
 const OIDC_DISCOVERY = `${KEYCLOAK_URL}/realms/workflow-platform/.well-known/openid-configuration`;
 
@@ -131,7 +130,7 @@ function decodeJwtPayload(token: string): Record<string, unknown> {
   return JSON.parse(payload);
 }
 
-// Small helper to wait for async event propagation (RabbitMQ -> services)
+// Small helper to give the engine a moment between steps
 async function waitForEventPropagation(ms = 2000) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -151,15 +150,6 @@ test.describe('1. Infrastructure Tests', () => {
     expect(body.jwks_uri).toBeTruthy();
   });
 
-  test('RabbitMQ management UI accessible', async ({ page }) => {
-    await page.goto(RABBITMQ_URL);
-    // Fill login form
-    await page.getByRole('textbox').first().fill('wfp');
-    await page.getByRole('textbox').nth(1).fill('wfp_secret');
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible({ timeout: 10000 });
-  });
-
   test('Gateway health check returns UP', async ({ request }) => {
     const response = await request.get(`${GATEWAY_URL}/actuator/health`);
     expect(response.status()).toBe(200);
@@ -170,7 +160,6 @@ test.describe('1. Infrastructure Tests', () => {
   test('All backend services healthy (ports 8081-8084)', async ({ request }) => {
     const services = [
       { port: 8081, name: 'workflow-service' },
-      { port: 8084, name: 'audit-service' },
     ];
 
     for (const svc of services) {

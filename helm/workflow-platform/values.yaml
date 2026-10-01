@@ -5,12 +5,6 @@ postgresql:
     password: wfp_secret
     database: wfp
 
-rabbitmq:
-  enabled: true
-  auth:
-    username: wfp
-    password: wfp_secret
-
 keycloak:
   enabled: true
   auth:

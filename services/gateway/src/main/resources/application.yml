@@ -28,8 +28,8 @@ spring:
               uri: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/notifications/**
-            - id: audit-service
-              uri: ${AUDIT_SERVICE_URL:http://localhost:8084}
+            - id: audit
+              uri: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/audit/**
   security:

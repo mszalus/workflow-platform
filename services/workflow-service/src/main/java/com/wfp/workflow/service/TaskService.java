@@ -2,9 +2,9 @@ package com.wfp.workflow.service;
 
 import com.wfp.common.dto.PagedResponse;
 import com.wfp.common.exception.NotFoundException;
-import com.wfp.events.EventConstants;
-import com.wfp.events.TaskCompletedEvent;
-import com.wfp.events.TaskDelegatedEvent;
+import com.wfp.workflow.event.EventConstants;
+import com.wfp.workflow.event.TaskCompletedEvent;
+import com.wfp.workflow.event.TaskDelegatedEvent;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.TaskDto;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +74,7 @@ public class TaskService {
                 .outcome(variables)
                 .build();
         event.initDefaults(EventConstants.TASK_COMPLETED, tenantId, userId);
-        eventPublisher.publish(EventConstants.TASK_COMPLETED, event);
+        eventPublisher.publish(event);
     }
 
     @Transactional
@@ -92,7 +92,7 @@ public class TaskService {
                 .comment(comment)
                 .build();
         event.initDefaults(EventConstants.TASK_DELEGATED, tenantId, fromUserId);
-        eventPublisher.publish(EventConstants.TASK_DELEGATED, event);
+        eventPublisher.publish(event);
     }
 
     private Task requireTenantTask(String taskId) {

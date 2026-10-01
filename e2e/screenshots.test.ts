@@ -93,15 +93,6 @@ test.describe('Screenshot Capture', () => {
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'user-notifications.png'), fullPage: true });
   });
 
-  test('RabbitMQ Management — Overview', async ({ page }) => {
-    await page.goto('http://localhost:15672/');
-    await page.getByRole('textbox').first().fill('wfp');
-    await page.getByRole('textbox').nth(1).fill('wfp_secret');
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible({ timeout: 10000 });
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'rabbitmq-overview.png'), fullPage: true });
-  });
-
   test('Gateway Health', async ({ page }) => {
     await page.goto('http://localhost:9080/actuator/health');
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'gateway-health.png') });
