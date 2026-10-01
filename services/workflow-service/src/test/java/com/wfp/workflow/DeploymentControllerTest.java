@@ -60,7 +60,7 @@ class DeploymentControllerTest {
         request.setCategory("test");
         request.setBpmnXml(SIMPLE_BPMN);
 
-        mockMvc.perform(post("/api/deployments")
+        mockMvc.perform(post("/api/workflow/deployments")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
                                 .claim("tenant_id", "tenant-test")))
                         .header("X-Tenant-Id", "tenant-test")
@@ -72,7 +72,7 @@ class DeploymentControllerTest {
 
     @Test
     void shouldListProcessDefinitions() throws Exception {
-        mockMvc.perform(get("/api/deployments")
+        mockMvc.perform(get("/api/workflow/deployments")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
                                 .claim("tenant_id", "tenant-test")))
                         .header("X-Tenant-Id", "tenant-test"))

@@ -108,7 +108,7 @@ Sessions, branches and merging, gates, review and subagent delegation are descri
 
 Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), deploy them, and end users complete tasks through a task inbox. Every action is audited, custom fields can be attached to any process, and notifications are delivered in real-time.
 
-Services: `gateway` (8080), `workflow-service` (8081: Flowable, custom fields, notifications and audit). Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
+Services: `workflow-service` (8081: Flowable, custom fields, notifications and audit), reached through the portals' nginx `/api` proxy. Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
 
 ## Build Commands
 
@@ -169,4 +169,4 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 
 ## MCP Servers
 
-- **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, frontend portals, and gateway health endpoints.
+- **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, frontend portals, and service health endpoints.

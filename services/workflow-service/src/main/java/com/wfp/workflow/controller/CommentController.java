@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/processes/{processId}/comments")
+@RequestMapping("/api/workflow/processes/{processId}/comments")
 @RequiredArgsConstructor
 public class CommentController {
 

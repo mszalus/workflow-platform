@@ -24,7 +24,7 @@ tasks.withType(Test).configureEach {
     timeout = Duration.ofMinutes(5)
 }
 
-// Acceptance scenarios hit a real running stack at localhost:9080, so they
+// Acceptance scenarios hit a real running stack at localhost:8081, so they
 // must be opted into explicitly (`./gradlew :tests:bdd-acceptance:test`)
 // rather than running as part of the default `build`/`check` task graph.
 tasks.named('test') {

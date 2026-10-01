@@ -20,7 +20,6 @@ flowchart LR
 
 | Layer | Mechanism | Lives in |
 |---|---|---|
-| Edge | `TenantHeaderFilter` strips any client-supplied `X-Tenant-Id` | API Gateway |
 | Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | wfp-security |
 | JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id from the database gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none. Inserts are not filtered: the entity's own `tenant_id` is written | entity classes, wfp-security |
 | Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
@@ -100,13 +99,12 @@ none of them holds a session.
 
 1. The browser runs an OIDC Authorization Code flow against Keycloak
    (realm `workflow-platform`) from Admin Portal or User Portal.
-2. The SPA sends the access token as `Authorization: Bearer …` to the API Gateway.
-3. The gateway validates the signature against the Keycloak JWK Set.
-4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`.
-5. `TenantHeaderFilter` strips any client-supplied `X-Tenant-Id`; each service takes the tenant from the JWT itself — see Multi-Tenancy.
-6. Each backend service independently re-validates the JWT. **The gateway is not a
-   trust boundary the services rely on** — they do not accept unauthenticated traffic
-   even if reached directly.
+2. The SPA sends the access token as `Authorization: Bearer …` with each `/api` call; the
+   portal's nginx proxies it to workflow-service.
+3. workflow-service validates the signature against the Keycloak JWK Set and accepts no
+   unauthenticated traffic, whether it's reached through a portal or directly.
+4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`; the
+   tenant comes only from the JWT, never from a header — see Multi-Tenancy.
 
 ### Public endpoints
 
@@ -114,48 +112,25 @@ Whitelisted in `SecurityConfig`, no token required:
 
 `/actuator/health` · `/actuator/info` · `/v3/api-docs/**` · `/swagger-ui/**`
 
-### Gotcha: the gateway has no database
-
-wfp-security drags in Spring Data JPA. `GatewayApplication` must exclude
-`DataSourceAutoConfiguration` and `HibernateJpaAutoConfiguration` or it will not boot.
-See Known Pitfalls.
-
 ### See also
 
-Admin — Keycloak Administration · API Gateway · User — Login
+Admin — Keycloak Administration · User — Login
 
-## Gateway Routing
+## API Routing
 
-Four routes, two of which rewrite the path. The asymmetry is deliberate:
-Workflow Service exposes generic `/api/**` paths for both workflows and custom fields,
-so the gateway namespaces them under `/api/workflow` and `/api/fields`; notifications and
-audit already expose distinct prefixes and pass through untouched.
+There is no gateway. Each portal's nginx proxies `/api/` to workflow-service unchanged,
+Vite does the same in development, and workflow-service serves the external paths
+itself:
 
-| External path | Target | Rewrite |
-|---|---|---|
-| `/api/workflow/**` | workflow-service:8081 | `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}` |
-| `/api/fields/**` | workflow-service:8081 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
-| `/api/notifications/**` | workflow-service:8081 | pass-through |
-| `/api/audit/**` | workflow-service:8081 | pass-through |
+| External path | Served by |
+|---|---|
+| `/api/workflow/**` | `DeploymentController`, `ProcessController`, `TaskController`, `CommentController`, `HistoryController` |
+| `/api/fields/**` | `FieldSchemaController`, `FieldValueController` |
+| `/api/notifications/**` | `NotificationController` |
+| `/api/audit/**` | `AuditController` |
 
-So `/api/workflow/tasks` reaches the backend as `/api/tasks`, but
-`/api/notifications/unread-count` arrives verbatim.
-
-### Overriding URIs in Docker
-
-Compose sets `SPRING_CLOUD_GATEWAY_MVC_ROUTES_N_URI` per route index. The project also
-defines a named var (`WORKFLOW_SERVICE_URL`) referenced from `application.yml`,
-because indexed env vars silently drop the rest of a route definition when partially
-overridden.
-
-> [!TIP]
-> **Frontend path bug class**
-> A portal calling `/api/tasks` instead of `/api/workflow/tasks` gets a 404 from the
-> gateway, not from the service. See Frontend API Path Bug Fix.
-
-### See also
-
-C4 L3 API Gateway · API Endpoint Catalog · Ports and Endpoints
+BDD and the Playwright API tests call workflow-service directly on port 8081 with the
+same paths.
 
 ## Flowable Engine
 
@@ -226,7 +201,7 @@ npm run typecheck --workspaces --if-present
 
 Both apps mount `AuthProvider` from shared-ui, which performs the OIDC code flow
 against Keycloak and injects the bearer token into `apiClient`. All calls go through the
-API Gateway, so every path is prefixed per Gateway Routing.
+portal's nginx `/api` proxy, so every path is an API Routing path.
 
 ### Testing posture
 

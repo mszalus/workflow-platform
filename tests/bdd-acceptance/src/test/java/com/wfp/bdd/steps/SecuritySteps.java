@@ -7,7 +7,7 @@ import io.restassured.response.Response;
 
 public class SecuritySteps {
 
-    private static final String GATEWAY = "http://localhost:9080";
+    private static final String API = "http://localhost:8081";
 
     private final ScenarioContext context;
 
@@ -19,7 +19,7 @@ public class SecuritySteps {
     public void callWithoutToken() {
         Response response = RestAssured.given()
                 .when()
-                .get(GATEWAY + "/api/workflow/deployments");
+                .get(API + "/api/workflow/deployments");
         context.setLastStatusCode(response.statusCode());
     }
 
@@ -28,7 +28,7 @@ public class SecuritySteps {
         Response response = RestAssured.given()
                 .header("Authorization", "Bearer this.is.not.a.valid.jwt.token")
                 .when()
-                .get(GATEWAY + "/api/workflow/deployments");
+                .get(API + "/api/workflow/deployments");
         context.setLastStatusCode(response.statusCode());
     }
 }

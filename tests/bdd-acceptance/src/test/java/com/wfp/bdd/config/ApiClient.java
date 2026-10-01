@@ -12,7 +12,7 @@ import java.util.Map;
  */
 public class ApiClient {
 
-    private static final String GATEWAY = "http://localhost:9080";
+    private static final String API = "http://localhost:8081";
     private static final String KEYCLOAK = "http://localhost:8180";
     private static final String TOKEN_URL =
             KEYCLOAK + "/realms/workflow-platform/protocol/openid-connect/token";
@@ -49,18 +49,18 @@ public class ApiClient {
         return auth()
                 .body(Map.of("name", name, "bpmnXml", buildBpmn(key, name)))
                 .when()
-                .post(GATEWAY + "/api/workflow/deployments");
+                .post(API + "/api/workflow/deployments");
     }
 
     public Response deployInvalidBpmn() {
         return auth()
                 .body(Map.of("name", "BDDInvalidBpmn", "bpmnXml", "this-is-not-valid-xml"))
                 .when()
-                .post(GATEWAY + "/api/workflow/deployments");
+                .post(API + "/api/workflow/deployments");
     }
 
     public Response listProcessDefinitions() {
-        return auth().when().get(GATEWAY + "/api/workflow/deployments");
+        return auth().when().get(API + "/api/workflow/deployments");
     }
 
     // -------------------------------------------------------------------------
@@ -71,16 +71,16 @@ public class ApiClient {
         return auth()
                 .body(Map.of("processDefinitionKey", processDefinitionKey))
                 .when()
-                .post(GATEWAY + "/api/workflow/processes");
+                .post(API + "/api/workflow/processes");
     }
 
     public Response listProcesses() {
-        return auth().when().get(GATEWAY + "/api/workflow/processes?size=100");
+        return auth().when().get(API + "/api/workflow/processes?size=100");
     }
 
     public Response cancelProcess(String processInstanceId) {
         return auth().when()
-                .delete(GATEWAY + "/api/workflow/processes/" + processInstanceId);
+                .delete(API + "/api/workflow/processes/" + processInstanceId);
     }
 
     // -------------------------------------------------------------------------
@@ -89,25 +89,25 @@ public class ApiClient {
 
     public Response listTasksForAssignee(String assignee) {
         return auth().when()
-                .get(GATEWAY + "/api/workflow/tasks?assignee=" + assignee + "&size=100");
+                .get(API + "/api/workflow/tasks?assignee=" + assignee + "&size=100");
     }
 
     public Response getTask(String taskId) {
-        return auth().when().get(GATEWAY + "/api/workflow/tasks/" + taskId);
+        return auth().when().get(API + "/api/workflow/tasks/" + taskId);
     }
 
     public Response completeTask(String taskId) {
         return auth()
                 .body("{}")
                 .when()
-                .post(GATEWAY + "/api/workflow/tasks/" + taskId + "/complete");
+                .post(API + "/api/workflow/tasks/" + taskId + "/complete");
     }
 
     public Response delegateTask(String taskId, String toUserId) {
         return auth()
                 .body(Map.of("delegateToUserId", toUserId, "comment", "Delegated via BDD test"))
                 .when()
-                .post(GATEWAY + "/api/workflow/tasks/" + taskId + "/delegate");
+                .post(API + "/api/workflow/tasks/" + taskId + "/delegate");
     }
 
     // -------------------------------------------------------------------------
@@ -125,12 +125,12 @@ public class ApiClient {
                         "sortOrder", 0
                 ))
                 .when()
-                .post(GATEWAY + "/api/fields/schemas");
+                .post(API + "/api/fields/schemas");
     }
 
     public Response listFieldSchemas(String processDefinitionKey) {
         return auth().when()
-                .get(GATEWAY + "/api/fields/schemas?processDefinitionKey=" + processDefinitionKey);
+                .get(API + "/api/fields/schemas?processDefinitionKey=" + processDefinitionKey);
     }
 
     public Response saveFieldValues(String processInstanceId, String processDefinitionKey,
@@ -142,12 +142,12 @@ public class ApiClient {
                         "values", values
                 ))
                 .when()
-                .post(GATEWAY + "/api/fields/values");
+                .post(API + "/api/fields/values");
     }
 
     public Response getFieldValues(String processInstanceId) {
         return auth().when()
-                .get(GATEWAY + "/api/fields/values?processInstanceId=" + processInstanceId);
+                .get(API + "/api/fields/values?processInstanceId=" + processInstanceId);
     }
 
     // -------------------------------------------------------------------------
@@ -155,17 +155,17 @@ public class ApiClient {
     // -------------------------------------------------------------------------
 
     public Response listNotifications() {
-        return auth().when().get(GATEWAY + "/api/notifications?size=100");
+        return auth().when().get(API + "/api/notifications?size=100");
     }
 
     public long getUnreadCount() {
         return auth().when()
-                .get(GATEWAY + "/api/notifications/unread-count")
+                .get(API + "/api/notifications/unread-count")
                 .jsonPath().getLong("count");
     }
 
     public Response markAllNotificationsRead() {
-        return auth().when().put(GATEWAY + "/api/notifications/mark-all-read");
+        return auth().when().put(API + "/api/notifications/mark-all-read");
     }
 
     // -------------------------------------------------------------------------
@@ -173,7 +173,7 @@ public class ApiClient {
     // -------------------------------------------------------------------------
 
     public Response listAuditEntries() {
-        return auth().when().get(GATEWAY + "/api/audit?size=100");
+        return auth().when().get(API + "/api/audit?size=100");
     }
 
     // -------------------------------------------------------------------------

@@ -4,7 +4,6 @@
 ##     --set externalSecrets.gcpProjectId=<project-id> \
 ##     --set externalSecrets.clusterName=<cluster-name> \
 ##     --set externalSecrets.clusterLocation=europe-west1 \
-##     --set gateway.ingress.hosts[0].host=wfp.example.com \
 ##     --set "otel-collector.gcpProjectId=<project-id>"
 
 postgresql:
@@ -36,51 +35,6 @@ otel-collector:
   resources:
     requests: { cpu: 100m, memory: 128Mi }
     limits: { cpu: 500m, memory: 512Mi }
-
-# ---------------------------------------------------------------------------
-# Gateway — public ingress with TLS via cert-manager
-# cert-manager must be installed before deploying:
-#   helm install cert-manager jetstack/cert-manager \
-#     -n cert-manager --create-namespace --set installCRDs=true
-# ---------------------------------------------------------------------------
-gateway:
-  replicaCount: 2
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 5
-  podDisruptionBudget:
-    enabled: true
-    minAvailable: 1
-  serviceAccount:
-    create: true
-    annotations:
-      iam.gke.io/gcp-service-account: "REPLACE_WITH_WORKLOAD_SA_EMAIL"
-  resources:
-    requests: { cpu: 250m, memory: 256Mi }
-    limits: { cpu: 500m, memory: 512Mi }
-  ingress:
-    enabled: true
-    className: "gce"   # GKE Ingress class (or "nginx" if using nginx-ingress)
-    annotations:
-      kubernetes.io/ingress.global-static-ip-name: "wfp-gateway-ip"
-      cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    hosts:
-      - host: "REPLACE_WITH_YOUR_DOMAIN"
-        paths:
-          - path: /
-            pathType: Prefix
-    tls:
-      - secretName: wfp-gateway-tls
-        hosts:
-          - "REPLACE_WITH_YOUR_DOMAIN"
-  externalSecrets:
-    enabled: true
-    environment: "dev"
-  env:
-    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
-    MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "0.1"
-    GOOGLE_CLOUD_PROJECT: "REPLACE_WITH_GCP_PROJECT_ID"
 
 # ---------------------------------------------------------------------------
 # Backend services — Cloud SQL connection + observability

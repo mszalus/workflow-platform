@@ -87,7 +87,7 @@ class EventRollbackTest {
         doThrow(new IllegalStateException("notification store down"))
                 .when(notificationService).notify(any(TaskCompletedEvent.class));
 
-        mockMvc.perform(post("/api/tasks/{id}/complete", taskId)
+        mockMvc.perform(post("/api/workflow/tasks/{id}/complete", taskId)
                         .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
                                 .claim("tenant_id", "tenant-rollback"))))
                 .andExpect(status().is5xxServerError());
@@ -101,7 +101,7 @@ class EventRollbackTest {
                 .when(auditService).record(any(TaskCreatedEvent.class));
         long runsBefore = runtimeService.createProcessInstanceQuery().processDefinitionKey("notificationRollback").count();
 
-        mockMvc.perform(post("/api/processes")
+        mockMvc.perform(post("/api/workflow/processes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"processDefinitionKey\":\"notificationRollback\"}")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
@@ -117,7 +117,7 @@ class EventRollbackTest {
         doThrow(new IllegalStateException("audit store down"))
                 .when(auditService).record(any(TaskCompletedEvent.class));
 
-        mockMvc.perform(post("/api/tasks/{id}/complete", taskId)
+        mockMvc.perform(post("/api/workflow/tasks/{id}/complete", taskId)
                         .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
                                 .claim("tenant_id", "tenant-rollback"))))
                 .andExpect(status().is5xxServerError());

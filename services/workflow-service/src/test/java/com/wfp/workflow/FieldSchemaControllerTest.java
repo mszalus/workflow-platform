@@ -48,7 +48,7 @@ class FieldSchemaControllerTest {
         request.setFieldType(FieldType.TEXT);
         request.setRequired(true);
 
-        mockMvc.perform(post("/api/schemas")
+        mockMvc.perform(post("/api/fields/schemas")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
                                 .claim("tenant_id", "tenant-test")))
                         .header("X-Tenant-Id", "tenant-test")
@@ -61,7 +61,7 @@ class FieldSchemaControllerTest {
 
     @Test
     void shouldListSchemasByProcessDefinition() throws Exception {
-        mockMvc.perform(get("/api/schemas")
+        mockMvc.perform(get("/api/fields/schemas")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
                                 .claim("tenant_id", "tenant-test")))
                         .header("X-Tenant-Id", "tenant-test")

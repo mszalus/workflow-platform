@@ -6,21 +6,21 @@ The workflow service is the core of the platform. It wraps the Flowable 7.1 BPMN
 C4Component
     title Workflow Service — Component Diagram
 
-    Container_Ext(gateway, "API Gateway", "Routes /api/workflow/** to this service")
+    Container_Ext(portals, "Admin and User Portal", "nginx proxies /api/** to this service")
     ContainerDb_Ext(postgres, "PostgreSQL", "Schema: workflow")
     System_Ext(flowableEngine, "Flowable Engine", "Embedded BPMN engine (in-process)")
 
     Container_Boundary(workflowSvc, "Workflow Service") {
 
-        Component(deployCtrl, "DeploymentController", "REST Controller", "POST /api/deployments (deploy BPMN)<br/>GET /api/deployments (list definitions)<br/>GET /api/deployments/{id}/bpmn (export XML)<br/>DELETE /api/deployments/{id}")
+        Component(deployCtrl, "DeploymentController", "REST Controller", "POST /api/workflow/deployments (deploy BPMN)<br/>GET /api/workflow/deployments (list definitions)<br/>GET /api/workflow/deployments/{id}/bpmn (export XML)<br/>DELETE /api/workflow/deployments/{id}")
 
-        Component(processCtrl, "ProcessController", "REST Controller", "POST /api/processes (start)<br/>GET /api/processes (list active)<br/>GET /api/processes/{id} (details)<br/>DELETE /api/processes/{id} (cancel)")
+        Component(processCtrl, "ProcessController", "REST Controller", "POST /api/workflow/processes (start)<br/>GET /api/workflow/processes (list active)<br/>GET /api/workflow/processes/{id} (details)<br/>DELETE /api/workflow/processes/{id} (cancel)")
 
-        Component(taskCtrl, "TaskController", "REST Controller", "GET /api/tasks (list/filter)<br/>GET /api/tasks/{id} (details)<br/>POST claim/unclaim/complete/delegate")
+        Component(taskCtrl, "TaskController", "REST Controller", "GET /api/workflow/tasks (list/filter)<br/>GET /api/workflow/tasks/{id} (details)<br/>POST claim/unclaim/complete/delegate")
 
-        Component(commentCtrl, "CommentController", "REST Controller", "GET /api/processes/{id}/comments<br/>POST /api/processes/{id}/comments")
+        Component(commentCtrl, "CommentController", "REST Controller", "GET /api/workflow/processes/{id}/comments<br/>POST /api/workflow/processes/{id}/comments")
 
-        Component(historyCtrl, "HistoryController", "REST Controller", "GET /api/history/processes<br/>GET /api/history/tasks")
+        Component(historyCtrl, "HistoryController", "REST Controller", "GET /api/workflow/history/processes<br/>GET /api/workflow/history/tasks")
         Component(auditCtrl, "AuditController", "REST Controller", "GET /api/audit (filter by entity, user, event type, time)")
         Component(notifCtrl, "NotificationController", "REST Controller", "GET /api/notifications<br/>GET /api/notifications/unread-count<br/>PUT mark-read, mark-all-read")
 
@@ -42,13 +42,13 @@ C4Component
         Component(attachmentRepo, "AttachmentRepository", "JPA Repository", "CRUD for Attachment entity")
     }
 
-    Rel(gateway, deployCtrl, "HTTP/JSON")
-    Rel(gateway, processCtrl, "HTTP/JSON")
-    Rel(gateway, taskCtrl, "HTTP/JSON")
-    Rel(gateway, commentCtrl, "HTTP/JSON")
-    Rel(gateway, historyCtrl, "HTTP/JSON")
-    Rel(gateway, notifCtrl, "HTTP/JSON")
-    Rel(gateway, auditCtrl, "HTTP/JSON")
+    Rel(portals, deployCtrl, "HTTP/JSON")
+    Rel(portals, processCtrl, "HTTP/JSON")
+    Rel(portals, taskCtrl, "HTTP/JSON")
+    Rel(portals, commentCtrl, "HTTP/JSON")
+    Rel(portals, historyCtrl, "HTTP/JSON")
+    Rel(portals, notifCtrl, "HTTP/JSON")
+    Rel(portals, auditCtrl, "HTTP/JSON")
 
     Rel(deployCtrl, deploySvc, "Calls")
     Rel(processCtrl, processSvc, "Calls")
@@ -102,6 +102,6 @@ C4Component
 
 ## Notes for Editors
 
-- **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the gateway and the service to the relevant repository/Flowable service.
+- **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the portals and the service to the relevant repository/Flowable service.
 - **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `com.wfp.workflow.event`.
 - **Flowable engine is embedded** (in-process, not a separate container). It uses the same PostgreSQL schema (`workflow`) and manages its own `ACT_*` tables alongside the application's `wf_*` tables.

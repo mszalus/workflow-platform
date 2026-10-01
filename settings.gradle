@@ -23,5 +23,4 @@ include 'libs:wfp-test-support'
 include 'tests:bdd-acceptance'
 
 // Backend services
-include 'services:gateway'
 include 'services:workflow-service'

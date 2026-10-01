@@ -1,6 +1,6 @@
 # Tracker Architecture
 
-Status: **removal candidates decided on 2026-10-01**: R-1 to R-12 approved; R-11 verified in 20.a. Tenant identity and the delivery order decided the same day. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
+Status: **removal candidates decided on 2026-10-01**: R-1 to R-12 approved; R-11 verified in 20.a. C-2 runs before C-1d (decided 2026-10-01), because the gateway used `wfp-security`. Tenant identity and the delivery order decided the same day. BPMN stays: Flowable behind the `WorkflowEngine` facade (20.5) and the bpmn-js editor. Screens are in [tracker-screens.md](tracker-screens.md); the tracker's behaviour is in [work-item-tracker.md](work-item-tracker.md).
 
 ## Today
 
@@ -106,7 +106,7 @@ The chain is today's, minus the gateway:
 |---|---|---|
 | 20.a | Spike, unchanged: parser, profile validator, `describe()`. Also verifies R-11 (confirmed) | as in 20.6, plus R-11 confirmed or reverted |
 | C-1 | Fold custom-fields (C-1a, #42: done), notification (C-1b, #78: done) and audit (C-1c, #79: done) into `workflow-service` (renamed `app`); remove RabbitMQ and `wfp-events`; libraries become packages; one schema (R-1 to R-4, R-7, R-9). Today's screens keep working | BDD and Playwright green; 2 backend containers left (gateway, app) |
-| C-2 | Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
+| C-2 | **Done (#81), before C-1d.** Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
 | 20.b | Facade extraction, with the tenant check from #71 inside `transition` and `cancel` | as in 20.6 |
 | 20.c | Item model. History, notification and audit rows are written in the same transaction, with no events | as in 20.6 |
 | 20.d | Editor guardrails | as in 20.6 |

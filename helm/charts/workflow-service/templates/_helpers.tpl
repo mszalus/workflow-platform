@@ -1,3 +1,3 @@
 {{- define "chart.fullname" -}}
-{{- .Release.Name }}-{{ .Chart.Name }}
+{{- .Values.fullnameOverride | default (printf "%s-%s" .Release.Name .Chart.Name) }}
 {{- end }}

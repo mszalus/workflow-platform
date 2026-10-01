@@ -5,7 +5,7 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 // ---------------------------------------------------------------------------
 
 const KEYCLOAK_URL = 'http://localhost:8180';
-const GATEWAY_URL = 'http://localhost:9080';
+const API_URL = 'http://localhost:8081';
 const ADMIN_PORTAL_URL = 'http://localhost:5173';
 const USER_PORTAL_URL = 'http://localhost:5174';
 const TOKEN_ENDPOINT = `${KEYCLOAK_URL}/realms/workflow-platform/protocol/openid-connect/token`;
@@ -149,13 +149,6 @@ test.describe('1. Infrastructure Tests', () => {
     expect(body.jwks_uri).toBeTruthy();
   });
 
-  test('Gateway health check returns UP', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/actuator/health`);
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.status).toBe('UP');
-  });
-
   test('Backend service healthy (port 8081)', async ({ request }) => {
     const services = [
       { port: 8081, name: 'workflow-service' },
@@ -194,9 +187,9 @@ test.describe('2. Authentication Tests', () => {
     }
   });
 
-  test('Token works against gateway API', async ({ request }) => {
+  test('Token works against the API', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -220,7 +213,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('Deploy a test BPMN process', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.post(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
       data: {
         name: 'Comprehensive Simple Process',
@@ -235,7 +228,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('List process definitions — verify new process exists', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -249,7 +242,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('Start a process instance', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.post(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(token),
       data: {
         processDefinitionKey: 'comprehensiveSimple',
@@ -264,7 +257,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('List process instances — verify new instance appears', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.get(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -277,7 +270,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('List tasks assigned to admin-a — verify task exists', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=admin-a`, {
+    const response = await request.get(`${API_URL}/api/workflow/tasks?assignee=admin-a`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -292,7 +285,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('Get task detail — verify task has correct name and assignee', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/tasks/${taskId}`, {
+    const response = await request.get(`${API_URL}/api/workflow/tasks/${taskId}`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -304,7 +297,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
   });
 
   test('Complete task — verify 204', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/tasks/${taskId}/complete`, {
+    const response = await request.post(`${API_URL}/api/workflow/tasks/${taskId}/complete`, {
       headers: authHeaders(token),
       data: {},
     });
@@ -315,7 +308,7 @@ test.describe.serial('3. Process Lifecycle Tests', () => {
     // Give the engine a moment to finalize
     await waitForEngine(1000);
 
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=admin-a`, {
+    const response = await request.get(`${API_URL}/api/workflow/tasks?assignee=admin-a`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -348,7 +341,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
   test('Deploy approval process if not already present', async ({ request }) => {
     // Check if approvalProcess is already deployed (auto-deployed from resources)
-    const listResponse = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const listResponse = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(adminToken),
     });
     const definitions = await listResponse.json();
@@ -378,7 +371,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
     </sequenceFlow>
   </process>
 </definitions>`;
-      const deployResponse = await request.post(`${GATEWAY_URL}/api/workflow/deployments`, {
+      const deployResponse = await request.post(`${API_URL}/api/workflow/deployments`, {
         headers: authHeaders(adminToken),
         data: { name: 'Approval Process', bpmnXml: approvalBpmn },
       });
@@ -387,7 +380,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
   });
 
   test('Start approval process as user-a', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.post(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(userToken),
       data: {
         processDefinitionKey: 'approvalProcess',
@@ -401,7 +394,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
   });
 
   test('Verify "Submit Request" task assigned to user-a', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=user-a`, {
+    const response = await request.get(`${API_URL}/api/workflow/tasks?assignee=user-a`, {
       headers: authHeaders(userToken),
     });
     expect(response.status()).toBe(200);
@@ -418,7 +411,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
   test('Complete "Submit Request"', async ({ request }) => {
     const response = await request.post(
-      `${GATEWAY_URL}/api/workflow/tasks/${submitTaskId}/complete`,
+      `${API_URL}/api/workflow/tasks/${submitTaskId}/complete`,
       {
         headers: authHeaders(userToken),
         data: {},
@@ -433,7 +426,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
     // Query tasks by candidateGroup — the task should be unassigned
     const response = await request.get(
-      `${GATEWAY_URL}/api/workflow/tasks?candidateGroup=managers`,
+      `${API_URL}/api/workflow/tasks?candidateGroup=managers`,
       { headers: authHeaders(adminToken) },
     );
     expect(response.status()).toBe(200);
@@ -451,14 +444,14 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
   test('Claim "Manager Approval" as admin-a', async ({ request }) => {
     const response = await request.post(
-      `${GATEWAY_URL}/api/workflow/tasks/${approvalTaskId}/claim`,
+      `${API_URL}/api/workflow/tasks/${approvalTaskId}/claim`,
       { headers: authHeaders(adminToken) },
     );
     expect(response.status()).toBe(204);
 
     // Verify it is now assigned to admin-a
     const detailResponse = await request.get(
-      `${GATEWAY_URL}/api/workflow/tasks/${approvalTaskId}`,
+      `${API_URL}/api/workflow/tasks/${approvalTaskId}`,
       { headers: authHeaders(adminToken) },
     );
     expect(detailResponse.status()).toBe(200);
@@ -468,7 +461,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
   test('Complete "Manager Approval" with approved=true', async ({ request }) => {
     const response = await request.post(
-      `${GATEWAY_URL}/api/workflow/tasks/${approvalTaskId}/complete`,
+      `${API_URL}/api/workflow/tasks/${approvalTaskId}/complete`,
       {
         headers: authHeaders(adminToken),
         data: { variables: { approved: true } },
@@ -481,7 +474,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
     await waitForEngine(1000);
 
     // Check that no tasks remain for this process instance
-    const tasksResponse = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=user-a`, {
+    const tasksResponse = await request.get(`${API_URL}/api/workflow/tasks?assignee=user-a`, {
       headers: authHeaders(userToken),
     });
     const tasks = await tasksResponse.json();
@@ -490,7 +483,7 @@ test.describe.serial('4. Approval Flow Tests', () => {
 
     // Also verify via history that the process is completed
     const historyResponse = await request.get(
-      `${GATEWAY_URL}/api/workflow/history/processes`,
+      `${API_URL}/api/workflow/history/processes`,
       { headers: authHeaders(adminToken) },
     );
     if (historyResponse.status() === 200) {
@@ -515,7 +508,7 @@ test.describe.serial('5. Comments Tests', () => {
     token = await getToken(request, 'admin-a');
 
     // Start a process
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.post(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(token),
       data: {
         processDefinitionKey: 'comprehensiveSimple',
@@ -528,7 +521,7 @@ test.describe.serial('5. Comments Tests', () => {
 
   test('Add comment to process instance', async ({ request }) => {
     const response = await request.post(
-      `${GATEWAY_URL}/api/workflow/processes/${processInstanceId}/comments`,
+      `${API_URL}/api/workflow/processes/${processInstanceId}/comments`,
       {
         headers: authHeaders(token),
         data: { content: 'This is a test comment from comprehensive E2E' },
@@ -543,7 +536,7 @@ test.describe.serial('5. Comments Tests', () => {
 
   test('List comments — verify comment exists', async ({ request }) => {
     const response = await request.get(
-      `${GATEWAY_URL}/api/workflow/processes/${processInstanceId}/comments`,
+      `${API_URL}/api/workflow/processes/${processInstanceId}/comments`,
       { headers: authHeaders(token) },
     );
     expect(response.status()).toBe(200);
@@ -557,13 +550,13 @@ test.describe.serial('5. Comments Tests', () => {
 
   test('Cleanup: complete the task to avoid dangling processes', async ({ request }) => {
     const tasksResponse = await request.get(
-      `${GATEWAY_URL}/api/workflow/tasks?assignee=admin-a`,
+      `${API_URL}/api/workflow/tasks?assignee=admin-a`,
       { headers: authHeaders(token) },
     );
     const tasks = await tasksResponse.json();
     const task = tasks.content.find((t: any) => t.processInstanceId === processInstanceId);
     if (task) {
-      await request.post(`${GATEWAY_URL}/api/workflow/tasks/${task.id}/complete`, {
+      await request.post(`${API_URL}/api/workflow/tasks/${task.id}/complete`, {
         headers: authHeaders(token),
         data: {},
       });
@@ -584,7 +577,7 @@ test.describe.serial('6. Custom Fields Tests', () => {
   });
 
   test('Create a field schema', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/fields/schemas`, {
+    const response = await request.post(`${API_URL}/api/fields/schemas`, {
       headers: authHeaders(token),
       data: {
         processDefinitionKey: 'comprehensiveSimple',
@@ -612,7 +605,7 @@ test.describe.serial('6. Custom Fields Tests', () => {
 
   test('List schemas by processDefinitionKey', async ({ request }) => {
     const response = await request.get(
-      `${GATEWAY_URL}/api/fields/schemas?processDefinitionKey=comprehensiveSimple`,
+      `${API_URL}/api/fields/schemas?processDefinitionKey=comprehensiveSimple`,
       { headers: authHeaders(token) },
     );
     expect(response.status()).toBe(200);
@@ -625,14 +618,14 @@ test.describe.serial('6. Custom Fields Tests', () => {
   });
 
   test('Delete schema', async ({ request }) => {
-    const response = await request.delete(`${GATEWAY_URL}/api/fields/schemas/${schemaId}`, {
+    const response = await request.delete(`${API_URL}/api/fields/schemas/${schemaId}`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(204);
 
     // Verify it is gone
     const listResponse = await request.get(
-      `${GATEWAY_URL}/api/fields/schemas?processDefinitionKey=comprehensiveSimple`,
+      `${API_URL}/api/fields/schemas?processDefinitionKey=comprehensiveSimple`,
       { headers: authHeaders(token) },
     );
     const schemas = await listResponse.json();
@@ -653,7 +646,7 @@ test.describe.serial('7. Notifications Tests', () => {
   });
 
   test('Get unread count', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/notifications/unread-count`, {
+    const response = await request.get(`${API_URL}/api/notifications/unread-count`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -663,7 +656,7 @@ test.describe.serial('7. Notifications Tests', () => {
   });
 
   test('List notifications', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/notifications`, {
+    const response = await request.get(`${API_URL}/api/notifications`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -673,14 +666,14 @@ test.describe.serial('7. Notifications Tests', () => {
   });
 
   test('Mark all read', async ({ request }) => {
-    const response = await request.put(`${GATEWAY_URL}/api/notifications/mark-all-read`, {
+    const response = await request.put(`${API_URL}/api/notifications/mark-all-read`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
   });
 
   test('Verify unread count is 0 after mark-all-read', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/notifications/unread-count`, {
+    const response = await request.get(`${API_URL}/api/notifications/unread-count`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -697,7 +690,7 @@ test.describe('8. Audit Trail Tests', () => {
   test('List audit events and verify process/task events exist', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
 
-    const response = await request.get(`${GATEWAY_URL}/api/audit`, {
+    const response = await request.get(`${API_URL}/api/audit`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -716,7 +709,7 @@ test.describe('8. Audit Trail Tests', () => {
   test('Query audit events by eventType', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
 
-    const response = await request.get(`${GATEWAY_URL}/api/audit?eventType=process.started`, {
+    const response = await request.get(`${API_URL}/api/audit?eventType=process.started`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -730,7 +723,7 @@ test.describe('8. Audit Trail Tests', () => {
   test('Query audit events by userId', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
 
-    const response = await request.get(`${GATEWAY_URL}/api/audit?userId=admin-a`, {
+    const response = await request.get(`${API_URL}/api/audit?userId=admin-a`, {
       headers: authHeaders(token),
     });
     expect(response.status()).toBe(200);
@@ -761,7 +754,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Deploy a process as admin-a (tenant-a)', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.post(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(tokenAdminA),
       data: {
         name: 'Tenant Isolation Test',
@@ -773,7 +766,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Verify admin-b (tenant-b) cannot see tenant-a process definitions', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(tokenAdminB),
     });
     expect(response.status()).toBe(200);
@@ -785,7 +778,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Start process as user-a (tenant-a)', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.post(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(tokenUserA),
       data: {
         processDefinitionKey: 'tenantIsolationTest',
@@ -797,7 +790,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Verify user-b (tenant-b) cannot see tenant-a tasks', async ({ request }) => {
-    const tasksResponseB = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=user-b`, {
+    const tasksResponseB = await request.get(`${API_URL}/api/workflow/tasks?assignee=user-b`, {
       headers: authHeaders(tokenUserB),
     });
     expect(tasksResponseB.status()).toBe(200);
@@ -809,7 +802,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Verify user-b cannot see tenant-a process instances', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.get(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(tokenUserB),
     });
     expect(response.status()).toBe(200);
@@ -821,7 +814,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Verify tenant-a only sees its own processes', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.get(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(tokenUserA),
     });
     expect(response.status()).toBe(200);
@@ -833,13 +826,13 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
   });
 
   test('Cleanup: complete the isolation test task', async ({ request }) => {
-    const tasksResponse = await request.get(`${GATEWAY_URL}/api/workflow/tasks?assignee=user-a`, {
+    const tasksResponse = await request.get(`${API_URL}/api/workflow/tasks?assignee=user-a`, {
       headers: authHeaders(tokenUserA),
     });
     const tasks = await tasksResponse.json();
     const task = tasks.content.find((t: any) => t.processInstanceId === tenantAProcessId);
     if (task) {
-      await request.post(`${GATEWAY_URL}/api/workflow/tasks/${task.id}/complete`, {
+      await request.post(`${API_URL}/api/workflow/tasks/${task.id}/complete`, {
         headers: authHeaders(tokenUserA),
         data: {},
       });
@@ -854,7 +847,7 @@ test.describe.serial('9. Multi-Tenant Isolation Tests', () => {
 test.describe('10. Negative Tests', () => {
   test('Start a non-existent process definition — expect 4xx or 5xx', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/processes`, {
+    const response = await request.post(`${API_URL}/api/workflow/processes`, {
       headers: authHeaders(token),
       data: {
         processDefinitionKey: 'nonExistentProcess_xyz_123',
@@ -867,7 +860,7 @@ test.describe('10. Negative Tests', () => {
   test('Complete a non-existent task — expect 404', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
     const response = await request.post(
-      `${GATEWAY_URL}/api/workflow/tasks/non-existent-task-id-12345/complete`,
+      `${API_URL}/api/workflow/tasks/non-existent-task-id-12345/complete`,
       {
         headers: authHeaders(token),
         data: {},
@@ -877,19 +870,19 @@ test.describe('10. Negative Tests', () => {
   });
 
   test('Access API without token — expect 401', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/deployments`);
+    const response = await request.get(`${API_URL}/api/workflow/deployments`);
     expect(response.status()).toBe(401);
   });
 
   test('Access with invalid/expired token — expect 401', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: { Authorization: 'Bearer invalid.jwt.token_that_is_clearly_not_valid' },
     });
     expect(response.status()).toBe(401);
   });
 
   test('Access with malformed Authorization header — expect 401', async ({ request }) => {
-    const response = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: { Authorization: 'NotBearer sometoken' },
     });
     expect(response.status()).toBe(401);
@@ -898,7 +891,7 @@ test.describe('10. Negative Tests', () => {
   test('Get non-existent task detail — expect 404', async ({ request }) => {
     const token = await getToken(request, 'admin-a');
     const response = await request.get(
-      `${GATEWAY_URL}/api/workflow/tasks/00000000-0000-0000-0000-000000000000`,
+      `${API_URL}/api/workflow/tasks/00000000-0000-0000-0000-000000000000`,
       { headers: authHeaders(token) },
     );
     expect(response.status()).toBeGreaterThanOrEqual(400);
@@ -920,7 +913,7 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
   });
 
   test('Deploy BPMN with Flowable properties', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.post(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
       data: {
         name: 'Flowable Properties Test',
@@ -932,7 +925,7 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
     expect(body.deploymentId).toBeTruthy();
 
     // Get the process definition ID
-    const listResponse = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const listResponse = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
     });
     const definitions = await listResponse.json();
@@ -945,7 +938,7 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
 
   test('Retrieve BPMN XML', async ({ request }) => {
     const response = await request.get(
-      `${GATEWAY_URL}/api/workflow/deployments/${processDefinitionId}/bpmn`,
+      `${API_URL}/api/workflow/deployments/${processDefinitionId}/bpmn`,
       { headers: authHeaders(token) },
     );
     expect(response.status()).toBe(200);
@@ -966,7 +959,7 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
   });
 
   test('Re-deploy the retrieved XML', async ({ request }) => {
-    const response = await request.post(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const response = await request.post(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
       data: {
         name: 'Flowable Properties Test Re-deploy',
@@ -978,7 +971,7 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
     expect(body.deploymentId).toBeTruthy();
 
     // Get the new process definition ID (should be version 2)
-    const listResponse = await request.get(`${GATEWAY_URL}/api/workflow/deployments`, {
+    const listResponse = await request.get(`${API_URL}/api/workflow/deployments`, {
       headers: authHeaders(token),
     });
     const definitions = await listResponse.json();
@@ -992,7 +985,7 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
 
   test('Retrieve re-deployed XML and verify properties still intact', async ({ request }) => {
     const response = await request.get(
-      `${GATEWAY_URL}/api/workflow/deployments/${redeployedProcessDefinitionId}/bpmn`,
+      `${API_URL}/api/workflow/deployments/${redeployedProcessDefinitionId}/bpmn`,
       { headers: authHeaders(token) },
     );
     expect(response.status()).toBe(200);

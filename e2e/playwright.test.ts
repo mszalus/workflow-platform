@@ -22,13 +22,6 @@ test.describe('Workflow Platform E2E', () => {
     await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
   });
 
-  test('Gateway health check', async ({ request }) => {
-    const response = await request.get('http://localhost:9080/actuator/health');
-    expect(response.status()).toBe(200);
-    const body = await response.json();
-    expect(body.status).toBe('UP');
-  });
-
   test('All backend services healthy', async ({ request }) => {
     for (const port of [8081]) {
       const response = await request.get(`http://localhost:${port}/actuator/health`);
@@ -38,7 +31,7 @@ test.describe('Workflow Platform E2E', () => {
     }
   });
 
-  test('Full workflow E2E through gateway', async ({ request }) => {
+  test('Full workflow E2E through the API', async ({ request }) => {
     // Get token
     const tokenResponse = await request.post('http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token', {
       form: {
@@ -54,7 +47,7 @@ test.describe('Workflow Platform E2E', () => {
     const headers = { Authorization: `Bearer ${token}` };
 
     // Deploy BPMN
-    const deployResponse = await request.post('http://localhost:9080/api/workflow/deployments', {
+    const deployResponse = await request.post('/api/workflow/deployments', {
       headers,
       data: {
         name: 'Playwright Test',
@@ -77,7 +70,7 @@ test.describe('Workflow Platform E2E', () => {
     expect(deployment.deploymentId).toBeTruthy();
 
     // Start process
-    const startResponse = await request.post('http://localhost:9080/api/workflow/processes', {
+    const startResponse = await request.post('/api/workflow/processes', {
       headers,
       data: {
         processDefinitionKey: 'playwrightTest',
@@ -87,27 +80,27 @@ test.describe('Workflow Platform E2E', () => {
     expect(startResponse.status()).toBe(201);
 
     // List tasks
-    const tasksResponse = await request.get('http://localhost:9080/api/workflow/tasks?assignee=admin-a', { headers });
+    const tasksResponse = await request.get('/api/workflow/tasks?assignee=admin-a', { headers });
     expect(tasksResponse.status()).toBe(200);
     const tasks = await tasksResponse.json();
     const task = tasks.content.find((t: any) => t.taskDefinitionKey === 'task1');
     expect(task).toBeTruthy();
 
     // Complete task
-    const completeResponse = await request.post(`http://localhost:9080/api/workflow/tasks/${task.id}/complete`, {
+    const completeResponse = await request.post(`/api/workflow/tasks/${task.id}/complete`, {
       headers,
       data: {},
     });
     expect(completeResponse.status()).toBe(204);
 
     // Check audit trail
-    const auditResponse = await request.get('http://localhost:9080/api/audit', { headers });
+    const auditResponse = await request.get('/api/audit', { headers });
     expect(auditResponse.status()).toBe(200);
     const audit = await auditResponse.json();
     expect(audit.totalElements).toBeGreaterThan(0);
 
     // Check notifications
-    const notifResponse = await request.get('http://localhost:9080/api/notifications', { headers });
+    const notifResponse = await request.get('/api/notifications', { headers });
     expect(notifResponse.status()).toBe(200);
   });
 
@@ -124,13 +117,13 @@ test.describe('Workflow Platform E2E', () => {
     const tokenB = await getToken('admin-b');
 
     // Tenant A lists processes
-    const processesA = await request.get('http://localhost:9080/api/workflow/processes', {
+    const processesA = await request.get('/api/workflow/processes', {
       headers: { Authorization: `Bearer ${tokenA}` },
     });
     const dataA = await processesA.json();
 
     // Tenant B lists processes — should see different (or no) data
-    const processesB = await request.get('http://localhost:9080/api/workflow/processes', {
+    const processesB = await request.get('/api/workflow/processes', {
       headers: { Authorization: `Bearer ${tokenB}` },
     });
     const dataB = await processesB.json();
