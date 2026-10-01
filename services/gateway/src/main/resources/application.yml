@@ -18,8 +18,8 @@ spring:
                 - Path=/api/workflow/**
               filters:
                 - RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}
-            - id: custom-fields-service
-              uri: ${CUSTOM_FIELDS_SERVICE_URL:http://localhost:8082}
+            - id: custom-fields
+              uri: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/fields/**
               filters:

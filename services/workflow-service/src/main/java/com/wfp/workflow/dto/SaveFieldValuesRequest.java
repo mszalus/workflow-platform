@@ -1,4 +1,4 @@
-package com.wfp.customfields.dto;
+package com.wfp.workflow.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;

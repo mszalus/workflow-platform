@@ -1,6 +1,4 @@
-package com.wfp.customfields.entity;
-
-import com.wfp.security.filter.CurrentTenantIdResolver;
+package com.wfp.workflow.entity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -21,8 +19,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Filter;
-import org.hibernate.annotations.FilterDef;
-import org.hibernate.annotations.ParamDef;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -32,8 +28,6 @@ import java.util.UUID;
 @Entity
 @Table(name = "field_schema")
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
-@FilterDef(name = "tenantFilter", autoEnabled = true, applyToLoadByKey = true,
-        parameters = @ParamDef(name = "tenantId", type = String.class, resolver = CurrentTenantIdResolver.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class FieldSchema {
 

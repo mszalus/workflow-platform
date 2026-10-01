@@ -1,8 +1,8 @@
-package com.wfp.customfields.controller;
+package com.wfp.workflow.controller;
 
-import com.wfp.customfields.dto.FieldValueDto;
-import com.wfp.customfields.dto.SaveFieldValuesRequest;
-import com.wfp.customfields.service.FieldValueService;
+import com.wfp.workflow.dto.FieldValueDto;
+import com.wfp.workflow.dto.SaveFieldValuesRequest;
+import com.wfp.workflow.service.FieldValueService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

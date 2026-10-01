@@ -22,11 +22,6 @@ scrape_configs:
       - targets: ['workflow-service:8081']
     metrics_path: /actuator/prometheus
 
-  - job_name: custom-fields-service
-    static_configs:
-      - targets: ['custom-fields-service:8082']
-    metrics_path: /actuator/prometheus
-
   - job_name: notification-service
     static_configs:
       - targets: ['notification-service:8083']

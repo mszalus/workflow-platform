@@ -108,7 +108,7 @@ Sessions, branches and merging, gates, review and subagent delegation are descri
 
 Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), deploy them, and end users complete tasks through a task inbox. Every action is audited, custom fields can be attached to any process, and notifications are delivered in real-time.
 
-Services: `gateway` (8080), `workflow-service` (8081, Flowable), `custom-fields-service` (8082), `notification-service` (8083), `audit-service` (8084). Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
+Services: `gateway` (8080), `workflow-service` (8081, Flowable and custom fields), `notification-service` (8083), `audit-service` (8084). Shared libraries are in `libs/`, the React apps in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
 
 ## Build Commands
 

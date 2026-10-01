@@ -17,8 +17,7 @@ architecture-beta
 
     group backends(server)[Backend Services] in dockerHost
         service gateway(server)[Gateway :9080] in backends
-        service workflow(server)[Workflow :8081] in backends
-        service fields(server)[Custom Fields :8082] in backends
+        service workflow(server)[Workflow and custom fields :8081] in backends
         service notif(server)[Notification :8083] in backends
         service audit(server)[Audit :8084] in backends
 
@@ -36,7 +35,6 @@ architecture-beta
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
 | `wfp-gateway` | wfp/gateway | 9080 | 8080 | keycloak (started) |
 | `wfp-workflow` | wfp/workflow-service | - | 8081 | postgres (healthy), rabbitmq (healthy) |
-| `wfp-custom-fields` | wfp/custom-fields-service | - | 8082 | postgres (healthy) |
 | `wfp-notification` | wfp/notification-service | - | 8083 | postgres (healthy), rabbitmq (healthy) |
 | `wfp-audit` | wfp/audit-service | - | 8084 | postgres (healthy), rabbitmq (healthy) |
 | `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | gateway (started) |
@@ -48,7 +46,6 @@ architecture-beta
 flowchart LR
     PG[PostgreSQL] --> KC[Keycloak]
     PG --> WF[Workflow Service]
-    PG --> CF[Custom Fields Service]
     PG --> NS[Notification Service]
     PG --> AS[Audit Service]
     RMQ[RabbitMQ] --> WF
@@ -61,21 +58,19 @@ flowchart LR
 
 ### Database Schemas
 
-Single PostgreSQL instance with 5 schemas:
+Single PostgreSQL instance with 4 schemas:
 
 ```mermaid
 flowchart TD
     subgraph "PostgreSQL (wfp database)"
         KS["keycloak schema<br/>Keycloak managed tables"]
-        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments<br/>+ Flowable ACT_* tables"]
-        CFS["custom_fields schema<br/>field_schema, field_option, field_value"]
+        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments,<br/>field_schema, field_option, field_value<br/>+ Flowable ACT_* tables"]
         NS["notification schema<br/>notification, notification_preference"]
         AS["audit schema<br/>audit_entry"]
     end
 
     KC[Keycloak] --> KS
     WF[Workflow Service] --> WS
-    CF[Custom Fields Service] --> CFS
     NF[Notification Service] --> NS
     AU[Audit Service] --> AS
 ```
@@ -94,14 +89,13 @@ flowchart TD
     UP -->|"/api/* proxy"| GW
 
     GW -->|"/api/workflow/**"| WF["Workflow Service :8081"]
-    GW -->|"/api/fields/**"| CF["Custom Fields :8082"]
+    GW -->|"/api/fields/**"| WF
     GW -->|"/api/notifications/**"| NS["Notification :8083"]
     GW -->|"/api/audit/**"| AS["Audit :8084"]
 
     GW -.->|"JWK Set"| KC
 
     WF --> PG["PostgreSQL :5432"]
-    CF --> PG
     NS --> PG
     AS --> PG
     KC --> PG
@@ -180,7 +174,6 @@ flowchart TD
         subgraph "Application Pods"
             GW["Gateway<br/>2 replicas (GCP)"]
             WF["Workflow Service<br/>2-5 replicas (HPA)"]
-            CF["Custom Fields<br/>2-3 replicas (HPA)"]
             NS["Notification<br/>2-3 replicas (HPA)"]
             AS["Audit<br/>2-3 replicas (HPA)"]
             AP["Admin Portal<br/>2 replicas"]
@@ -201,10 +194,10 @@ flowchart TD
     ING --> GW
     ING --> AP
     ING --> UP
-    GW --> WF & CF & NS & AS
-    WF & CF & NS & AS --> PG
+    GW --> WF & NS & AS
+    WF & NS & AS --> PG
     WF & NS & AS --> RMQ
-    WF & CF & NS & AS -.-> CSQL
+    WF & NS & AS -.-> CSQL
 
     style CSQL fill:#4285f4,stroke:#fff,color:#fff
 ```
@@ -222,7 +215,6 @@ flowchart TD
 |---------|------------|-----------|---------------|-------------|-----------------|
 | Gateway | 250m | 500m | 256Mi | 512Mi | 2 / 5 |
 | Workflow Service | 500m | 1000m | 512Mi | 1Gi | 2 / 5 |
-| Custom Fields | 250m | 500m | 512Mi | 1Gi | 2 / 3 |
 | Notification | 250m | 500m | 512Mi | 1Gi | 2 / 3 |
 | Audit | 250m | 500m | 512Mi | 1Gi | 2 / 3 |
 | Admin Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |

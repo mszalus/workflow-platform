@@ -170,7 +170,6 @@ test.describe('1. Infrastructure Tests', () => {
   test('All backend services healthy (ports 8081-8084)', async ({ request }) => {
     const services = [
       { port: 8081, name: 'workflow-service' },
-      { port: 8082, name: 'custom-fields-service' },
       { port: 8083, name: 'notification-service' },
       { port: 8084, name: 'audit-service' },
     ];

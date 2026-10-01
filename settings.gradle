@@ -26,6 +26,5 @@ include 'tests:bdd-acceptance'
 // Backend services
 include 'services:gateway'
 include 'services:workflow-service'
-include 'services:custom-fields-service'
 include 'services:notification-service'
 include 'services:audit-service'

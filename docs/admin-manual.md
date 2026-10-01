@@ -47,14 +47,14 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
          │   :9080     │
          └──────┬──────┘
                 │
-    ┌───────────┼───────────────┬──────────────┐
-    ▼           ▼               ▼              ▼
-┌────────┐ ┌────────────┐ ┌────────────┐ ┌─────────┐
-│Workflow│ │Custom Fields│ │Notification│ │  Audit  │
-│ :8081  │ │   :8082    │ │   :8083    │ │  :8084  │
-└───┬────┘ └─────┬──────┘ └─────┬──────┘ └────┬────┘
-    │            │              │              │
-    └────────────┴──────┬───────┴──────────────┘
+       ┌────────┴───────┬──────────────┐
+       ▼                ▼              ▼
+┌──────────────┐  ┌────────────┐  ┌─────────┐
+│  Workflow +  │  │Notification│  │  Audit  │
+│custom fields │  │   :8083    │  │  :8084  │
+│    :8081     │  └─────┬──────┘  └────┬────┘
+└──────┬───────┘        │              │
+       └────────────────┼──────────────┘
                         │
               ┌─────────┼──────────┐
               ▼         ▼          ▼
@@ -69,7 +69,7 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
 | Frontend Path          | Gateway Route           | Backend Service        |
 |-----------------------|-------------------------|------------------------|
 | `/api/workflow/**`    | `RewritePath → /api/**` | workflow-service:8081  |
-| `/api/fields/**`      | `RewritePath → /api/**` | custom-fields:8082    |
+| `/api/fields/**`      | `RewritePath → /api/**` | workflow-service:8081  |
 | `/api/notifications/**` | Pass-through          | notification:8083     |
 | `/api/audit/**`       | Pass-through            | audit-service:8084    |
 
@@ -248,7 +248,7 @@ The table shows all field schemas for the selected process:
 
 ### How Custom Fields Work
 
-- Schemas are stored in the custom-fields-service (separate from the workflow engine)
+- Schemas are stored in workflow-service, next to the workflow engine
 - Field values are associated with process instances
 - The User Portal displays custom fields on the Task Detail page
 - Fields are queried via the gateway: `GET /api/fields/values?processInstanceId=...`
@@ -387,8 +387,7 @@ docker compose -f docker/docker-compose.yml ps
 | wfp-rabbitmq      | rabbitmq:3.13-management | 5672, 15672 | Message broker |
 | wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
 | wfp-gateway       | (built)            | 9080  | API gateway            |
-| wfp-workflow      | (built)            | 8081  | Workflow engine        |
-| wfp-custom-fields | (built)            | 8082  | Custom fields service  |
+| wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields |
 | wfp-notification  | (built)            | 8083  | Notification service   |
 | wfp-audit         | (built)            | 8084  | Audit service          |
 | wfp-admin-portal  | (built)            | 5173  | Admin frontend         |
@@ -423,8 +422,7 @@ PostgreSQL uses separate schemas per service (created by `docker/init-db.sql`):
 
 | Schema          | Service              |
 |----------------|----------------------|
-| `workflow`     | workflow-service     |
-| `custom_fields`| custom-fields-service|
+| `workflow`     | workflow-service (including custom fields) |
 | `notification` | notification-service |
 | `audit`        | audit-service        |
 | `keycloak`     | Keycloak             |
@@ -436,7 +434,6 @@ Backend service URIs are configured via environment variables in `docker-compose
 | Variable                | Default                | Description               |
 |------------------------|------------------------|---------------------------|
 | `WORKFLOW_SERVICE_URL` | `http://workflow:8081` | Workflow service URI      |
-| `CUSTOM_FIELDS_SERVICE_URL` | `http://custom-fields:8082` | Custom fields URI |
 | `NOTIFICATION_SERVICE_URL` | `http://notification:8083` | Notification URI    |
 | `AUDIT_SERVICE_URL`    | `http://audit:8084`    | Audit service URI         |
 
@@ -452,7 +449,6 @@ The platform includes Helm charts for Kubernetes deployment.
 helm/
 ├── charts/
 │   ├── workflow-service/
-│   ├── custom-fields-service/
 │   ├── notification-service/
 │   ├── audit-service/
 │   ├── gateway/
@@ -522,7 +518,6 @@ curl http://localhost:9080/actuator/health
 
 # Individual services
 curl http://localhost:8081/actuator/health  # workflow
-curl http://localhost:8082/actuator/health  # custom-fields
 curl http://localhost:8083/actuator/health  # notification
 curl http://localhost:8084/actuator/health  # audit
 ```

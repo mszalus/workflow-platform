@@ -1,11 +1,11 @@
-package com.wfp.customfields.service;
+package com.wfp.workflow.service;
 
 import com.wfp.common.exception.NotFoundException;
-import com.wfp.customfields.dto.CreateFieldSchemaRequest;
-import com.wfp.customfields.dto.FieldSchemaDto;
-import com.wfp.customfields.entity.FieldOption;
-import com.wfp.customfields.entity.FieldSchema;
-import com.wfp.customfields.repository.FieldSchemaRepository;
+import com.wfp.workflow.dto.CreateFieldSchemaRequest;
+import com.wfp.workflow.dto.FieldSchemaDto;
+import com.wfp.workflow.entity.FieldOption;
+import com.wfp.workflow.entity.FieldSchema;
+import com.wfp.workflow.repository.FieldSchemaRepository;
 import com.wfp.security.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

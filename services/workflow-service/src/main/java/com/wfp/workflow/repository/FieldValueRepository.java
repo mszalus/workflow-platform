@@ -1,6 +1,6 @@
-package com.wfp.customfields.repository;
+package com.wfp.workflow.repository;
 
-import com.wfp.customfields.entity.FieldValue;
+import com.wfp.workflow.entity.FieldValue;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
