@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="parallelOutside" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <parallelGateway id="fork"/>
+    <userTask id="build" name="Build" wfp:statusCategory="IN_PROGRESS"/>
+    <userTask id="test" name="Test" wfp:statusCategory="IN_PROGRESS"/>
+    <parallelGateway id="join"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="f2" name="Start" sourceRef="open" targetRef="fork"/>
+    <sequenceFlow id="f3" sourceRef="fork" targetRef="build"/>
+    <sequenceFlow id="f4" sourceRef="fork" targetRef="test"/>
+    <sequenceFlow id="f5" name="Built" sourceRef="build" targetRef="join"/>
+    <sequenceFlow id="f6" name="Tested" sourceRef="test" targetRef="join"/>
+    <sequenceFlow id="f7" sourceRef="join" targetRef="done"/>
+    <sequenceFlow id="f8" name="Close" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>

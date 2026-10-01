@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="slaTimer" name="SLA timer" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <boundaryEvent id="slaBreached" attachedToRef="open" cancelActivity="true">
+      <timerEventDefinition><timeDuration>P2D</timeDuration></timerEventDefinition>
+    </boundaryEvent>
+    <userTask id="escalated" name="Escalated" wfp:statusCategory="TODO"/>
+    <userTask id="doing" name="Doing" wfp:statusCategory="IN_PROGRESS"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="toOpen" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="startWork" name="Start" sourceRef="open" targetRef="doing"/>
+    <sequenceFlow id="escalate" sourceRef="slaBreached" targetRef="escalated"/>
+    <sequenceFlow id="pickUp" name="Pick up" sourceRef="escalated" targetRef="doing"/>
+    <sequenceFlow id="finish" name="Finish" sourceRef="doing" targetRef="done"/>
+    <sequenceFlow id="close" name="Close" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>

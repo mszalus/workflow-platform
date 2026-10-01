@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="simple" name="Simple task" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <userTask id="doing" name="Doing" wfp:statusCategory="IN_PROGRESS"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed" name="Closed"/>
+    <sequenceFlow id="toOpen" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="startWork" name="Start work" sourceRef="open" targetRef="doing"/>
+    <sequenceFlow id="finish" name="Finish" sourceRef="doing" targetRef="done"/>
+    <sequenceFlow id="close" name="Close" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>

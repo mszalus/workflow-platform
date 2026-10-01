@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="bugFlow" name="Bug workflow" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN" flowable:candidateGroups="triage"/>
+    <exclusiveGateway id="openChoice"/>
+    <userTask id="ready" name="Ready" wfp:statusCategory="TODO"/>
+    <userTask id="doing" name="Doing" wfp:statusCategory="IN_PROGRESS" flowable:candidateGroups="dev"/>
+    <exclusiveGateway id="doingChoice"/>
+    <serviceTask id="route" name="Route by severity" flowable:expression="${true}"/>
+    <exclusiveGateway id="routeChoice"/>
+    <userTask id="review" name="In Review" wfp:statusCategory="IN_PROGRESS" flowable:candidateGroups="reviewers"/>
+    <exclusiveGateway id="reviewChoice"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <exclusiveGateway id="doneChoice"/>
+    <endEvent id="closed" name="Closed"/>
+    <endEvent id="rejected" name="Rejected"/>
+    <sequenceFlow id="toOpen" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="openLeaves" sourceRef="open" targetRef="openChoice"/>
+    <sequenceFlow id="accept" name="Accept" sourceRef="openChoice" targetRef="ready"/>
+    <sequenceFlow id="reject" name="Reject" sourceRef="openChoice" targetRef="rejected"/>
+    <sequenceFlow id="startWork" name="Start" sourceRef="ready" targetRef="doing"/>
+    <sequenceFlow id="doingLeaves" sourceRef="doing" targetRef="doingChoice"/>
+    <sequenceFlow id="submit" name="Submit" sourceRef="doingChoice" targetRef="route"/>
+    <sequenceFlow id="block" name="Block" sourceRef="doingChoice" targetRef="ready"/>
+    <sequenceFlow id="routed" sourceRef="route" targetRef="routeChoice"/>
+    <sequenceFlow id="needsReview" sourceRef="routeChoice" targetRef="review">
+      <conditionExpression>${severity == 'High'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="skipReview" sourceRef="routeChoice" targetRef="done">
+      <conditionExpression>${severity != 'High'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="reviewLeaves" sourceRef="review" targetRef="reviewChoice"/>
+    <sequenceFlow id="approve" name="Approve" sourceRef="reviewChoice" targetRef="done"/>
+    <sequenceFlow id="requestChanges" name="Request changes" sourceRef="reviewChoice" targetRef="doing"/>
+    <sequenceFlow id="doneLeaves" sourceRef="done" targetRef="doneChoice"/>
+    <sequenceFlow id="close" name="Close" sourceRef="doneChoice" targetRef="closed"/>
+    <sequenceFlow id="reopen" name="Reopen" sourceRef="doneChoice" targetRef="open"/>
+  </process>
+</definitions>

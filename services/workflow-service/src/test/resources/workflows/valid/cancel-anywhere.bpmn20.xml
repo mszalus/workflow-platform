@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <message id="cancelMessage" name="cancel"/>
+  <process id="cancelAnywhere" name="Cancel anywhere" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="toOpen" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="finish" name="Finish" sourceRef="open" targetRef="done"/>
+    <sequenceFlow id="close" name="Close" sourceRef="done" targetRef="closed"/>
+    <subProcess id="cancel" name="Cancel" triggeredByEvent="true">
+      <startEvent id="cancelStart" isInterrupting="true">
+        <messageEventDefinition messageRef="cancelMessage"/>
+      </startEvent>
+      <endEvent id="cancelled" name="Cancelled"/>
+      <sequenceFlow id="cancelFlow" sourceRef="cancelStart" targetRef="cancelled"/>
+    </subProcess>
+  </process>
+</definitions>

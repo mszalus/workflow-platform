@@ -43,16 +43,19 @@ Design agreed 2026-09-26, moved from `PLAN.md` step 20. Delivery is tracked in t
 
 ## 20.3 Tracker profile and editor guardrails
 
-The *tracker profile* is this project's own concept: the subset of BPMN that the tracker accepts, plus the `wfp:statusCategory` attribute. It is a restricted subset in the same spirit as the conformance sub-classes defined in the BPMN 2.0 spec. `wfp:` is a custom XML namespace; the BPMN XSD allows foreign attributes, so engines ignore it.
+The *tracker profile* is this project's own concept: the subset of BPMN that the tracker accepts, plus the `wfp:statusCategory` attribute. It is a restricted subset in the same spirit as the conformance sub-classes defined in the BPMN 2.0 spec. `wfp:` is a custom XML namespace (`http://wfp.com/schema/tracker`); the BPMN XSD allows foreign attributes, so engines ignore it.
+
+A **status** is a user task, or a subprocess that carries `wfp:statusCategory` (a *status subprocess*). User tasks inside a status subprocess are steps of that one status, not statuses of their own, and need no category.
 
 The adapter parses the XML into an engine-neutral `WorkflowGraph` (nodes and flows). The validator and `describe()` both work on that graph, so all the rules live in one place, in Java.
 
 **Rules:**
 1. Only these elements are allowed: start event, end event, user task, service task, exclusive gateway, subprocess, message event subprocess, boundary timer. Parallel gateways are allowed only inside a status subprocess.
-2. Exactly one start event. The first status reached from it is the item's initial status.
+2. Exactly one start event. Following automatic nodes (service tasks, gateways) from it must reach exactly one status, which is the item's initial status.
 3. Every user task has a `wfp:statusCategory`, and status names are unique. At least one status is `DONE`.
 4. Every outgoing flow of a gateway that follows a status is named, and names are unique per gateway.
 5. Every status is reachable from the start, and an end event is reachable from every status.
+6. A status has exactly one outgoing flow: to the exclusive gateway that holds its transitions, or straight to the next node. Two flows out of a task would be an implicit parallel split. (Added 2026-10-01, #36.)
 
 **Editor (`frontend/packages/bpmn-editor`):**
 - The palette and context pad offer only the profile's elements.

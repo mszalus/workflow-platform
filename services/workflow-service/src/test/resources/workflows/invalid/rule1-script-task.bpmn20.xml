@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="scriptTask" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <scriptTask id="calculate" name="Calculate" scriptFormat="groovy"><script>1</script></scriptTask>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="f2" name="Calculate" sourceRef="open" targetRef="calculate"/>
+    <sequenceFlow id="f3" sourceRef="calculate" targetRef="done"/>
+    <sequenceFlow id="f4" name="Close" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>
