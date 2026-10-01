@@ -28,7 +28,7 @@ architecture-beta
 |-----------|-------|-----------|---------------|------------|
 | `wfp-postgres` | postgres:16-alpine | 5433 | 5432 | - |
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
-| `wfp-workflow` | wfp/workflow-service | - | 8081 | postgres (healthy) |
+| `wfp-workflow` | wfp/workflow-service | 8081 | 8081 | postgres (healthy) |
 | `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | workflow-service (started) |
 | `wfp-user-portal` | wfp/user-portal | 5174 | 80 | workflow-service (started) |
 

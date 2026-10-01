@@ -12,15 +12,15 @@ C4Component
 
     Container_Boundary(workflowSvc, "Workflow Service") {
 
-        Component(deployCtrl, "DeploymentController", "REST Controller", "POST /api/deployments (deploy BPMN)<br/>GET /api/deployments (list definitions)<br/>GET /api/deployments/{id}/bpmn (export XML)<br/>DELETE /api/deployments/{id}")
+        Component(deployCtrl, "DeploymentController", "REST Controller", "POST /api/workflow/deployments (deploy BPMN)<br/>GET /api/workflow/deployments (list definitions)<br/>GET /api/workflow/deployments/{id}/bpmn (export XML)<br/>DELETE /api/workflow/deployments/{id}")
 
-        Component(processCtrl, "ProcessController", "REST Controller", "POST /api/processes (start)<br/>GET /api/processes (list active)<br/>GET /api/processes/{id} (details)<br/>DELETE /api/processes/{id} (cancel)")
+        Component(processCtrl, "ProcessController", "REST Controller", "POST /api/workflow/processes (start)<br/>GET /api/workflow/processes (list active)<br/>GET /api/workflow/processes/{id} (details)<br/>DELETE /api/workflow/processes/{id} (cancel)")
 
-        Component(taskCtrl, "TaskController", "REST Controller", "GET /api/tasks (list/filter)<br/>GET /api/tasks/{id} (details)<br/>POST claim/unclaim/complete/delegate")
+        Component(taskCtrl, "TaskController", "REST Controller", "GET /api/workflow/tasks (list/filter)<br/>GET /api/workflow/tasks/{id} (details)<br/>POST claim/unclaim/complete/delegate")
 
-        Component(commentCtrl, "CommentController", "REST Controller", "GET /api/processes/{id}/comments<br/>POST /api/processes/{id}/comments")
+        Component(commentCtrl, "CommentController", "REST Controller", "GET /api/workflow/processes/{id}/comments<br/>POST /api/workflow/processes/{id}/comments")
 
-        Component(historyCtrl, "HistoryController", "REST Controller", "GET /api/history/processes<br/>GET /api/history/tasks")
+        Component(historyCtrl, "HistoryController", "REST Controller", "GET /api/workflow/history/processes<br/>GET /api/workflow/history/tasks")
         Component(auditCtrl, "AuditController", "REST Controller", "GET /api/audit (filter by entity, user, event type, time)")
         Component(notifCtrl, "NotificationController", "REST Controller", "GET /api/notifications<br/>GET /api/notifications/unread-count<br/>PUT mark-read, mark-all-read")
 
