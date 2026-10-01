@@ -1,0 +1,127 @@
+package com.wfp.workflow;
+
+import com.wfp.workflow.event.TaskCompletedEvent;
+import com.wfp.workflow.event.TaskCreatedEvent;
+import com.wfp.workflow.service.AuditService;
+import com.wfp.workflow.service.NotificationService;
+import org.flowable.engine.RepositoryService;
+import org.flowable.engine.RuntimeService;
+import org.flowable.engine.TaskService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class EventRollbackTest {
+
+    private static final String BPMN = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                     targetNamespace="http://wfp.com/test">
+          <process id="notificationRollback" isExecutable="true">
+            <startEvent id="start"/>
+            <userTask id="review" name="Review"/>
+            <endEvent id="end"/>
+            <sequenceFlow sourceRef="start" targetRef="review"/>
+            <sequenceFlow sourceRef="review" targetRef="end"/>
+          </process>
+        </definitions>
+        """;
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private RepositoryService repositoryService;
+
+    @Autowired
+    private RuntimeService runtimeService;
+
+    @Autowired
+    private TaskService flowableTaskService;
+
+    @MockitoSpyBean
+    private NotificationService notificationService;
+
+    @MockitoSpyBean
+    private AuditService auditService;
+
+    private String deploymentId;
+    private String taskId;
+
+    @BeforeEach
+    void startProcess() {
+        deploymentId = repositoryService.createDeployment()
+                .addString("notification-rollback.bpmn20.xml", BPMN)
+                .tenantId("tenant-rollback")
+                .deploy()
+                .getId();
+        String processInstanceId = runtimeService
+                .startProcessInstanceByKeyAndTenantId("notificationRollback", "tenant-rollback").getId();
+        taskId = flowableTaskService.createTaskQuery().processInstanceId(processInstanceId).singleResult().getId();
+    }
+
+    @AfterEach
+    void deleteDeployment() {
+        repositoryService.deleteDeployment(deploymentId, true);
+    }
+
+    @Test
+    void aFailedNotificationRollsBackTheTaskCompletion() throws Exception {
+        doThrow(new IllegalStateException("notification store down"))
+                .when(notificationService).notify(any(TaskCompletedEvent.class));
+
+        mockMvc.perform(post("/api/tasks/{id}/complete", taskId)
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
+                                .claim("tenant_id", "tenant-rollback"))))
+                .andExpect(status().is5xxServerError());
+
+        assertThat(flowableTaskService.createTaskQuery().taskId(taskId).count()).isEqualTo(1);
+    }
+
+    @Test
+    void aFailedAuditEntryForANewTaskRollsBackTheProcessStart() throws Exception {
+        doThrow(new IllegalStateException("audit store down"))
+                .when(auditService).record(any(TaskCreatedEvent.class));
+        long runsBefore = runtimeService.createProcessInstanceQuery().processDefinitionKey("notificationRollback").count();
+
+        mockMvc.perform(post("/api/processes")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"processDefinitionKey\":\"notificationRollback\"}")
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
+                                .claim("tenant_id", "tenant-rollback"))))
+                .andExpect(status().is5xxServerError());
+
+        assertThat(runtimeService.createProcessInstanceQuery().processDefinitionKey("notificationRollback").count())
+                .isEqualTo(runsBefore);
+    }
+
+    @Test
+    void aFailedAuditEntryRollsBackTheTaskCompletion() throws Exception {
+        doThrow(new IllegalStateException("audit store down"))
+                .when(auditService).record(any(TaskCompletedEvent.class));
+
+        mockMvc.perform(post("/api/tasks/{id}/complete", taskId)
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "user-rollback")
+                                .claim("tenant_id", "tenant-rollback"))))
+                .andExpect(status().is5xxServerError());
+
+        assertThat(flowableTaskService.createTaskQuery().taskId(taskId).count()).isEqualTo(1);
+    }
+}

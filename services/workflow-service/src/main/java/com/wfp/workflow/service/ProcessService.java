@@ -2,8 +2,8 @@ package com.wfp.workflow.service;
 
 import com.wfp.common.dto.PagedResponse;
 import com.wfp.common.exception.NotFoundException;
-import com.wfp.events.EventConstants;
-import com.wfp.events.ProcessStartedEvent;
+import com.wfp.workflow.event.EventConstants;
+import com.wfp.workflow.event.ProcessStartedEvent;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.ProcessInstanceDto;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +49,7 @@ public class ProcessService {
                     .variables(variables)
                     .build();
             event.initDefaults(EventConstants.PROCESS_STARTED, tenantId, userId);
-            eventPublisher.publish(EventConstants.PROCESS_STARTED, event);
+            eventPublisher.publish(event);
 
             return toDto(pi);
         } finally {

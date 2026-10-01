@@ -1,6 +1,6 @@
 # Workflow Platform
 
-A multi-tenant BPMN workflow platform built with Flowable, Spring Boot microservices, and React. Users design workflows visually, deploy them, and end users complete tasks through a web-based task inbox. Every action is audited, custom fields can be attached to any process definition, and notifications are delivered in real-time via RabbitMQ.
+A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React. Users design workflows visually, deploy them, and end users complete tasks through a web-based task inbox. Every action is audited, custom fields can be attached to any process definition, and in-app notifications are written in the same transaction as the change that causes them.
 
 ## Architecture
 
@@ -13,26 +13,21 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot microserv
         ┌───────────────────────┼───────────────────────┐
         │                  API Gateway (:8080)           │
         │          JWT validation + tenant routing       │
-        └──┬────────────────────────────────┬───────────┘
-           │                                │
-     ┌─────┴──────┐                    ┌───┴────┐
-     │ Workflow   │                    │ Audit  │
-     │ Service    │                    │Service │
-     │ :8081      │                    │ :8084  │
-     │ + custom   │                    │        │
-     │   fields,  │                    │        │
-     │   notifs   │                    │        │
-     └──┬──┬──────┘                    └──┬────┘
-        │  │                              │
-        │  │  ┌───────────────────────────┘
-        │  │  │         RabbitMQ
-        │  │  │      (audit events)
-        │  │  └─────────────────────────────
-        │  │
-     ┌──┴──┴──┐
-     │PostgreSQL│  ← schema-per-service
-     │  :5432   │    (workflow, audit)
-     └─────────┘
+        └───────────────────────┬───────────────────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    │   Workflow Service    │
+                    │        :8081          │
+                    │ + custom fields,      │
+                    │   notifications,      │
+                    │   audit               │
+                    └───────────┬───────────┘
+                                │
+                         ┌──────┴──────┐
+                         │ PostgreSQL  │
+                         │   :5432     │
+                         │  (workflow) │
+                         └─────────────┘
 
         ┌─────────────┐    ┌─────────────┐
         │Admin Portal │    │ User Portal │
@@ -45,11 +40,10 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot microserv
 | Layer | Technology |
 |-------|-----------|
 | BPMN Engine | Flowable 7.1.0 |
-| Backend | Java 21, Spring Boot 3.3.5, Spring Cloud 2023.0.3 |
+| Backend | Java 21, Spring Boot 3.5, Spring Cloud 2025.0 |
 | API Gateway | Spring Cloud Gateway MVC |
-| Database | PostgreSQL 16 (schema-per-service) |
-| Messaging | RabbitMQ 3.13 (topic exchange) |
-| Identity | Keycloak 25 (OIDC/JWT, Organizations for tenants) |
+| Database | PostgreSQL 16 |
+| Identity | Keycloak 25 (OIDC/JWT, tenant as a user attribute) |
 | Frontend | React 18, TypeScript, Vite, bpmn-js |
 | Build | Gradle 9.2 (Groovy DSL), npm workspaces |
 | Deployment | Docker Compose, Helm/Kubernetes |
@@ -81,11 +75,9 @@ Once running, the services are available at:
 |---------|-----|
 | API Gateway | http://localhost:9080 |
 | Keycloak Admin | http://localhost:8180 (admin/admin) |
-| RabbitMQ Management | http://localhost:15672 (wfp/wfp_secret) |
 | Admin Portal | http://localhost:5173 |
 | User Portal | http://localhost:5174 |
 | Workflow Service (direct) | http://localhost:8081 |
-| Audit Service (direct) | http://localhost:8084 |
 | PostgreSQL | localhost:5433 (wfp/wfp_secret) |
 
 ## Local Development
@@ -100,9 +92,9 @@ Once running, the services are available at:
 ./gradlew :services:workflow-service:bootJar -x test
 
 # Run tests for a single service
-./gradlew :services:audit-service:test
+./gradlew :services:workflow-service:test
 
-# Start a service locally (requires PG, RabbitMQ, Keycloak running)
+# Start a service locally (requires PG and Keycloak running)
 ./gradlew :services:workflow-service:bootRun
 ```
 
@@ -132,7 +124,7 @@ npm run typecheck --workspaces --if-present
 To run just the backing services (for local development of backend/frontend):
 
 ```bash
-docker compose -f docker/docker-compose.yml up -d postgres rabbitmq keycloak
+docker compose -f docker/docker-compose.yml up -d postgres keycloak
 ```
 
 ## API Endpoints
@@ -166,13 +158,11 @@ workflow-platform/
 ├── buildSrc/                    # Gradle convention plugins (Java 21, Spring Boot, Lombok)
 ├── libs/                        # Shared libraries
 │   ├── wfp-common/              # DTOs, exception handling
-│   ├── wfp-events/              # RabbitMQ event types (polymorphic Jackson)
 │   ├── wfp-security/            # JWT auth, tenant context, Hibernate tenant filter
 │   └── wfp-test-support/        # Test helpers (JWT mocking, Testcontainers)
 ├── services/
 │   ├── gateway/                 # API Gateway (routing, JWT validation)
-│   ├── workflow-service/        # Flowable BPMN engine, custom fields, notifications, REST API
-│   └── audit-service/           # Event-driven audit trail
+│   └── workflow-service/        # Flowable BPMN engine, custom fields, notifications, audit, REST API
 ├── frontend/
 │   ├── packages/shared-ui/      # Shared components, API client, auth
 │   ├── packages/bpmn-editor/    # bpmn-js wrapper
@@ -202,7 +192,7 @@ Tenant isolation is enforced at every layer:
 cd frontend && npm run typecheck --workspaces --if-present
 ```
 
-Backend integration tests use Testcontainers to spin up PostgreSQL and RabbitMQ automatically. No manual infrastructure setup needed.
+Backend integration tests use Testcontainers to spin up PostgreSQL automatically. No manual infrastructure setup needed.
 
 ## CI/CD
 
@@ -216,7 +206,7 @@ GitHub Actions CI runs on every push to `main` and on pull requests:
 ## Kubernetes Deployment
 
 ```bash
-# Update Helm dependencies (pulls Bitnami charts for PG, RabbitMQ, Keycloak)
+# Update Helm dependencies (pulls Bitnami charts for PG and Keycloak)
 helm dependency update helm/workflow-platform/
 
 # Install with local values

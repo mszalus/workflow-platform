@@ -13,18 +13,11 @@ spring:
         default_schema:
   flyway:
     enabled: false
-  rabbitmq:
-    host: localhost
-    port: 5672
   security:
     oauth2:
       resourceserver:
         jwt:
           issuer-uri: http://localhost:8180/realms/workflow-platform
-
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
 
 flowable:
   database-schema-update: true

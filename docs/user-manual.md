@@ -190,4 +190,4 @@ The platform supports multiple tenants (organizations). Each tenant's data is co
 | Redirected to login repeatedly | Your JWT token may have expired. Clear browser cookies and log in again |
 | No processes available to start | Ask an administrator to deploy a BPMN process definition |
 | Tasks not appearing | Verify you're logged in as the correct user. Tasks are filtered by assignee |
-| Notifications not appearing | Notifications are created asynchronously via RabbitMQ. Allow a few seconds for delivery |
+| Notifications not appearing | Notifications are created together with the task change. Refresh the page; if one is still missing, the change itself didn't happen |

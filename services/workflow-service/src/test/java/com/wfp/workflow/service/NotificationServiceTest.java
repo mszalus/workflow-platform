@@ -1,8 +1,8 @@
 package com.wfp.workflow.service;
 
-import com.wfp.events.EventConstants;
-import com.wfp.events.TaskCompletedEvent;
-import com.wfp.events.TaskCreatedEvent;
+import com.wfp.workflow.event.EventConstants;
+import com.wfp.workflow.event.TaskCompletedEvent;
+import com.wfp.workflow.event.TaskCreatedEvent;
 import com.wfp.workflow.entity.Notification;
 import com.wfp.workflow.entity.NotificationType;
 import com.wfp.workflow.repository.NotificationRepository;

@@ -1,11 +1,11 @@
 package com.wfp.workflow.service;
 
 import com.wfp.common.dto.PagedResponse;
-import com.wfp.events.BaseEvent;
-import com.wfp.events.ProcessCompletedEvent;
-import com.wfp.events.TaskAssignedEvent;
-import com.wfp.events.TaskCompletedEvent;
-import com.wfp.events.TaskCreatedEvent;
+import com.wfp.workflow.event.BaseEvent;
+import com.wfp.workflow.event.ProcessCompletedEvent;
+import com.wfp.workflow.event.TaskAssignedEvent;
+import com.wfp.workflow.event.TaskCompletedEvent;
+import com.wfp.workflow.event.TaskCreatedEvent;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.NotificationDto;
 import com.wfp.workflow.entity.Notification;

@@ -9,6 +9,5 @@ dependencies {
     api "org.testcontainers:testcontainers:${findProperty('testcontainersVersion')}"
     api "org.testcontainers:junit-jupiter:${findProperty('testcontainersVersion')}"
     api "org.testcontainers:postgresql:${findProperty('testcontainersVersion')}"
-    api "org.testcontainers:rabbitmq:${findProperty('testcontainersVersion')}"
     api project(':libs:wfp-security')
 }

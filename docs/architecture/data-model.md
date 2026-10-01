@@ -162,7 +162,7 @@ erDiagram
     }
 
     %% ============================================================
-    %% AUDIT SCHEMA (audit-service)
+    %% AUDIT (workflow schema, workflow-service)
     %% ============================================================
 
     audit_entry {
@@ -202,8 +202,7 @@ erDiagram
 
 | Schema | Service | Tables | Description |
 |--------|---------|--------|-------------|
-| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments`, `field_schema`, `field_option`, `field_value`, `notification` + ~60 `ACT_*` tables | Process metadata, comments, attachments, custom field definitions and values, in-app notifications + Flowable engine |
-| `audit` | audit-service | `audit_entry` | Immutable audit trail |
+| `workflow` | workflow-service | `wf_process_metadata`, `wf_comments`, `wf_attachments`, `field_schema`, `field_option`, `field_value`, `notification`, `audit_entry` + ~60 `ACT_*` tables | Process metadata, comments, attachments, custom field definitions and values, in-app notifications, audit trail + Flowable engine |
 | `keycloak` | Keycloak | (managed by Keycloak) | Users, realms, clients, roles, organizations |
 
 ## Entity Details
@@ -237,8 +236,8 @@ erDiagram
 
 Every entity (except `field_option`) carries a `tenant_id` column. Hibernate filters enforce row-level isolation:
 
-- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`, `AuditEntry`
-- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldSchema`, `FieldValue`, `Notification`
+- **One `@FilterDef` per schema** (on the "root" entity of each service): `ProcessMetadata`
+- **`@Filter` only** on additional entities in the same persistence unit: `Comment`, `Attachment`, `FieldSchema`, `FieldValue`, `Notification`, `AuditEntry`
 - The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (from `wfp-security`) supplies the tenant from `TenantContext` and throws when none is set
 
 ### Cross-Schema References

@@ -8,14 +8,6 @@ test.describe('Workflow Platform E2E', () => {
     expect(body.issuer).toContain('workflow-platform');
   });
 
-  test('RabbitMQ management accessible', async ({ page }) => {
-    await page.goto('http://localhost:15672/');
-    await page.getByRole('textbox').first().fill('wfp');
-    await page.getByRole('textbox').nth(1).fill('wfp_secret');
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page.getByRole('heading', { name: 'Overview' })).toBeVisible({ timeout: 10000 });
-  });
-
   test('Admin Portal loads and redirects to Keycloak', async ({ page }) => {
     await page.goto('http://localhost:5173/');
     // OIDC-protected app redirects to Keycloak login
@@ -38,7 +30,7 @@ test.describe('Workflow Platform E2E', () => {
   });
 
   test('All backend services healthy', async ({ request }) => {
-    for (const port of [8081, 8084]) {
+    for (const port of [8081]) {
       const response = await request.get(`http://localhost:${port}/actuator/health`);
       expect(response.status()).toBe(200);
       const body = await response.json();
