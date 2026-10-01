@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="approval" name="Approval" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="draft" name="Draft" wfp:statusCategory="OPEN"/>
+    <subProcess id="inApproval" name="In Approval" wfp:statusCategory="IN_PROGRESS">
+      <startEvent id="approvalStart"/>
+      <parallelGateway id="fork"/>
+      <userTask id="legal" name="Legal approval"/>
+      <userTask id="finance" name="Finance approval"/>
+      <parallelGateway id="join"/>
+      <endEvent id="approvalEnd"/>
+      <sequenceFlow id="a1" sourceRef="approvalStart" targetRef="fork"/>
+      <sequenceFlow id="a2" sourceRef="fork" targetRef="legal"/>
+      <sequenceFlow id="a3" sourceRef="fork" targetRef="finance"/>
+      <sequenceFlow id="a4" sourceRef="legal" targetRef="join"/>
+      <sequenceFlow id="a5" sourceRef="finance" targetRef="join"/>
+      <sequenceFlow id="a6" sourceRef="join" targetRef="approvalEnd"/>
+    </subProcess>
+    <userTask id="approved" name="Approved" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="toDraft" sourceRef="start" targetRef="draft"/>
+    <sequenceFlow id="submit" name="Submit" sourceRef="draft" targetRef="inApproval"/>
+    <sequenceFlow id="complete" name="Complete" sourceRef="inApproval" targetRef="approved"/>
+    <sequenceFlow id="close" name="Close" sourceRef="approved" targetRef="closed"/>
+  </process>
+</definitions>

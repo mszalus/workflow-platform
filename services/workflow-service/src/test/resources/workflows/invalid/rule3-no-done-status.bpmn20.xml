@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="noDone" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <userTask id="doing" name="Doing" wfp:statusCategory="IN_PROGRESS"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="f2" name="Start" sourceRef="open" targetRef="doing"/>
+    <sequenceFlow id="f3" name="Close" sourceRef="doing" targetRef="closed"/>
+  </process>
+</definitions>

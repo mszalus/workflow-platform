@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="deadEnd" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="open" name="Open" wfp:statusCategory="OPEN"/>
+    <exclusiveGateway id="openChoice"/>
+    <userTask id="ping" name="Ping" wfp:statusCategory="IN_PROGRESS"/>
+    <userTask id="pong" name="Pong" wfp:statusCategory="TODO"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed"/>
+    <sequenceFlow id="f1" sourceRef="start" targetRef="open"/>
+    <sequenceFlow id="f2" sourceRef="open" targetRef="openChoice"/>
+    <sequenceFlow id="toPing" name="Start" sourceRef="openChoice" targetRef="ping"/>
+    <sequenceFlow id="toDone" name="Finish" sourceRef="openChoice" targetRef="done"/>
+    <sequenceFlow id="f3" name="Pass" sourceRef="ping" targetRef="pong"/>
+    <sequenceFlow id="f4" name="Return" sourceRef="pong" targetRef="ping"/>
+    <sequenceFlow id="f5" name="Close" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>
