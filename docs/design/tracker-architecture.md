@@ -82,7 +82,7 @@ flowchart LR
 | R-7 | `wfp-common`, `wfp-security`, `wfp-test-support` | Become packages in `app`; they only existed to share code between services | Nothing, with one service | **Remove** | Approved |
 | R-8 | Dead code | Remove `Attachment` (screen S-5), `ProcessMetadata` (projects replace it), `NotificationPreference`, the mail and Thymeleaf dependencies, the empty email templates, and the process, task and history endpoints and DTOs that the item API replaces (20.7) | Nothing in use | **Remove** | Approved |
 | R-9 | Per-service database schemas | One schema, one Flyway history. **Assumption: no environment holds data worth migrating** (nothing is deployed; GCP is parked), so the local database is recreated instead of migrated | Nothing, if the assumption holds | **Remove, confirm the assumption** | Approved |
-| R-10 | Local observability stack (otel-collector, Tempo, Prometheus, Grafana) | Move to an optional compose profile (`--profile observability`). With one service, request tracing across services is gone, but database and HTTP spans stay. Rescope Phase 2 afterwards | Always-on local traces and dashboards | **Make optional** (not delete) | Approved |
+| R-10 | Local observability stack (otel-collector, Tempo, Prometheus, Grafana) | Move to an optional compose profile (`--profile observability`). With one service, request tracing across services is gone, but database and HTTP spans stay. Rescope the GCP observability phase (now Phase 3) afterwards | Always-on local traces and dashboards | **Make optional** (not delete) | Approved |
 | R-11 | Flowable history tables | The platform never reads engine history (20.2), so set `flowable.history-level: none`. First verify in the 20.a spike that moving items between versions (20.4) doesn't need it | The engine's own audit trail, which duplicates `wf_item_transition` | **Decide in 20.a** | **Approved, verify in 20.a**: moving an item to a new version (`moveActivityIdTo`) must work with history off; if it doesn't, history stays on. `wf_item_transition` is the item history either way; its view comes in a later phase (#75) |
 | R-12 | The `manager` role | Unused. Proposed roles: `admin` (tenant administration: projects, workflows, fields, audit log) and `user` (items). Enforced in the backend (#72) | A middle role, until someone needs one | **Remove** | Approved |
 
@@ -92,7 +92,7 @@ flowchart LR
 
 The chain is today's, minus the gateway:
 
-1. The Keycloak token carries `tenant_id`, from a user attribute. **Decided 2026-10-01:** keep the attribute for now; moving tenants to Keycloak Organizations is in Phase 3 (#76). To keep that move free of data migration, each organization's alias will equal today's tenant id.
+1. The Keycloak token carries `tenant_id`, from a user attribute. **Decided 2026-10-01:** keep the attribute for now; moving tenants to Keycloak Organizations is in Phase 2 (#76). To keep that move free of data migration, each organization's alias will equal today's tenant id.
 2. `TenantInterceptor` puts the tenant in `TenantContext` and rejects a token without one.
 3. JPA: the auto-enabled Hibernate filter applies the tenant to every query and load by id, and fails closed without a tenant (#58, #66).
 4. Flowable: every call passes the tenant. The facade's `transition` and `cancel` must check that the run belongs to the caller's tenant, which is exactly what #71 fixes today.
@@ -111,7 +111,7 @@ The chain is today's, minus the gateway:
 | 20.c | Item model. History, notification and audit rows are written in the same transaction, with no events | as in 20.6 |
 | 20.d | Editor guardrails | as in 20.6 |
 | 20.e | The new single app with the approved screens; delete `admin-portal` and `user-portal` (R-6, R-8 UI parts) | Playwright flow from 20.6 |
-| 20.f | Moving items to a new version | as in 20.6 |
+| 20.f | Moving items to a new version. **Moved to Phase 2: Tracker follow-ups** (#41); until then, open items stay on their version | as in 20.6 |
 
 20.g is absorbed into C-1. #71 is fixed now, ahead of this order; #72 (roles) is part of 20.e.
 

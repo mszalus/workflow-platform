@@ -1,6 +1,6 @@
 # Tracker Screens
 
-Status: **approved on 2026-10-01**: the wireframes and decisions S-1 to S-9 (S-2 changed; S-5 and the item history panel moved to Phase 3). Behaviour behind the screens is in [work-item-tracker.md](work-item-tracker.md); the architecture is in [tracker-architecture.md](tracker-architecture.md).
+Status: **approved on 2026-10-01**: the wireframes and decisions S-1 to S-9 (S-2 changed; S-5 and the item history panel moved to Phase 2). Behaviour behind the screens is in [work-item-tracker.md](work-item-tracker.md); the architecture is in [tracker-architecture.md](tracker-architecture.md).
 
 ## Decisions to approve
 
