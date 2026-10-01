@@ -47,14 +47,15 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
          │   :9080     │
          └──────┬──────┘
                 │
-       ┌────────┴───────┬──────────────┐
-       ▼                ▼              ▼
-┌──────────────┐  ┌────────────┐  ┌─────────┐
-│  Workflow +  │  │Notification│  │  Audit  │
-│custom fields │  │   :8083    │  │  :8084  │
-│    :8081     │  └─────┬──────┘  └────┬────┘
-└──────┬───────┘        │              │
-       └────────────────┼──────────────┘
+       ┌────────┴──────────────┐
+       ▼                       ▼
+┌──────────────┐          ┌─────────┐
+│  Workflow +  │          │  Audit  │
+│custom fields,│          │  :8084  │
+│notifications │          └────┬────┘
+│    :8081     │               │
+└──────┬───────┘               │
+       └────────────────┬──────┘
                         │
               ┌─────────┼──────────┐
               ▼         ▼          ▼
@@ -70,7 +71,7 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
 |-----------------------|-------------------------|------------------------|
 | `/api/workflow/**`    | `RewritePath → /api/**` | workflow-service:8081  |
 | `/api/fields/**`      | `RewritePath → /api/**` | workflow-service:8081  |
-| `/api/notifications/**` | Pass-through          | notification:8083     |
+| `/api/notifications/**` | Pass-through          | workflow-service:8081  |
 | `/api/audit/**`       | Pass-through            | audit-service:8084    |
 
 ### Event System
@@ -387,8 +388,7 @@ docker compose -f docker/docker-compose.yml ps
 | wfp-rabbitmq      | rabbitmq:3.13-management | 5672, 15672 | Message broker |
 | wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
 | wfp-gateway       | (built)            | 9080  | API gateway            |
-| wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields |
-| wfp-notification  | (built)            | 8083  | Notification service   |
+| wfp-workflow      | (built)            | 8081  | Workflow engine, custom fields, notifications |
 | wfp-audit         | (built)            | 8084  | Audit service          |
 | wfp-admin-portal  | (built)            | 5173  | Admin frontend         |
 | wfp-user-portal   | (built)            | 5174  | User frontend          |
@@ -422,8 +422,7 @@ PostgreSQL uses separate schemas per service (created by `docker/init-db.sql`):
 
 | Schema          | Service              |
 |----------------|----------------------|
-| `workflow`     | workflow-service (including custom fields) |
-| `notification` | notification-service |
+| `workflow`     | workflow-service (including custom fields and notifications) |
 | `audit`        | audit-service        |
 | `keycloak`     | Keycloak             |
 
@@ -434,7 +433,6 @@ Backend service URIs are configured via environment variables in `docker-compose
 | Variable                | Default                | Description               |
 |------------------------|------------------------|---------------------------|
 | `WORKFLOW_SERVICE_URL` | `http://workflow:8081` | Workflow service URI      |
-| `NOTIFICATION_SERVICE_URL` | `http://notification:8083` | Notification URI    |
 | `AUDIT_SERVICE_URL`    | `http://audit:8084`    | Audit service URI         |
 
 ---
@@ -449,7 +447,6 @@ The platform includes Helm charts for Kubernetes deployment.
 helm/
 ├── charts/
 │   ├── workflow-service/
-│   ├── notification-service/
 │   ├── audit-service/
 │   ├── gateway/
 │   ├── admin-portal/
@@ -518,7 +515,6 @@ curl http://localhost:9080/actuator/health
 
 # Individual services
 curl http://localhost:8081/actuator/health  # workflow
-curl http://localhost:8083/actuator/health  # notification
 curl http://localhost:8084/actuator/health  # audit
 ```
 

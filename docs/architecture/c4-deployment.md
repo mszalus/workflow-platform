@@ -17,8 +17,7 @@ architecture-beta
 
     group backends(server)[Backend Services] in dockerHost
         service gateway(server)[Gateway :9080] in backends
-        service workflow(server)[Workflow and custom fields :8081] in backends
-        service notif(server)[Notification :8083] in backends
+        service workflow(server)[Workflow, custom fields, notifications :8081] in backends
         service audit(server)[Audit :8084] in backends
 
     group frontends(server)[Frontends] in dockerHost
@@ -35,7 +34,6 @@ architecture-beta
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
 | `wfp-gateway` | wfp/gateway | 9080 | 8080 | keycloak (started) |
 | `wfp-workflow` | wfp/workflow-service | - | 8081 | postgres (healthy), rabbitmq (healthy) |
-| `wfp-notification` | wfp/notification-service | - | 8083 | postgres (healthy), rabbitmq (healthy) |
 | `wfp-audit` | wfp/audit-service | - | 8084 | postgres (healthy), rabbitmq (healthy) |
 | `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | gateway (started) |
 | `wfp-user-portal` | wfp/user-portal | 5174 | 80 | gateway (started) |
@@ -46,7 +44,6 @@ architecture-beta
 flowchart LR
     PG[PostgreSQL] --> KC[Keycloak]
     PG --> WF[Workflow Service]
-    PG --> NS[Notification Service]
     PG --> AS[Audit Service]
     RMQ[RabbitMQ] --> WF
     RMQ --> NS
@@ -58,20 +55,18 @@ flowchart LR
 
 ### Database Schemas
 
-Single PostgreSQL instance with 4 schemas:
+Single PostgreSQL instance with 3 schemas:
 
 ```mermaid
 flowchart TD
     subgraph "PostgreSQL (wfp database)"
         KS["keycloak schema<br/>Keycloak managed tables"]
-        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments,<br/>field_schema, field_option, field_value<br/>+ Flowable ACT_* tables"]
-        NS["notification schema<br/>notification, notification_preference"]
+        WS["workflow schema<br/>wf_process_metadata, wf_comments, wf_attachments,<br/>field_schema, field_option, field_value, notification<br/>+ Flowable ACT_* tables"]
         AS["audit schema<br/>audit_entry"]
     end
 
     KC[Keycloak] --> KS
     WF[Workflow Service] --> WS
-    NF[Notification Service] --> NS
     AU[Audit Service] --> AS
 ```
 
@@ -90,7 +85,7 @@ flowchart TD
 
     GW -->|"/api/workflow/**"| WF["Workflow Service :8081"]
     GW -->|"/api/fields/**"| WF
-    GW -->|"/api/notifications/**"| NS["Notification :8083"]
+    GW -->|"/api/notifications/**"| WF
     GW -->|"/api/audit/**"| AS["Audit :8084"]
 
     GW -.->|"JWK Set"| KC

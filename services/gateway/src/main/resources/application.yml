@@ -24,8 +24,8 @@ spring:
                 - Path=/api/fields/**
               filters:
                 - RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}
-            - id: notification-service
-              uri: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+            - id: notifications
+              uri: ${WORKFLOW_SERVICE_URL:http://localhost:8081}
               predicates:
                 - Path=/api/notifications/**
             - id: audit-service

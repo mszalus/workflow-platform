@@ -38,7 +38,7 @@ test.describe('Workflow Platform E2E', () => {
   });
 
   test('All backend services healthy', async ({ request }) => {
-    for (const port of [8081, 8083, 8084]) {
+    for (const port of [8081, 8084]) {
       const response = await request.get(`http://localhost:${port}/actuator/health`);
       expect(response.status()).toBe(200);
       const body = await response.json();

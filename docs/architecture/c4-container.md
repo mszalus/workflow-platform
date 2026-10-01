@@ -18,11 +18,10 @@ C4Container
 
         Container(gateway, "API Gateway", "Spring Cloud Gateway MVC, Java 21", "JWT validation, path routing. Port 8080")
 
-        Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values. Port 8081")
-        Container(notifSvc, "Notification Service", "Spring Boot 3.3, Java 21", "Event-driven notifications, unread count, mark-read. Port 8083")
+        Container(workflowSvc, "Workflow Service", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, attachments, history; custom field schemas and values; in-app notifications. Port 8081")
         Container(auditSvc, "Audit Service", "Spring Boot 3.3, Java 21", "Event-driven audit trail, queryable by entity/user/time. Port 8084")
 
-        ContainerDb(postgres, "PostgreSQL 16", "4 schemas: workflow, notification, audit, keycloak", "Shared instance, one schema per service")
+        ContainerDb(postgres, "PostgreSQL 16", "3 schemas: workflow, audit, keycloak", "Shared instance, one schema per service")
         ContainerQueue(rabbitmq, "RabbitMQ 3.13", "Topic exchange: wfp.events", "Async event bus between services")
     }
 
@@ -36,17 +35,15 @@ C4Container
 
     Rel(gateway, workflowSvc, "Routes", "/api/workflow/** -> /api/**")
     Rel(gateway, workflowSvc, "Routes", "/api/fields/** -> /api/**")
-    Rel(gateway, notifSvc, "Routes", "/api/notifications/**")
+    Rel(gateway, workflowSvc, "Routes", "/api/notifications/**")
     Rel(gateway, auditSvc, "Routes", "/api/audit/**")
     Rel(gateway, keycloak, "Validates JWTs", "JWK Set endpoint")
 
     Rel(workflowSvc, postgres, "Reads/Writes", "JDBC, schema: workflow")
-    Rel(notifSvc, postgres, "Reads/Writes", "JDBC, schema: notification")
     Rel(auditSvc, postgres, "Reads/Writes", "JDBC, schema: audit")
     Rel(keycloak, postgres, "Reads/Writes", "JDBC, schema: keycloak")
 
     Rel(workflowSvc, rabbitmq, "Publishes events", "task.*, process.*")
-    Rel(rabbitmq, notifSvc, "Delivers events", "queue: wfp.notification<br/>binds: task.*, process.completed")
     Rel(rabbitmq, auditSvc, "Delivers events", "queue: wfp.audit<br/>binds: # (all)")
 
     UpdateLayoutConfig($c4ShapeInRow="4", $c4BoundaryInRow="1")
@@ -59,10 +56,9 @@ C4Container
 | Admin Portal | React 18 + nginx | 5173 (host) | - | Process designer, field editor, audit viewer |
 | User Portal | React 18 + nginx | 5174 (host) | - | Task inbox, start process, notifications |
 | API Gateway | Spring Cloud Gateway MVC | 9080 (host) / 8080 | - (no DB) | JWT validation, routing |
-| Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields |
-| Notification Service | Spring Boot | 8083 | `notification` | Event-driven notifications |
+| Workflow Service | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications |
 | Audit Service | Spring Boot | 8084 | `audit` | Event-driven audit trail |
-| PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 4 schemas | Shared database instance |
+| PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 3 schemas | Shared database instance |
 | RabbitMQ | RabbitMQ 3.13 | 5672 / 15672 | - | Async event bus |
 | Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
 
@@ -72,7 +68,7 @@ C4Container
 |---------------|---------------|-------------|
 | `/api/workflow/**` | workflow-service:8081 | `RewritePath=/api/workflow(?:/(?<segment>.*))?$, /api/${segment}` |
 | `/api/fields/**` | workflow-service:8081 | `RewritePath=/api/fields(?:/(?<segment>.*))?$, /api/${segment}` |
-| `/api/notifications/**` | notification-service:8083 | Pass-through (no rewrite) |
+| `/api/notifications/**` | workflow-service:8081 | Pass-through (no rewrite) |
 | `/api/audit/**` | audit-service:8084 | Pass-through (no rewrite) |
 
 ## Event Flows (RabbitMQ)
@@ -80,12 +76,14 @@ C4Container
 | Producer | Routing Key | Consumer(s) | Purpose |
 |----------|------------|-------------|---------|
 | Workflow Service | `process.started` | Audit Service | Audit trail |
-| Workflow Service | `process.completed` | Notification Service, Audit Service | User notification + audit |
+| Workflow Service | `process.completed` | Audit Service | Audit trail (declared, not yet published) |
 | Workflow Service | `process.cancelled` | Audit Service | Audit trail |
-| Workflow Service | `task.created` | Notification Service, Audit Service | New task notification + audit |
-| Workflow Service | `task.assigned` | Notification Service, Audit Service | Assignment notification + audit |
-| Workflow Service | `task.completed` | Notification Service, Audit Service | Completion notification + audit |
-| Workflow Service | `task.delegated` | Notification Service, Audit Service | Delegation notification + audit |
+| Workflow Service | `task.created` | Audit Service | Audit trail |
+| Workflow Service | `task.assigned` | Audit Service | Audit trail |
+| Workflow Service | `task.completed` | Audit Service | Audit trail |
+| Workflow Service | `task.delegated` | Audit Service | Audit trail |
+
+Notifications no longer travel over RabbitMQ: `EventPublisher` hands every event to `NotificationService` in the same transaction before publishing it.
 
 ## Notes for Editors
 

@@ -1,6 +1,6 @@
-package com.wfp.notification.dto;
+package com.wfp.workflow.dto;
 
-import com.wfp.notification.entity.NotificationType;
+import com.wfp.workflow.entity.NotificationType;
 import lombok.Builder;
 import lombok.Data;
 
