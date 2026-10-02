@@ -99,6 +99,6 @@ C4Component
 ## Notes for Editors
 
 - **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the portals and the service to the relevant repository/Flowable service.
-- **Flowable stays in `com.wfp.workflow.engine.flowable`**: DeploymentService, ProcessService, TaskService, ProcessHistoryService, FlowableEventListener, FlowableConfig and FlowableExceptionHandler live there, and `EngineBoundaryTest` (ArchUnit) fails the build if any other main class depends on `org.flowable`.
+- **Flowable stays in `com.wfp.workflow.engine.flowable`**: DeploymentService, ProcessService, TaskService, ProcessHistoryService, FlowableEventListener, FlowableConfig, FlowableExceptionHandler and FlowableWorkflowParser live there, and `EngineBoundaryTest` (ArchUnit) fails the build if any other main class depends on `org.flowable`.
 - **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `com.wfp.workflow.event`.
 - **Flowable engine is embedded** (in-process, not a separate container). It uses the same PostgreSQL schema (`workflow`) and manages its own `ACT_*` tables alongside the application's `wf_*` tables.

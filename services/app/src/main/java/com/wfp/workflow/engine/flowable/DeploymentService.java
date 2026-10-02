@@ -62,7 +62,7 @@ public class DeploymentService {
                 .build();
     }
 
-    public ProcessDefinition getProcessDefinition(String processDefinitionId) {
+    private ProcessDefinition getProcessDefinition(String processDefinitionId) {
         ProcessDefinition pd = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionId(processDefinitionId)
                 .processDefinitionTenantId(TenantContext.requireCurrentTenantId())

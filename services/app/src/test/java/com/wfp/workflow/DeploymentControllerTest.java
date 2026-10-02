@@ -67,15 +67,33 @@ class DeploymentControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.deploymentId").exists());
+                .andExpect(jsonPath("$.deploymentId").exists())
+                .andExpect(jsonPath("$.name").value("Test Process"));
     }
 
     @Test
-    void shouldListProcessDefinitions() throws Exception {
+    void shouldListProcessDefinitionsFallingBackToKeyForName() throws Exception {
+        DeployProcessRequest request = new DeployProcessRequest();
+        request.setName("Unnamed");
+        request.setBpmnXml(SIMPLE_BPMN.replace("id=\"testProcess\" name=\"Test Process\"", "id=\"unnamedProcess\""));
+
+        mockMvc.perform(post("/api/workflow/deployments")
+                        .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
+                                .claim("tenant_id", "tenant-list")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
         mockMvc.perform(get("/api/workflow/deployments")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-test")))
-                        .header("X-Tenant-Id", "tenant-test"))
-                .andExpect(status().isOk());
+                                .claim("tenant_id", "tenant-list"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].key").value("unnamedProcess"))
+                .andExpect(jsonPath("$[0].name").value("unnamedProcess"))
+                .andExpect(jsonPath("$[0].version").value(1))
+                .andExpect(jsonPath("$[0].deploymentId").exists())
+                .andExpect(jsonPath("$[0].suspended").value(false));
     }
 }

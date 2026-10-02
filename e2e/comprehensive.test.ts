@@ -701,7 +701,7 @@ test.describe('8. Audit Trail Tests', () => {
     // Verify that some expected event types exist from the lifecycle tests
     const eventTypes = body.content.map((e: any) => e.eventType);
     // At least one of these event types should be present from prior tests
-    const expectedTypes = ['process.started', 'task.created', 'task.completed', 'process.completed'];
+    const expectedTypes = ['process.started', 'task.created', 'task.completed'];
     const foundAny = expectedTypes.some((et) => eventTypes.includes(et));
     expect(foundAny, `Expected at least one of ${expectedTypes.join(', ')} in audit log`).toBe(true);
   });
