@@ -157,7 +157,8 @@ The engine reports back through `WorkflowRunListener`: `FlowableRunEvents` liste
 `ACTIVITY_STARTED` on runs that carry an `itemId` and calls `statusEntered` or `runEnded`,
 which `ItemService` implements. Timer-driven moves reach the item the same way.
 
-The older services below serve today's process and task API, which 20.e removes.
+The older services below serve today's process and task API, which 20.e removes. Their queries
+skip runs that carry an `itemId`, so items can only be moved through the item API.
 
 | Flowable API | Wrapped by | Purpose |
 |---|---|---|
