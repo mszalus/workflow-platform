@@ -1,6 +1,5 @@
-package com.wfp.workflow.config;
+package com.wfp.workflow.engine.flowable;
 
-import com.wfp.workflow.listener.FlowableEventListener;
 import org.flowable.common.engine.api.delegate.event.FlowableEngineEventType;
 import org.flowable.spring.SpringProcessEngineConfiguration;
 import org.flowable.spring.boot.EngineConfigurationConfigurer;

@@ -1,8 +1,10 @@
-package com.wfp.workflow.service;
+package com.wfp.workflow.engine.flowable;
 
 import com.wfp.common.exception.BadRequestException;
 import com.wfp.common.exception.NotFoundException;
 import com.wfp.security.context.TenantContext;
+import com.wfp.workflow.dto.DeploymentDto;
+import com.wfp.workflow.dto.ProcessDefinitionDto;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.repository.Deployment;
@@ -19,30 +21,45 @@ public class DeploymentService {
 
     private final RepositoryService repositoryService;
 
-    public Deployment deploy(String name, String category, String bpmnXml) {
+    public DeploymentDto deploy(String name, String category, String bpmnXml) {
         String tenantId = TenantContext.requireCurrentTenantId();
         // Ensure process definitions are marked executable (Flowable requires this)
         String fixedXml = bpmnXml.replace("isExecutable=\"false\"", "isExecutable=\"true\"");
         try {
-            return repositoryService.createDeployment()
+            Deployment deployment = repositoryService.createDeployment()
                     .name(name)
                     .category(category)
                     .addString(name + ".bpmn20.xml", fixedXml)
                     .tenantId(tenantId)
                     .deploy();
+            return DeploymentDto.builder().deploymentId(deployment.getId()).name(deployment.getName()).build();
         } catch (Exception e) {
             throw new BadRequestException("Invalid BPMN: " + e.getMessage());
         }
     }
 
-    public List<ProcessDefinition> listProcessDefinitions() {
+    public List<ProcessDefinitionDto> listProcessDefinitions() {
         String tenantId = TenantContext.requireCurrentTenantId();
         return repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(tenantId)
                 .latestVersion()
                 .orderByProcessDefinitionName()
                 .asc()
-                .list();
+                .list()
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    private ProcessDefinitionDto toDto(ProcessDefinition pd) {
+        return ProcessDefinitionDto.builder()
+                .id(pd.getId())
+                .key(pd.getKey())
+                .name(pd.getName() != null ? pd.getName() : pd.getKey())
+                .version(pd.getVersion())
+                .deploymentId(pd.getDeploymentId())
+                .suspended(pd.isSuspended())
+                .build();
     }
 
     public ProcessDefinition getProcessDefinition(String processDefinitionId) {

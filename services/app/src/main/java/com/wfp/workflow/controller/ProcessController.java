@@ -3,7 +3,7 @@ package com.wfp.workflow.controller;
 import com.wfp.common.dto.PagedResponse;
 import com.wfp.workflow.dto.ProcessInstanceDto;
 import com.wfp.workflow.dto.StartProcessRequest;
-import com.wfp.workflow.service.ProcessService;
+import com.wfp.workflow.engine.flowable.ProcessService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
