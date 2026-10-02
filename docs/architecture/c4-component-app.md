@@ -33,7 +33,7 @@ C4Component
         Component(notifSvc, "NotificationService", "Service", "Turns task events into in-app notification rows, in the caller's transaction; lists and marks them read")
         Component(auditSvc, "AuditService", "Service", "Records each domain event as an audit entry in the caller's transaction; queries the audit trail")
         Component(eventPub, "EventPublisher", "Service", "In-process dispatcher: hands each domain event to NotificationService, then AuditService")
-        Component(eventListener, "FlowableEventListener", "Flowable Listener", "Listens to Flowable engine events (TASK_CREATED, TASK_ASSIGNED, PROCESS_COMPLETED) and delegates to EventPublisher")
+        Component(eventListener, "FlowableEventListener", "Flowable Listener", "Listens to Flowable engine events (TASK_CREATED, TASK_ASSIGNED) and delegates to EventPublisher")
         Component(tenantResolver, "CurrentTenantIdResolver", "Hibernate filter parameter", "Supplies the tenant from TenantContext to the auto-enabled tenantFilter")
         Component(securityConfig, "SecurityConfig", "Spring Security", "OAuth2 resource server, JWT validation, public endpoint whitelist")
 
@@ -62,8 +62,8 @@ C4Component
     Rel(historySvc, flowableEngine, "HistoryService")
 
     Rel(taskSvc, eventPub, "Publishes task.completed, task.delegated")
-    Rel(processSvc, eventPub, "Publishes process.started, process.cancelled")
-    Rel(eventListener, eventPub, "Publishes task.created, task.assigned, process.completed")
+    Rel(processSvc, eventPub, "Publishes process.started")
+    Rel(eventListener, eventPub, "Publishes task.created, task.assigned")
     Rel(eventPub, notifSvc, "notify(event)", "same transaction")
     Rel(eventPub, auditSvc, "record(event)", "same transaction")
 
@@ -99,5 +99,6 @@ C4Component
 ## Notes for Editors
 
 - **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the portals and the service to the relevant repository/Flowable service.
+- **Flowable stays in `com.wfp.workflow.engine.flowable`**: DeploymentService, ProcessService, TaskService, ProcessHistoryService, FlowableEventListener, FlowableConfig and FlowableExceptionHandler live there, and `EngineBoundaryTest` (ArchUnit) fails the build if any other main class depends on `org.flowable`.
 - **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `com.wfp.workflow.event`.
 - **Flowable engine is embedded** (in-process, not a separate container). It uses the same PostgreSQL schema (`workflow`) and manages its own `ACT_*` tables alongside the application's `wf_*` tables.

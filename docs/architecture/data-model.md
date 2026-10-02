@@ -204,8 +204,8 @@ erDiagram
 |-------|-------------|
 | `TASK_ASSIGNED` | TaskCreatedEvent, TaskAssignedEvent |
 | `TASK_COMPLETED` | TaskCompletedEvent |
-| `PROCESS_COMPLETED` | ProcessCompletedEvent |
-| `SLA_BREACH` | ProcessSlaBreachedEvent (not yet wired) |
+| `PROCESS_COMPLETED` | not produced (kept for stored values and the UI) |
+| `SLA_BREACH` | not produced yet (item SLA timers, tracker) |
 | `INFO` | General-purpose notifications |
 
 ### Multi-Tenancy Pattern

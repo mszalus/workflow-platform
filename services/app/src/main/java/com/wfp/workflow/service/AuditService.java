@@ -7,8 +7,6 @@ import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.AuditEntryDto;
 import com.wfp.workflow.entity.AuditEntry;
 import com.wfp.workflow.event.BaseEvent;
-import com.wfp.workflow.event.ProcessCancelledEvent;
-import com.wfp.workflow.event.ProcessCompletedEvent;
 import com.wfp.workflow.event.ProcessStartedEvent;
 import com.wfp.workflow.event.TaskAssignedEvent;
 import com.wfp.workflow.event.TaskCompletedEvent;
@@ -94,8 +92,6 @@ public class AuditService {
     private String resolveEntityType(BaseEvent event) {
         return switch (event) {
             case ProcessStartedEvent e -> "PROCESS";
-            case ProcessCompletedEvent e -> "PROCESS";
-            case ProcessCancelledEvent e -> "PROCESS";
             case TaskCreatedEvent e -> "TASK";
             case TaskAssignedEvent e -> "TASK";
             case TaskCompletedEvent e -> "TASK";
@@ -107,8 +103,6 @@ public class AuditService {
     private String resolveEntityId(BaseEvent event) {
         return switch (event) {
             case ProcessStartedEvent e -> e.getProcessInstanceId();
-            case ProcessCompletedEvent e -> e.getProcessInstanceId();
-            case ProcessCancelledEvent e -> e.getProcessInstanceId();
             case TaskCreatedEvent e -> e.getTaskId();
             case TaskAssignedEvent e -> e.getTaskId();
             case TaskCompletedEvent e -> e.getTaskId();

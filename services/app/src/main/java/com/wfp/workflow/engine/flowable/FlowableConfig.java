@@ -19,8 +19,7 @@ public class FlowableConfig {
             configuration.setAsyncExecutorActivate(true);
             configuration.setTypedEventListeners(java.util.Map.of(
                     FlowableEngineEventType.TASK_CREATED.name() + ","
-                    + FlowableEngineEventType.TASK_ASSIGNED.name() + ","
-                    + FlowableEngineEventType.PROCESS_COMPLETED.name(),
+                    + FlowableEngineEventType.TASK_ASSIGNED.name(),
                     Collections.singletonList(listener)
             ));
         };
