@@ -3,7 +3,7 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json* ./
 COPY frontend/packages packages
 COPY frontend/apps/user-portal apps/user-portal
-RUN npm install --workspace=apps/user-portal
+RUN npm install --workspace=apps/user-portal --include-workspace-root
 RUN npm run build --workspace=packages/shared-ui && npm run build --workspace=apps/user-portal
 
 FROM nginxinc/nginx-unprivileged:alpine

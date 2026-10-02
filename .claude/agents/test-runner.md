@@ -12,7 +12,7 @@ Commands, from the repository root:
 - All backend tests: `./gradlew test --console=plain`
 - One module: `./gradlew :services:<module>:test --console=plain`
 - One class: `./gradlew :services:<module>:test --tests '<fully.qualified.ClassName>' --console=plain`
-- Frontend: `cd frontend && npm test` (one Vitest run over all packages and apps, with coverage)
+- Frontend: `cd frontend && npm test` (one Vitest run over all packages and apps)
 
 Run what the caller asked for. If they did not say, run all backend tests.
 

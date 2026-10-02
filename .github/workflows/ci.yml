@@ -66,10 +66,11 @@ jobs:
         run: npm run typecheck --workspaces --if-present
 
       - name: Unit tests
-        run: npm test
+        id: unit-tests
+        run: npm run test:coverage
 
       - name: Upload test coverage
-        if: always()
+        if: ${{ !cancelled() && steps.unit-tests.outcome != 'skipped' }}
         uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage

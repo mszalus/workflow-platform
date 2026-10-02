@@ -163,7 +163,7 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 - Backend integration tests run the full Spring context on H2 (`@SpringBootTest`, `MODE=LEGACY`)
 - Test config: `src/test/resources/application-test.yml` with `SPRING_PROFILES_ACTIVE=test`
 - Authenticated endpoint tests use Spring Security's `jwt()` request post-processor with a `tenant_id` claim; service-layer tests use `TenantContext.runAs`
-- Frontend: Vitest with React Testing Library on jsdom. One config, `frontend/vitest.config.ts`, runs every `*.test.ts(x)` under `packages/*/src` and `apps/*/src`: `cd frontend && npm test` (with coverage)
+- Frontend: Vitest with React Testing Library on jsdom. One config, `frontend/vitest.config.ts`, runs every `*.test.ts(x)` under `packages/*/src` and `apps/*/src`: `cd frontend && npm test` (`npm run test:coverage` for the coverage report, as CI does)
 - Acceptance: Cucumber BDD in `tests/bdd-acceptance` and Playwright in `e2e/` (`npm test`), both run in CI against a fresh Docker stack. `npm run screenshots` in `e2e/` refreshes `docs/screenshots/`
 
 ## MCP Servers

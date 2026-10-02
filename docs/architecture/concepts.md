@@ -228,7 +228,8 @@ portal's nginx `/api` proxy, so every path is an API Routing path.
 Unit tests run on Vitest with React Testing Library and jsdom. A single
 `frontend/vitest.config.ts` picks up every `*.test.ts(x)` under `packages/*/src` and
 `apps/*/src`, so it keeps working when 20.e folds the packages into one app.
-`npm test` runs them with coverage, in the Claude commit and push hooks and in CI.
+`npm test` runs them in the Claude commit and push hooks; CI runs `npm run test:coverage` and
+uploads the report.
 User flows are covered by Playwright at the E2E layer.
 
 ### See also

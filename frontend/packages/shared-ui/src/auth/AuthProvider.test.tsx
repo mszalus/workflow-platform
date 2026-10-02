@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiClient } from '../api/apiClient';
 import { AuthProvider, useAuth } from './AuthProvider';
 
@@ -55,6 +55,10 @@ describe('AuthProvider', () => {
       realm_access: { roles: ['user'] },
     };
     keycloak.init.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('shows a loading state until Keycloak is initialised', async () => {
