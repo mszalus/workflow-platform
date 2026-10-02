@@ -268,10 +268,10 @@ The table displays audit entries with columns:
 | Event Type         | Description                        |
 |-------------------|------------------------------------|
 | `process.started` | A new process instance was created |
-| `process.completed`| A process instance finished       |
 | `task.created`    | A new task was created             |
 | `task.assigned`   | A task was assigned to a user      |
 | `task.completed`  | A task was marked as complete      |
+| `task.delegated`  | A task was delegated to another user |
 
 ---
 

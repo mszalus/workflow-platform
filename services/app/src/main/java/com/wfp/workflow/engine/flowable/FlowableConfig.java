@@ -1,6 +1,5 @@
-package com.wfp.workflow.config;
+package com.wfp.workflow.engine.flowable;
 
-import com.wfp.workflow.listener.FlowableEventListener;
 import org.flowable.common.engine.api.delegate.event.FlowableEngineEventType;
 import org.flowable.spring.SpringProcessEngineConfiguration;
 import org.flowable.spring.boot.EngineConfigurationConfigurer;
@@ -20,8 +19,7 @@ public class FlowableConfig {
             configuration.setAsyncExecutorActivate(true);
             configuration.setTypedEventListeners(java.util.Map.of(
                     FlowableEngineEventType.TASK_CREATED.name() + ","
-                    + FlowableEngineEventType.TASK_ASSIGNED.name() + ","
-                    + FlowableEngineEventType.PROCESS_COMPLETED.name(),
+                    + FlowableEngineEventType.TASK_ASSIGNED.name(),
                     Collections.singletonList(listener)
             ));
         };

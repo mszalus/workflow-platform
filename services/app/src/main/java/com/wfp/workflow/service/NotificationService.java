@@ -2,7 +2,6 @@ package com.wfp.workflow.service;
 
 import com.wfp.common.dto.PagedResponse;
 import com.wfp.workflow.event.BaseEvent;
-import com.wfp.workflow.event.ProcessCompletedEvent;
 import com.wfp.workflow.event.TaskAssignedEvent;
 import com.wfp.workflow.event.TaskCompletedEvent;
 import com.wfp.workflow.event.TaskCreatedEvent;
@@ -33,7 +32,6 @@ public class NotificationService {
             case TaskCreatedEvent e -> notifyTaskCreated(e);
             case TaskAssignedEvent e -> notifyTaskAssigned(e);
             case TaskCompletedEvent e -> notifyTaskCompleted(e);
-            case ProcessCompletedEvent e -> notifyProcessCompleted(e);
             default -> { }
         }
     }
@@ -100,15 +98,6 @@ public class NotificationService {
                     "Task Completed: " + e.getTaskName(),
                     "Task '" + e.getTaskName() + "' has been completed",
                     NotificationType.TASK_COMPLETED, e.getTaskId(), "TASK");
-        }
-    }
-
-    private void notifyProcessCompleted(ProcessCompletedEvent e) {
-        if (e.getUserId() != null) {
-            createNotification(e.getUserId(), e.getTenantId(),
-                    "Process Completed: " + e.getProcessName(),
-                    "Process '" + e.getProcessName() + "' has been completed",
-                    NotificationType.PROCESS_COMPLETED, e.getProcessInstanceId(), "PROCESS");
         }
     }
 

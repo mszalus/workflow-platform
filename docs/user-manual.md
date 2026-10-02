@@ -20,7 +20,7 @@ The Workflow Platform User Portal is a web application for end users to interact
 - View and complete tasks assigned to you
 - Start new workflow processes
 - Track your running processes
-- Receive notifications about task assignments and process completions
+- Receive notifications about task assignments and completed tasks
 
 **URL:** `http://localhost:5174` (local development)
 

@@ -4,7 +4,7 @@ import com.wfp.common.dto.PagedResponse;
 import com.wfp.workflow.dto.CompleteTaskRequest;
 import com.wfp.workflow.dto.DelegateTaskRequest;
 import com.wfp.workflow.dto.TaskDto;
-import com.wfp.workflow.service.TaskService;
+import com.wfp.workflow.engine.flowable.TaskService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

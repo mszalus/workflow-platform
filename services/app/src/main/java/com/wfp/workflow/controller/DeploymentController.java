@@ -1,10 +1,11 @@
 package com.wfp.workflow.controller;
 
 import com.wfp.workflow.dto.DeployProcessRequest;
-import com.wfp.workflow.service.DeploymentService;
+import com.wfp.workflow.dto.DeploymentDto;
+import com.wfp.workflow.dto.ProcessDefinitionDto;
+import com.wfp.workflow.engine.flowable.DeploymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.flowable.engine.repository.Deployment;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,22 +28,13 @@ public class DeploymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Map<String, String> deploy(@Valid @RequestBody DeployProcessRequest request) {
-        Deployment d = deploymentService.deploy(request.getName(), request.getCategory(), request.getBpmnXml());
-        return Map.of("deploymentId", d.getId(), "name", d.getName());
+    public DeploymentDto deploy(@Valid @RequestBody DeployProcessRequest request) {
+        return deploymentService.deploy(request.getName(), request.getCategory(), request.getBpmnXml());
     }
 
     @GetMapping
-    public List<Map<String, Object>> listProcessDefinitions() {
-        return deploymentService.listProcessDefinitions().stream()
-                .map(pd -> Map.<String, Object>of(
-                        "id", pd.getId(),
-                        "key", pd.getKey(),
-                        "name", pd.getName() != null ? pd.getName() : pd.getKey(),
-                        "version", pd.getVersion(),
-                        "deploymentId", pd.getDeploymentId(),
-                        "suspended", pd.isSuspended()
-                )).toList();
+    public List<ProcessDefinitionDto> listProcessDefinitions() {
+        return deploymentService.listProcessDefinitions();
     }
 
     @GetMapping("/{processDefinitionId}/bpmn")

@@ -68,13 +68,10 @@ flowchart LR
 
 ### Event types
 
-`process.started` · `process.completed` · `process.cancelled` · `process.sla.breached`
-`task.created` · `task.assigned` · `task.completed` · `task.delegated`
-`field.schema.created` · `field.value.saved`
+`process.started` · `task.created` · `task.assigned` · `task.completed` · `task.delegated`
 
-The event classes live in `com.wfp.workflow.event`. `process.completed`,
-`process.sla.breached` and the two `field.*` types are declared in `EventConstants` but
-**not published yet**.
+The event classes live in `com.wfp.workflow.event`; every declared type is published.
+Process completion, cancellation and SLA events return as item events in the tracker.
 
 ### Two publication paths
 
@@ -135,6 +132,10 @@ sit alongside the application `wf_*` tables.
 
 ### Engine services used
 
+All Flowable code lives in `com.wfp.workflow.engine.flowable`; `EngineBoundaryTest`
+(ArchUnit) fails the build if any other main class depends on `org.flowable`. The
+`WorkflowEngine` interface in tracker terms arrives with items (20.c).
+
 | Flowable API | Wrapped by | Purpose |
 |---|---|---|
 | `RepositoryService` | `DeploymentService` | deploy BPMN XML, list definitions, fetch XML |
@@ -151,8 +152,8 @@ filter used for application entities. See Multi-Tenancy.
 
 ### Engine events
 
-`FlowableEventListener` subscribes to the engine event bus for `TASK_CREATED`,
-`TASK_ASSIGNED` and `PROCESS_COMPLETED` and hands them to `EventPublisher`. These
+`FlowableEventListener` subscribes to the engine event bus for `TASK_CREATED` and
+`TASK_ASSIGNED` and hands them to `EventPublisher`. These
 transitions are caused by the engine advancing a process, not by an API call, so they
 cannot be published from a controller. See Event System.
 
