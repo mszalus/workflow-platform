@@ -1,6 +1,6 @@
 # C4 Level 3 — Component Diagram: App (the backend service)
 
-The workflow service is the core of the platform. It wraps the Flowable 7.1 BPMN engine and exposes process, task, deployment, comment, and history APIs.
+The workflow service is the core of the platform. It wraps the Flowable 7.1 BPMN engine and exposes the project and work item APIs, plus today's process, task, deployment, comment and history APIs.
 
 ```mermaid
 C4Component
@@ -11,6 +11,13 @@ C4Component
     System_Ext(flowableEngine, "Flowable Engine", "Embedded BPMN engine (in-process)")
 
     Container_Boundary(workflowSvc, "App") {
+
+        Component(projectCtrl, "ProjectController", "REST Controller", "POST /api/projects<br/>GET /api/projects")
+        Component(itemCtrl, "ItemController", "REST Controller", "POST /api/items<br/>GET /api/items, /api/items/{key}<br/>PATCH /api/items/{key}<br/>POST /api/items/{key}/transitions")
+        Component(projectSvc, "ProjectService", "Service", "Creates projects with item types; checks that each workflow is a tracker workflow")
+        Component(itemSvc, "ItemService", "Service", "Creates, changes and moves items; implements WorkflowRunListener; writes transition, audit and notification rows in the same transaction")
+        Component(workflowEngine, "FlowableWorkflowEngine", "WorkflowEngine adapter", "latestVersion, describe, start, transition (tenant-checked)")
+        Component(runEvents, "FlowableRunEvents", "Flowable Listener", "ACTIVITY_STARTED on item runs → statusEntered, runEnded")
 
         Component(deployCtrl, "DeploymentController", "REST Controller", "POST /api/workflow/deployments (deploy BPMN)<br/>GET /api/workflow/deployments (list definitions)<br/>GET /api/workflow/deployments/{id}/bpmn (export XML)<br/>DELETE /api/workflow/deployments/{id}")
 
@@ -40,6 +47,16 @@ C4Component
         Component(commentRepo, "CommentRepository", "JPA Repository", "CRUD for Comment entity")
     }
 
+    Rel(portals, projectCtrl, "HTTP/JSON")
+    Rel(portals, itemCtrl, "HTTP/JSON")
+    Rel(projectCtrl, projectSvc, "Calls")
+    Rel(itemCtrl, itemSvc, "Calls")
+    Rel(projectSvc, workflowEngine, "WorkflowEngine")
+    Rel(itemSvc, workflowEngine, "WorkflowEngine")
+    Rel(workflowEngine, flowableEngine, "RepositoryService, RuntimeService, TaskService")
+    Rel(runEvents, itemSvc, "WorkflowRunListener")
+    Rel(itemSvc, notifSvc, "createNotification", "same transaction")
+    Rel(itemSvc, auditSvc, "record", "same transaction")
     Rel(portals, deployCtrl, "HTTP/JSON")
     Rel(portals, processCtrl, "HTTP/JSON")
     Rel(portals, taskCtrl, "HTTP/JSON")
@@ -77,6 +94,12 @@ C4Component
 
 | Component | Type | Responsibility |
 |-----------|------|---------------|
+| ProjectController | REST | Create and list projects with their item types |
+| ItemController | REST | Create, list, get, change and transition work items |
+| ProjectService | Service | Validates the key and that each item type's workflow is a tracker workflow |
+| ItemService | Service | Item lifecycle; status copy, transition rows, audit and notifications in one transaction |
+| FlowableWorkflowEngine | `WorkflowEngine` adapter | The only engine API work items use |
+| FlowableRunEvents | Engine Listener | Reports status changes of item runs to `WorkflowRunListener` |
 | DeploymentController | REST | BPMN deploy, list definitions, export XML, delete |
 | ProcessController | REST | Start, list, get, cancel process instances |
 | TaskController | REST | List, claim, unclaim, complete, delegate tasks |
@@ -99,6 +122,6 @@ C4Component
 ## Notes for Editors
 
 - **Adding a new endpoint group** (e.g., Attachments API): Add a Controller + Service component pair, connect the controller to the portals and the service to the relevant repository/Flowable service.
-- **Flowable stays in `com.wfp.workflow.engine.flowable`**: DeploymentService, ProcessService, TaskService, ProcessHistoryService, FlowableEventListener, FlowableConfig, FlowableExceptionHandler and FlowableWorkflowParser live there, and `EngineBoundaryTest` (ArchUnit) fails the build if any other main class depends on `org.flowable`.
+- **Flowable stays in `com.wfp.workflow.engine.flowable`**: DeploymentService, ProcessService, TaskService, ProcessHistoryService, FlowableEventListener, FlowableConfig, FlowableExceptionHandler, FlowableWorkflowParser, FlowableWorkflowEngine, FlowableRunEvents and TransitionConditions live there, and `EngineBoundaryTest` (ArchUnit) fails the build if any other main class depends on `org.flowable`.
 - **Adding a new event type**: Update EventPublisher with the new publish method, update FlowableEventListener if it originates from the engine, and add the event class to `com.wfp.workflow.event`.
 - **Flowable engine is embedded** (in-process, not a separate container). It uses the same PostgreSQL schema (`workflow`) and manages its own `ACT_*` tables alongside the application's `wf_*` tables.

@@ -24,6 +24,9 @@ public class FlowableEventListener implements org.flowable.common.engine.api.del
         FlowableEventType type = event.getType();
         String typeName = type.name();
 
+        if (belongsToItemRun(event)) {
+            return;
+        }
         if ("TASK_CREATED".equals(typeName)) {
             handleTaskCreated(event);
         } else if ("TASK_ASSIGNED".equals(typeName)) {
@@ -31,6 +34,12 @@ public class FlowableEventListener implements org.flowable.common.engine.api.del
         } else {
             log.debug("Unhandled Flowable event: {}", typeName);
         }
+    }
+
+    private boolean belongsToItemRun(FlowableEvent event) {
+        return event instanceof FlowableEngineEntityEvent entityEvent
+                && entityEvent.getEntity() instanceof TaskEntity task
+                && task.getVariable(FlowableWorkflowEngine.ITEM_ID) != null;
     }
 
     private void handleTaskCreated(FlowableEvent event) {

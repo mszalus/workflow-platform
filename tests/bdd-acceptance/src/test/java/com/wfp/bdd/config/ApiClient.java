@@ -4,6 +4,7 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -174,6 +175,43 @@ public class ApiClient {
 
     public Response listAuditEntries() {
         return auth().when().get(API + "/api/audit?size=100");
+    }
+
+    // -------------------------------------------------------------------------
+    // Work items
+    // -------------------------------------------------------------------------
+
+    public Response deployBpmn(String name, String bpmnXml) {
+        return auth()
+                .body(Map.of("name", name, "bpmnXml", bpmnXml))
+                .when()
+                .post(API + "/api/workflow/deployments");
+    }
+
+    public Response listProjects() {
+        return auth().when().get(API + "/api/projects");
+    }
+
+    public Response createProject(String key, String itemType, String workflowKey) {
+        return auth()
+                .body(Map.of("key", key, "name", key,
+                        "itemTypes", List.of(Map.of("name", itemType, "workflowKey", workflowKey))))
+                .when()
+                .post(API + "/api/projects");
+    }
+
+    public Response createItem(String project, String type, String title) {
+        return auth()
+                .body(Map.of("project", project, "type", type, "title", title))
+                .when()
+                .post(API + "/api/items");
+    }
+
+    public Response transitionItem(String key, String transitionId) {
+        return auth()
+                .body(Map.of("transitionId", transitionId))
+                .when()
+                .post(API + "/api/items/" + key + "/transitions");
     }
 
     // -------------------------------------------------------------------------

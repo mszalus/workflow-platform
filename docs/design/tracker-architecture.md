@@ -108,7 +108,7 @@ The chain is today's, minus the gateway:
 | C-1 | **Done.** Fold custom-fields (C-1a, #42), notification (C-1b, #78) and audit (C-1c, #79) into `workflow-service` (renamed `app`); remove RabbitMQ and `wfp-events`; libraries become packages; one schema (R-1 to R-4, R-7, R-9). Today's screens keep working | BDD and Playwright green; 2 backend containers left (gateway, app) |
 | C-2 | **Done (#81), before C-1d.** Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
 | 20.b | **Done (#37).** Flowable isolated in `engine.flowable` with an ArchUnit rule; the `WorkflowEngine` interface moves to 20.c, where items first call it (decided 2026-10-02), with the tenant check from #71 inside `transition` and `cancel` | Existing tests green; ArchUnit rule in place |
-| 20.c | Item model. History, notification and audit rows are written in the same transaction, with no events | as in 20.6 |
+| 20.c | **Done (#38).** Item model and API on the `WorkflowEngine` interface. History, notification and audit rows are written in the same transaction, with no events; field changes are kept in the `item.updated` audit row. Moving out of a status subprocess, `cancel()`, role checks and filters come later | Create, transition and close work through the API (integration test and BDD) |
 | 20.d | Editor guardrails | as in 20.6 |
 | 20.e | The new single app with the approved screens; delete `admin-portal` and `user-portal` (R-6, R-8 UI parts) | Playwright flow from 20.6 |
 | 20.f | Moving items to a new version. **Moved to Phase 2: Tracker follow-ups** (#41); until then, open items stay on their version | as in 20.6 |

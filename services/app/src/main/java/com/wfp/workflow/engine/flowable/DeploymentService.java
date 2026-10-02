@@ -20,12 +20,14 @@ import java.util.List;
 public class DeploymentService {
 
     private final RepositoryService repositoryService;
+    private final TransitionConditions transitionConditions = new TransitionConditions();
 
     public DeploymentDto deploy(String name, String category, String bpmnXml) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        // Ensure process definitions are marked executable (Flowable requires this)
-        String fixedXml = bpmnXml.replace("isExecutable=\"false\"", "isExecutable=\"true\"");
         try {
+            // Ensure process definitions are marked executable (Flowable requires this)
+            String fixedXml = transitionConditions.addTo(
+                    bpmnXml.replace("isExecutable=\"false\"", "isExecutable=\"true\""));
             Deployment deployment = repositoryService.createDeployment()
                     .name(name)
                     .category(category)

@@ -36,8 +36,8 @@ The `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `
 
 Code that runs outside a request (Flowable async jobs, scheduled jobs) has no tenant until it sets one. Wrap the work in `TenantContext.runAs(tenantId, ...)`; a query without a tenant throws.
 
-Note that FieldOption has no `tenant_id` at all — it is reached only through its
-parent `FieldSchema`, which is already filtered.
+Note that FieldOption and ItemType have no `tenant_id` at all — each is reached only
+through its parent (`FieldSchema`, `Project`), which is already filtered.
 
 ### Identity side
 
@@ -72,6 +72,14 @@ flowchart LR
 
 The event classes live in `com.wfp.workflow.event`; every declared type is published.
 Process completion, cancellation and SLA events return as item events in the tracker.
+
+### Work items write their rows directly
+
+`ItemService` doesn't use events. Creating, changing or moving an item writes the item,
+its `wf_item_transition` row, its audit entry (`item.created`, `item.updated` with the
+field diff, `item.transitioned`) and its notifications (`ITEM_ASSIGNED`,
+`ITEM_TRANSITIONED`) itself, in one transaction. The process and task events below go
+away with the old process and task API (20.e).
 
 ### Two publication paths
 
@@ -116,6 +124,8 @@ itself:
 
 | External path | Served by |
 |---|---|
+| `/api/projects/**` | `ProjectController` |
+| `/api/items/**` | `ItemController` |
 | `/api/workflow/**` | `DeploymentController`, `ProcessController`, `TaskController`, `CommentController`, `HistoryController` |
 | `/api/fields/**` | `FieldSchemaController`, `FieldValueController` |
 | `/api/notifications/**` | `NotificationController` |
@@ -133,8 +143,22 @@ sit alongside the application `wf_*` tables.
 ### Engine services used
 
 All Flowable code lives in `com.wfp.workflow.engine.flowable`; `EngineBoundaryTest`
-(ArchUnit) fails the build if any other main class depends on `org.flowable`. The
-`WorkflowEngine` interface in tracker terms arrives with items (20.c).
+(ArchUnit) fails the build if any other main class depends on `org.flowable`.
+
+Work items use the engine only through `WorkflowEngine`, in tracker terms:
+`latestVersion`, `describe`, `start` and `transition`. `FlowableWorkflowEngine` is its one
+adapter. `transition` looks the run up with the caller's tenant (another tenant's run is
+not found), then completes the current status's user task with the transient variable
+`transition`, or, for an any-status transition, triggers the event subprocess's message.
+Deploying a tracker workflow adds `${transition == '<flowId>'}` to every flow that leaves
+the gateway after a status, so imported BPMN needs no conditions.
+
+The engine reports back through `WorkflowRunListener`: `FlowableRunEvents` listens for
+`ACTIVITY_STARTED` on runs that carry an `itemId` and calls `statusEntered` or `runEnded`,
+which `ItemService` implements. Timer-driven moves reach the item the same way.
+
+The older services below serve today's process and task API, which 20.e removes. Their queries
+skip runs that carry an `itemId`, so items can only be moved through the item API.
 
 | Flowable API | Wrapped by | Purpose |
 |---|---|---|

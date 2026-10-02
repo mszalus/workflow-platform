@@ -66,6 +66,13 @@ public record WorkflowGraph(String processId, List<Node> nodes, List<Flow> flows
         return node.type() == NodeType.END && successors(node).isEmpty();
     }
 
+    public boolean endsRun(Node node) {
+        return node.type() == NodeType.END
+                && parentOf(node)
+                        .map(parent -> parent.type() == NodeType.EVENT_SUBPROCESS && parent.parentId() == null)
+                        .orElse(true);
+    }
+
     public Set<String> statusesAndEndsReachedFrom(String nodeId) {
         Set<String> reached = new LinkedHashSet<>();
         Set<String> visited = new HashSet<>();

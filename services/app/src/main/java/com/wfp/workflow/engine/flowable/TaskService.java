@@ -28,7 +28,9 @@ public class TaskService {
     public PagedResponse<TaskDto> listTasks(String assignee, String candidateGroup,
                                              String processDefinitionKey, int page, int size) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        TaskQuery query = flowableTaskService.createTaskQuery().taskTenantId(tenantId);
+        TaskQuery query = flowableTaskService.createTaskQuery()
+                .taskTenantId(tenantId)
+                .processVariableNotExists(FlowableWorkflowEngine.ITEM_ID);
         if (assignee != null) {
             query.taskAssignee(assignee);
         }
@@ -100,6 +102,7 @@ public class TaskService {
         Task task = flowableTaskService.createTaskQuery()
                 .taskId(taskId)
                 .taskTenantId(TenantContext.requireCurrentTenantId())
+                .processVariableNotExists(FlowableWorkflowEngine.ITEM_ID)
                 .singleResult();
         if (task == null) {
             throw new NotFoundException("Task", taskId);

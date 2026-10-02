@@ -58,7 +58,14 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'TASK_ASSIGNED' | 'TASK_COMPLETED' | 'PROCESS_COMPLETED' | 'SLA_BREACH' | 'INFO';
+  type:
+    | 'TASK_ASSIGNED'
+    | 'TASK_COMPLETED'
+    | 'PROCESS_COMPLETED'
+    | 'SLA_BREACH'
+    | 'INFO'
+    | 'ITEM_ASSIGNED'
+    | 'ITEM_TRANSITIONED';
   read: boolean;
   createdAt: string;
   referenceId?: string;

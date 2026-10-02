@@ -62,6 +62,7 @@ public class ProcessService {
         String tenantId = TenantContext.requireCurrentTenantId();
         ProcessInstanceQuery query = runtimeService.createProcessInstanceQuery()
                 .processInstanceTenantId(tenantId)
+                .variableNotExists(FlowableWorkflowEngine.ITEM_ID)
                 .orderByStartTime().desc();
 
         long total = query.count();
@@ -83,6 +84,7 @@ public class ProcessService {
         ProcessInstance pi = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .processInstanceTenantId(TenantContext.requireCurrentTenantId())
+                .variableNotExists(FlowableWorkflowEngine.ITEM_ID)
                 .singleResult();
         if (pi == null) {
             throw new NotFoundException("ProcessInstance", processInstanceId);

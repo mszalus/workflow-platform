@@ -125,6 +125,13 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 
 | Method | Path | Description |
 |--------|------|-------------|
+| POST | `/api/projects` | Create a project with its item types |
+| GET | `/api/projects` | List projects |
+| POST | `/api/items` | Create a work item |
+| GET | `/api/items?project=...&assignee=...` | List work items |
+| GET | `/api/items/{key}` | Get a work item with its available transitions |
+| PATCH | `/api/items/{key}` | Change fixed or custom fields |
+| POST | `/api/items/{key}/transitions` | Move a work item to another status |
 | POST | `/api/workflow/deployments` | Deploy a BPMN process |
 | GET | `/api/workflow/deployments` | List deployments |
 | POST | `/api/workflow/processes` | Start a process instance |
