@@ -225,8 +225,11 @@ portal's nginx `/api` proxy, so every path is an API Routing path.
 
 ### Testing posture
 
-TypeScript typecheck only — there is no frontend unit test framework yet.
-Behaviour is covered by Playwright at the E2E layer.
+Unit tests run on Vitest with React Testing Library and jsdom. A single
+`frontend/vitest.config.ts` picks up every `*.test.ts(x)` under `packages/*/src` and
+`apps/*/src`, so it keeps working when 20.e folds the packages into one app.
+`npm test` runs them with coverage, in the Claude commit and push hooks and in CI.
+User flows are covered by Playwright at the E2E layer.
 
 ### See also
 
@@ -273,7 +276,7 @@ Backend build commands · CI Pipeline · Repository Layout
 | Backend web | MockMvc + Spring Security `jwt()` | authenticated endpoints |
 | BDD acceptance | Cucumber-style features under `tests/` | cross-service behaviour |
 | E2E | Playwright (`e2e/`) | both portals against the running stack |
-| Frontend | `tsc --noEmit` only | no unit test framework yet |
+| Frontend unit | Vitest + React Testing Library (jsdom) | components, hooks, `apiClient` |
 
 Integration tests activate `SPRING_PROFILES_ACTIVE=test` and read
 `src/test/resources/application-test.yml`.

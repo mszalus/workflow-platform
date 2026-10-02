@@ -35,7 +35,7 @@ trap 'rm -f "$log"' EXIT
   ./gradlew test --console=plain
   backend=$?
   echo "== pre-commit: frontend unit tests =="
-  ( cd frontend && npm run test --workspaces --if-present )
+  ( cd frontend && npm test )
   frontend=$?
   echo "== backend=$backend frontend=$frontend =="
   exit $(( backend || frontend ))
