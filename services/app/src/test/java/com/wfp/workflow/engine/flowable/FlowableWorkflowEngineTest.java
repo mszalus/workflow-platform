@@ -99,8 +99,15 @@ class FlowableWorkflowEngineTest {
     }
 
     @Test
-    void deployAddsConditionsOnlyToTransitionsLeavingAStatusGateway() throws IOException {
-        WorkflowRun run = start("bug-flow", "bugFlow");
+    void deploySetsConditionsOnlyOnTransitionsLeavingAStatusGateway() throws IOException {
+        String staleCondition =
+                "<sequenceFlow id=\"accept\" name=\"Accept\" sourceRef=\"openChoice\" targetRef=\"ready\">"
+                + "<conditionExpression>${transition == 'renamed'}</conditionExpression></sequenceFlow>";
+        String bpmnXml = Samples.xml("valid/bug-flow").replace(
+                "<sequenceFlow id=\"accept\" name=\"Accept\" sourceRef=\"openChoice\" targetRef=\"ready\"/>",
+                staleCondition);
+        TenantContext.runAs(TENANT, () -> deploymentService.deploy("bug-flow", null, bpmnXml));
+        WorkflowRun run = engine.start(TENANT, engine.latestVersion(TENANT, "bugFlow"), itemId);
         ProcessDefinition version = repositoryService.getProcessDefinition(run.versionId());
 
         String deployedXml;
@@ -111,7 +118,8 @@ class FlowableWorkflowEngineTest {
 
         assertThat(deployedXml)
                 .contains("${transition == 'accept'}", "${transition == 'reject'}", "${transition == 'close'}")
-                .doesNotContain("${transition == 'startWork'}", "${transition == 'toOpen'}")
+                .doesNotContain("${transition == 'startWork'}", "${transition == 'toOpen'}",
+                        "${transition == 'renamed'}")
                 .contains("${severity == 'High'}");
     }
 

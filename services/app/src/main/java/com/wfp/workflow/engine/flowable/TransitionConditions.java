@@ -33,8 +33,8 @@ class TransitionConditions {
             NodeList flows = document.getElementsByTagNameNS("*", "sequenceFlow");
             for (int i = 0; i < flows.getLength(); i++) {
                 Element flow = (Element) flows.item(i);
-                if (transitionFlowIds.contains(flow.getAttribute("id"))
-                        && flow.getElementsByTagNameNS("*", "conditionExpression").getLength() == 0) {
+                if (transitionFlowIds.contains(flow.getAttribute("id"))) {
+                    removeConditions(flow);
                     Element condition = document.createElementNS(flow.getNamespaceURI(),
                             qualified(flow.getPrefix(), "conditionExpression"));
                     condition.setTextContent("${transition == '" + flow.getAttribute("id") + "'}");
@@ -57,6 +57,13 @@ class TransitionConditions {
                 .flatMap(gatewayId -> graph.outgoing(gatewayId).stream())
                 .map(Flow::id)
                 .collect(Collectors.toSet());
+    }
+
+    private static void removeConditions(Element flow) {
+        NodeList conditions = flow.getElementsByTagNameNS("*", "conditionExpression");
+        while (conditions.getLength() > 0) {
+            flow.removeChild(conditions.item(0));
+        }
     }
 
     private static String qualified(String prefix, String localName) {

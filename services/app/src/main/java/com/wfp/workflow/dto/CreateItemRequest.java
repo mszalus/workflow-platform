@@ -2,6 +2,7 @@ package com.wfp.workflow.dto;
 
 import com.wfp.workflow.entity.Priority;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.LinkedHashMap;
@@ -11,9 +12,9 @@ import java.util.Map;
 public class CreateItemRequest {
     @NotBlank private String project;
     @NotBlank private String type;
-    @NotBlank private String title;
+    @NotBlank @Size(max = 255) private String title;
     private String description;
     private Priority priority = Priority.MEDIUM;
-    private String assignee;
+    @Size(max = 255) private String assignee;
     private Map<String, Object> fields = new LinkedHashMap<>();
 }

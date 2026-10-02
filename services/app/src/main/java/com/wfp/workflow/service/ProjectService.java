@@ -38,7 +38,8 @@ public class ProjectService {
                 < request.getItemTypes().size()) {
             throw new BadRequestException("Item type names must be unique within a project");
         }
-        request.getItemTypes().forEach(type -> requireTrackerWorkflow(tenantId, type.getWorkflowKey()));
+        request.getItemTypes().forEach(type ->
+                engine.describe(engine.latestVersion(tenantId, type.getWorkflowKey())));
 
         Project project = Project.builder().tenantId(tenantId).key(request.getKey()).name(request.getName()).build();
         request.getItemTypes().forEach(type -> project.getItemTypes().add(ItemType.builder()
@@ -52,14 +53,6 @@ public class ProjectService {
     @Transactional(readOnly = true)
     public List<ProjectDto> list() {
         return projectRepository.findAllByOrderByKeyAsc().stream().map(this::toDto).toList();
-    }
-
-    private void requireTrackerWorkflow(String tenantId, String workflowKey) {
-        try {
-            engine.describe(engine.latestVersion(tenantId, workflowKey));
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Workflow " + workflowKey + " is not a tracker workflow: " + e.getMessage());
-        }
     }
 
     private ProjectDto toDto(Project project) {

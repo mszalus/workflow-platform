@@ -15,6 +15,7 @@ import com.wfp.workflow.repository.ItemRepository;
 import com.wfp.workflow.repository.ItemTransitionRepository;
 import com.wfp.workflow.repository.NotificationRepository;
 import org.flowable.engine.RepositoryService;
+import org.flowable.engine.TaskService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import java.util.function.Supplier;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -57,6 +59,9 @@ class ItemControllerTest {
 
     @Autowired
     private RepositoryService repositoryService;
+
+    @Autowired
+    private TaskService flowableTaskService;
 
     @Autowired
     private FieldSchemaRepository fieldSchemaRepository;
@@ -166,6 +171,37 @@ class ItemControllerTest {
                 "{\"field\":\"fields.severity\",\"from\":\"High\",\"to\":\"Low\"}");
         assertThat(auditEvents("PROJ-1")).containsExactly("item.created", "item.updated");
         assertThat(notificationTitles("carol")).containsExactly("PROJ-1 assigned to you");
+    }
+
+    @Test
+    void refusesChangesThatAreNotTextOrTooLong() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+
+        perform(patch("/api/items/PROJ-1"), "alice", "{\"title\":42}").andExpect(status().isBadRequest());
+        perform(patch("/api/items/PROJ-1"), "alice", "{\"title\":\"" + "x".repeat(256) + "\"}")
+                .andExpect(status().isBadRequest());
+        perform(post("/api/items"), "alice", ITEM.replace("Fix login", "x".repeat(256)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refusesToCreateAnItemOnANewVersionThatIsNotATrackerWorkflow() throws Exception {
+        String brokenVersion = Samples.xml("valid/simple").replace(" wfp:statusCategory=\"DONE\"", "");
+        TenantContext.runAs(tenant, () -> deploymentService.deploy("simple", null, brokenVersion));
+
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void theOldTaskAndProcessApiDoNotSeeItemRuns() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+        String taskId = flowableTaskService.createTaskQuery().taskTenantId(tenant).singleResult().getId();
+        String runId = flowableTaskService.createTaskQuery().taskTenantId(tenant).singleResult().getProcessInstanceId();
+
+        perform(get("/api/workflow/tasks"), "alice", null).andExpect(jsonPath("$.totalElements").value(0));
+        perform(get("/api/workflow/processes"), "alice", null).andExpect(jsonPath("$.totalElements").value(0));
+        perform(post("/api/workflow/tasks/{id}/complete", taskId), "alice", "{}").andExpect(status().isNotFound());
+        perform(delete("/api/workflow/processes/{id}", runId), "alice", null).andExpect(status().isNotFound());
     }
 
     @Test

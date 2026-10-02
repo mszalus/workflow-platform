@@ -58,7 +58,14 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
 
     @Override
     public WorkflowDescriptor describe(String versionId) {
-        return descriptors.computeIfAbsent(versionId, id -> describer.describe(graph(id)));
+        return descriptors.computeIfAbsent(versionId, id -> {
+            try {
+                return describer.describe(graph(id));
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Workflow version " + id + " is not a tracker workflow: "
+                        + e.getMessage());
+            }
+        });
     }
 
     @Override

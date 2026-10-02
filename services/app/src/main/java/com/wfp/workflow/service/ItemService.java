@@ -55,6 +55,7 @@ public class ItemService implements WorkflowRunListener {
     private static final String SYSTEM_ACTOR = "system";
     private static final String ENDED_STATUS_NAME = "Closed";
     private static final String FIELDS = "fields";
+    private static final int MAX_TEXT_LENGTH = 255;
     private static final Set<String> EDITABLE = Set.of("title", "description", "priority", "assignee", FIELDS);
 
     private final ItemRepository itemRepository;
@@ -79,6 +80,8 @@ public class ItemService implements WorkflowRunListener {
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException(
                         "Project " + project.getKey() + " has no item type " + request.getType()));
+        String versionId = engine.latestVersion(tenantId, type.getWorkflowKey());
+        engine.describe(versionId);
         int number = project.getNextItemNumber();
         project.setNextItemNumber(number + 1);
 
@@ -93,13 +96,16 @@ public class ItemService implements WorkflowRunListener {
                 .assignee(request.getAssignee())
                 .reporter(actor)
                 .fields(validFields(type.getWorkflowKey(), request.getFields()))
-                .workflowVersionId(engine.latestVersion(tenantId, type.getWorkflowKey()))
+                .workflowVersionId(versionId)
                 .build());
         withCause(new Cause(actor, null, "CREATED"),
                 () -> item.setRunId(engine.start(tenantId, item.getWorkflowVersionId(), item.getId()).runId()));
 
-        auditService.record("item.created", "ITEM", item.getKey(), actor,
-                Map.of("title", item.getTitle(), "type", type.getName(), "status", item.getStatusName()));
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("title", item.getTitle());
+        details.put("type", type.getName());
+        details.put("status", item.getStatusName());
+        auditService.record("item.created", "ITEM", item.getKey(), actor, details);
         notifyAssignee(item, actor);
         return toDto(item, true);
     }
@@ -133,21 +139,21 @@ public class ItemService implements WorkflowRunListener {
         List<Map<String, Object>> diff = new ArrayList<>();
         String previousAssignee = item.getAssignee();
         if (changes.containsKey("title")) {
-            String title = (String) changes.get("title");
+            String title = text(changes, "title", MAX_TEXT_LENGTH);
             if (title == null || title.isBlank()) {
                 throw new BadRequestException("Title is required");
             }
             apply(diff, "title", item.getTitle(), title, item::setTitle);
         }
         if (changes.containsKey("description")) {
-            apply(diff, "description", item.getDescription(), (String) changes.get("description"),
+            apply(diff, "description", item.getDescription(), text(changes, "description", Integer.MAX_VALUE),
                     item::setDescription);
         }
         if (changes.containsKey("priority")) {
             apply(diff, "priority", item.getPriority(), parsePriority(changes.get("priority")), item::setPriority);
         }
         if (changes.containsKey("assignee")) {
-            apply(diff, "assignee", item.getAssignee(), (String) changes.get("assignee"), item::setAssignee);
+            apply(diff, "assignee", item.getAssignee(), text(changes, "assignee", MAX_TEXT_LENGTH), item::setAssignee);
         }
         if (changes.get(FIELDS) instanceof Map<?, ?> fieldChanges) {
             Map<String, Object> merged = new LinkedHashMap<>(item.getFields());
@@ -292,6 +298,17 @@ public class ItemService implements WorkflowRunListener {
         if (definition.getValidationRegex() != null && !value.toString().matches(definition.getValidationRegex())) {
             throw new BadRequestException("Field '" + field + "' failed validation");
         }
+    }
+
+    private static String text(Map<String, Object> changes, String field, int maxLength) {
+        Object value = changes.get(field);
+        if (value != null && !(value instanceof String)) {
+            throw new BadRequestException("Field '" + field + "' must be text");
+        }
+        if (value != null && ((String) value).length() > maxLength) {
+            throw new BadRequestException("Field '" + field + "' is longer than " + maxLength + " characters");
+        }
+        return (String) value;
     }
 
     private static Priority parsePriority(Object value) {

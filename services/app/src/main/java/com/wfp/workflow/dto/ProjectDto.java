@@ -3,6 +3,7 @@ package com.wfp.workflow.dto;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ProjectDto {
     @NotBlank private String key;
-    @NotBlank private String name;
+    @NotBlank @Size(max = 255) private String name;
     @NotEmpty private List<@Valid ItemTypeDto> itemTypes;
 
     @Data
@@ -24,7 +25,7 @@ public class ProjectDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ItemTypeDto {
-        @NotBlank private String name;
-        @NotBlank private String workflowKey;
+        @NotBlank @Size(max = 100) private String name;
+        @NotBlank @Size(max = 255) private String workflowKey;
     }
 }
