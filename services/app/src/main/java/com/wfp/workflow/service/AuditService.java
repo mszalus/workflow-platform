@@ -42,7 +42,21 @@ public class AuditService {
                 .userId(event.getUserId())
                 .tenantId(event.getTenantId())
                 .timestamp(event.getTimestamp())
-                .details(serializeEvent(event))
+                .details(serialize(event))
+                .sourceService("app")
+                .build());
+    }
+
+    public void record(String eventType, String entityType, String entityId, String userId,
+                       Map<String, Object> details) {
+        auditEntryRepository.save(AuditEntry.builder()
+                .eventType(eventType)
+                .entityType(entityType)
+                .entityId(entityId)
+                .userId(userId)
+                .tenantId(TenantContext.requireCurrentTenantId())
+                .timestamp(Instant.now())
+                .details(serialize(details))
                 .sourceService("app")
                 .build());
     }
@@ -111,9 +125,9 @@ public class AuditService {
         };
     }
 
-    private String serializeEvent(BaseEvent event) {
+    private String serialize(Object details) {
         try {
-            return objectMapper.writeValueAsString(event);
+            return objectMapper.writeValueAsString(details);
         } catch (Exception e) {
             log.error("Failed to serialize audit event", e);
             return "{}";
