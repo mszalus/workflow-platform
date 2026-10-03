@@ -2,12 +2,16 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import { BpmnPropertiesPanelModule, BpmnPropertiesProviderModule } from 'bpmn-js-properties-panel';
 import flowableModdle from './flowable.json';
+import wfpModdle from './wfp.json';
 import FlowablePropertiesProviderModule from './FlowablePropertiesProvider';
+import TrackerPaletteModule from './trackerPalette';
+import { showViolations, type Violation } from './violations';
 
 import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
 import '@bpmn-io/properties-panel/assets/properties-panel.css';
+import './violations.css';
 
 const DEFAULT_DIAGRAM = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -33,12 +37,23 @@ export interface BpmnEditorProps {
   onError?: (error: Error) => void;
   readOnly?: boolean;
   height?: string | number;
+  violations?: Violation[];
+  selectElementId?: string;
 }
 
-export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height = '100%' }: BpmnEditorProps) {
+export function BpmnEditor({
+  xml,
+  onXmlChange,
+  onError,
+  readOnly = false,
+  height = '100%',
+  violations = [],
+  selectElementId,
+}: BpmnEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const propertiesPanelRef = useRef<HTMLDivElement>(null);
   const modelerRef = useRef<BpmnModeler | null>(null);
+  const markedElementIds = useRef<string[]>([]);
 
   useEffect(() => {
     if (!containerRef.current || !propertiesPanelRef.current) return;
@@ -48,9 +63,15 @@ export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height
       propertiesPanel: {
         parent: propertiesPanelRef.current,
       },
-      additionalModules: [BpmnPropertiesPanelModule, BpmnPropertiesProviderModule, FlowablePropertiesProviderModule],
+      additionalModules: [
+        BpmnPropertiesPanelModule,
+        BpmnPropertiesProviderModule,
+        FlowablePropertiesProviderModule,
+        TrackerPaletteModule,
+      ],
       moddleExtensions: {
         flowable: flowableModdle,
+        wfp: wfpModdle,
       },
     });
 
@@ -97,6 +118,26 @@ export function BpmnEditor({ xml, onXmlChange, onError, readOnly = false, height
       importXml(xml);
     }
   }, [xml, importXml]);
+
+  useEffect(() => {
+    const modeler = modelerRef.current;
+    if (!modeler) return;
+    markedElementIds.current = showViolations(
+      modeler.get('canvas'),
+      modeler.get('overlays'),
+      modeler.get('elementRegistry'),
+      violations,
+      markedElementIds.current,
+    );
+  }, [violations]);
+
+  useEffect(() => {
+    const modeler = modelerRef.current;
+    const element = selectElementId && modeler?.get('elementRegistry').get(selectElementId);
+    if (!modeler || !element) return;
+    modeler.get('selection').select(element);
+    modeler.get('canvas').scrollToElement(element);
+  }, [selectElementId]);
 
   return (
     <div style={{ display: 'flex', height: typeof height === 'number' ? `${height}px` : height, width: '100%' }}>
