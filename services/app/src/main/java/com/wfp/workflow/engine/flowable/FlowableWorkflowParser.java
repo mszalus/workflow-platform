@@ -41,6 +41,7 @@ public class FlowableWorkflowParser {
 
     public static final String TRACKER_NAMESPACE = "http://wfp.com/schema/tracker";
     private static final String STATUS_CATEGORY = "statusCategory";
+    private static final String MULTI_INSTANCE_USER_TASK = "multi-instance userTask";
 
     public WorkflowGraph parse(String bpmnXml) {
         Map<String, String> statusCategories = readStatusCategories(bpmnXml);
@@ -119,6 +120,7 @@ public class FlowableWorkflowParser {
             case BoundaryEvent boundary when hasTimer(boundary) && !boundary.isCancelActivity() ->
                     "non-interrupting boundary timer";
             case EventSubProcess eventSubProcess -> "eventSubProcess without an interrupting message start";
+            case UserTask userTask when userTask.getLoopCharacteristics() != null -> MULTI_INSTANCE_USER_TASK;
             default -> {
                 String className = element.getClass().getSimpleName();
                 yield Character.toLowerCase(className.charAt(0)) + className.substring(1);

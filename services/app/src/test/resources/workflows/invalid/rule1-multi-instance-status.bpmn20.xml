@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/samples">
+  <process id="multiInstanceStatus" name="Multi-instance status" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="review" name="Review" wfp:statusCategory="OPEN">
+      <multiInstanceLoopCharacteristics isSequential="false">
+        <loopCardinality>3</loopCardinality>
+      </multiInstanceLoopCharacteristics>
+    </userTask>
+    <subProcess id="approval" name="In Approval" wfp:statusCategory="IN_PROGRESS">
+      <startEvent id="approvalStart"/>
+      <userTask id="approve" name="Approve">
+        <multiInstanceLoopCharacteristics isSequential="false">
+          <loopCardinality>2</loopCardinality>
+        </multiInstanceLoopCharacteristics>
+      </userTask>
+      <endEvent id="approvalEnd"/>
+      <sequenceFlow id="toApprove" sourceRef="approvalStart" targetRef="approve"/>
+      <sequenceFlow id="approved" sourceRef="approve" targetRef="approvalEnd"/>
+    </subProcess>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <endEvent id="closed" name="Closed"/>
+    <sequenceFlow id="toReview" sourceRef="start" targetRef="review"/>
+    <sequenceFlow id="submit" name="Submit" sourceRef="review" targetRef="approval"/>
+    <sequenceFlow id="finish" name="Finish" sourceRef="approval" targetRef="done"/>
+    <sequenceFlow id="close" name="Close" sourceRef="done" targetRef="closed"/>
+  </process>
+</definitions>
