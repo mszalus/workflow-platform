@@ -3,13 +3,16 @@ package com.wfp.workflow.engine.flowable;
 import com.wfp.common.exception.BadRequestException;
 import com.wfp.common.exception.NotFoundException;
 import com.wfp.workflow.engine.Status;
+import com.wfp.workflow.engine.TrackerProfileValidator;
 import com.wfp.workflow.engine.Transition;
+import com.wfp.workflow.engine.Violation;
 import com.wfp.workflow.engine.WorkflowDescriber;
 import com.wfp.workflow.engine.WorkflowDescriptor;
 import com.wfp.workflow.engine.WorkflowEngine;
 import com.wfp.workflow.engine.WorkflowGraph;
 import com.wfp.workflow.engine.WorkflowRun;
 import lombok.RequiredArgsConstructor;
+import org.flowable.common.engine.api.FlowableException;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.repository.ProcessDefinition;
@@ -40,8 +43,18 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
     private final org.flowable.engine.TaskService taskService;
     private final FlowableWorkflowParser parser = new FlowableWorkflowParser();
     private final WorkflowDescriber describer = new WorkflowDescriber();
+    private final TrackerProfileValidator validator = new TrackerProfileValidator();
     private final Map<String, WorkflowGraph> graphs = new ConcurrentHashMap<>();
     private final Map<String, WorkflowDescriptor> descriptors = new ConcurrentHashMap<>();
+
+    @Override
+    public List<Violation> validate(String bpmnXml) {
+        try {
+            return validator.validate(parser.parse(bpmnXml));
+        } catch (IllegalArgumentException | FlowableException e) {
+            return List.of(new Violation(null, 0, e.getMessage()));
+        }
+    }
 
     @Override
     public String latestVersion(String tenantId, String workflowKey) {

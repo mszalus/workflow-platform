@@ -5,6 +5,7 @@ import com.wfp.workflow.engine.Node;
 import com.wfp.workflow.engine.NodeType;
 import com.wfp.workflow.engine.WorkflowGraph;
 import org.flowable.bpmn.converter.BpmnXMLConverter;
+import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
@@ -40,7 +41,7 @@ import java.util.Map;
 public class FlowableWorkflowParser {
 
     public static final String TRACKER_NAMESPACE = "http://wfp.com/schema/tracker";
-    private static final String STATUS_CATEGORY = "statusCategory";
+    static final String STATUS_CATEGORY = "statusCategory";
 
     public WorkflowGraph parse(String bpmnXml) {
         Map<String, String> statusCategories = readStatusCategories(bpmnXml);
@@ -76,8 +77,9 @@ public class FlowableWorkflowParser {
                 ? List.copyOf(userTask.getCandidateGroups())
                 : List.of();
         String attachedToId = element instanceof BoundaryEvent boundary ? boundary.getAttachedToRefId() : null;
+        boolean multiInstance = element instanceof Activity activity && activity.getLoopCharacteristics() != null;
         return new Node(element.getId(), element.getName(), nodeType(element), elementType(element), statusCategory,
-                parentId, attachedToId, candidateGroups);
+                parentId, attachedToId, candidateGroups, multiInstance);
     }
 
     private NodeType nodeType(FlowElement element) {

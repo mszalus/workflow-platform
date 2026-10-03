@@ -28,6 +28,9 @@ public class TrackerProfileValidator {
             } else if (node.type() == NodeType.PARALLEL_GATEWAY && !graph.insideStatusSubprocess(node)) {
                 violations.add(new Violation(node.id(), 1,
                         "A parallel gateway is only allowed inside a status subprocess"));
+            } else if (graph.isStatus(node) && node.multiInstance()) {
+                violations.add(new Violation(node.id(), 1,
+                        "A status can't be multi-instance; put parallel work inside a status subprocess"));
             }
         }
     }

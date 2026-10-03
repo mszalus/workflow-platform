@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@wfp/shared-ui';
-import { BpmnEditor } from '@wfp/bpmn-editor';
+import { BpmnEditor, type Violation } from '@wfp/bpmn-editor';
+import type { AxiosError } from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 
 export default function ProcessDesigner() {
@@ -10,6 +11,10 @@ export default function ProcessDesigner() {
   const [name, setName] = useState('');
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [selectRequest, setSelectRequest] = useState<{ elementId: string }>();
+  const [validationError, setValidationError] = useState<string>();
+  const [deployError, setDeployError] = useState<string>();
 
   // Load existing BPMN XML when editing a process definition
   const { data: bpmnData } = useQuery({
@@ -24,9 +29,38 @@ export default function ProcessDesigner() {
     }
   }, [bpmnData]);
 
+  useEffect(() => {
+    if (!xml) return;
+    let stale = false;
+    const timer = setTimeout(() => {
+      apiClient
+        .post<Violation[]>('/workflow/workflows/validate', { bpmnXml: xml })
+        .then((response) => {
+          if (stale) return;
+          setViolations(response.data);
+          setValidationError(undefined);
+        })
+        .catch((error: AxiosError) => {
+          if (!stale) setValidationError(error.message);
+        });
+    }, 500);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [xml]);
+
   const deployMutation = useMutation({
     mutationFn: (data: { name: string; bpmnXml: string }) => apiClient.post('/workflow/deployments', data),
+    onMutate: () => setDeployError(undefined),
     onSuccess: () => navigate('/processes'),
+    onError: (error: AxiosError<{ message?: string; details?: { violations?: Violation[] } }>) => {
+      const rejected = error.response?.data?.details?.violations;
+      if (rejected) {
+        setViolations(rejected);
+      }
+      setDeployError(error.response?.data?.message ?? error.message);
+    },
   });
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,7 +152,29 @@ export default function ProcessDesigner() {
         </div>
       </div>
       <div style={{ flex: 1 }}>
-        <BpmnEditor xml={xml} onXmlChange={setXml} />
+        <BpmnEditor xml={xml} onXmlChange={setXml} violations={violations} selectRequest={selectRequest} />
+      </div>
+      <div style={{ maxHeight: '25vh', overflowY: 'auto', borderTop: '1px solid #ccc', padding: '0.5rem 0' }}>
+        {deployError && <div style={{ color: '#d32f2f', marginBottom: '0.5rem' }}>Deploy failed: {deployError}</div>}
+        {validationError && (
+          <div style={{ color: '#d32f2f', marginBottom: '0.5rem' }}>
+            Couldn't check the workflow ({validationError}); the problems below may be out of date.
+          </div>
+        )}
+        <strong>Problems ({violations.length})</strong>
+        <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem' }}>
+          {violations.map((violation, index) => (
+            <li key={`${violation.elementId}-${violation.rule}-${index}`}>
+              <button
+                onClick={() => violation.elementId && setSelectRequest({ elementId: violation.elementId })}
+                style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+              >
+                {violation.message}{' '}
+                {violation.rule > 0 && <span style={{ color: '#777' }}>(rule {violation.rule})</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );
