@@ -156,7 +156,7 @@ the gateway after a status, so imported BPMN needs no conditions.
 `WorkflowEngine.validate` parses BPMN XML and applies `TrackerProfileValidator`; unreadable
 XML comes back as one violation with rule 0. The editor calls it live through
 `POST /api/workflow/workflows/validate`, and deploy calls it for every tracker workflow
-(XML with the `wfp` namespace), refusing one with violations as a 400 that lists them in
+(XML that sets a `wfp:statusCategory`), refusing one with violations as a 400 that lists them in
 `details.violations`. Deploy also sets `isExecutable="true"` on every process.
 
 The engine reports back through `WorkflowRunListener`: `FlowableRunEvents` listens for
