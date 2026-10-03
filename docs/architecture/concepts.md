@@ -126,7 +126,7 @@ itself:
 |---|---|
 | `/api/projects/**` | `ProjectController` |
 | `/api/items/**` | `ItemController` |
-| `/api/workflow/**` | `DeploymentController`, `ProcessController`, `TaskController`, `CommentController`, `HistoryController` |
+| `/api/workflow/**` | `DeploymentController`, `WorkflowController`, `ProcessController`, `TaskController`, `CommentController`, `HistoryController` |
 | `/api/fields/**` | `FieldSchemaController`, `FieldValueController` |
 | `/api/notifications/**` | `NotificationController` |
 | `/api/audit/**` | `AuditController` |
@@ -152,6 +152,12 @@ not found), then completes the current status's user task with the transient var
 `transition`, or, for an any-status transition, triggers the event subprocess's message.
 Deploying a tracker workflow adds `${transition == '<flowId>'}` to every flow that leaves
 the gateway after a status, so imported BPMN needs no conditions.
+
+`WorkflowEngine.validate` parses BPMN XML and applies `TrackerProfileValidator`; unreadable
+XML comes back as one violation with rule 0. The editor calls it live through
+`POST /api/workflow/workflows/validate`, and deploy calls it for every tracker workflow
+(XML with the `wfp` namespace), refusing one with violations as a 400 that lists them in
+`details.violations`. Deploy also sets `isExecutable="true"` on every process.
 
 The engine reports back through `WorkflowRunListener`: `FlowableRunEvents` listens for
 `ACTIVITY_STARTED` on runs that carry an `itemId` and calls `statusEntered` or `runEnded`,

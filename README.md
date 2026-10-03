@@ -132,7 +132,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | GET | `/api/items/{key}` | Get a work item with its available transitions |
 | PATCH | `/api/items/{key}` | Change fixed or custom fields |
 | POST | `/api/items/{key}/transitions` | Move a work item to another status |
-| POST | `/api/workflow/deployments` | Deploy a BPMN process |
+| POST | `/api/workflow/deployments` | Deploy a BPMN process (tracker workflows are validated first) |
+| POST | `/api/workflow/workflows/validate` | Check BPMN against the tracker profile: `[{elementId, rule, message}]` |
 | GET | `/api/workflow/deployments` | List deployments |
 | POST | `/api/workflow/processes` | Start a process instance |
 | GET | `/api/workflow/processes` | List process instances |

@@ -109,7 +109,7 @@ The chain is today's, minus the gateway:
 | C-2 | **Done (#81), before C-1d.** Remove the gateway; the portals' nginx proxies `/api` (R-5) | BDD and Playwright green through the new URLs; no gateway container |
 | 20.b | **Done (#37).** Flowable isolated in `engine.flowable` with an ArchUnit rule; the `WorkflowEngine` interface moves to 20.c, where items first call it (decided 2026-10-02), with the tenant check from #71 inside `transition` and `cancel` | Existing tests green; ArchUnit rule in place |
 | 20.c | **Done (#38).** Item model and API on the `WorkflowEngine` interface. History, notification and audit rows are written in the same transaction, with no events; field changes are kept in the `item.updated` audit row. Moving out of a status subprocess, `cancel()`, role checks and filters come later | Create, transition and close work through the API (integration test and BDD) |
-| 20.d | Editor guardrails | as in 20.6 |
+| 20.d | **Done (#39).** Editor guardrails: restricted palette and context pad, status-category dropdown, live validation through `POST /api/workflow/workflows/validate`; deploy validates tracker workflows | as in 20.6 |
 | 20.e | The new single app with the approved screens; delete `admin-portal` and `user-portal` (R-6, R-8 UI parts) | Playwright flow from 20.6 |
 | 20.f | Moving items to a new version. **Moved to Phase 2: Tracker follow-ups** (#41); until then, open items stay on their version | as in 20.6 |
 

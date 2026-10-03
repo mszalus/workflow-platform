@@ -58,10 +58,11 @@ The adapter parses the XML into an engine-neutral `WorkflowGraph` (nodes and flo
 6. A status has exactly one outgoing flow: to the exclusive gateway that holds its transitions, or straight to the next node. Two flows out of a task would be an implicit parallel split. (Added 2026-10-01, #36.)
 
 **Editor (`frontend/packages/bpmn-editor`):**
-- The palette and context pad offer only the profile's elements.
-- The properties panel adds a status-category dropdown on user tasks, requires a name on transition flows, and hides the generated condition.
-- Live validation: on change (debounced) the editor calls `POST /api/workflow/workflows/validate`, which returns `[{elementId, rule, message}]`. The editor shows markers and overlays on the offending elements.
-- Saving a draft with errors is allowed. Deploy runs the same validator and rejects the workflow on any error.
+- The palette offers the tools, start and end events, user task, service task, exclusive gateway and expanded subprocess. The context pad appends an end event, a gateway or a user task. Boundary timers and event subprocesses are made through the replace menu, which isn't restricted; anything off-profile made there is flagged live (20.d).
+- The properties panel adds a status-category dropdown on user tasks and subprocesses (not event subprocesses). Transition flows need a name through rule 4. There is no condition to hide: the base panel doesn't show conditions, and deploy writes them (20.1).
+- Live validation: on change (debounced) the editor calls `POST /api/workflow/workflows/validate`, which returns `[{elementId, rule, message}]`. Unreadable XML comes back as one violation with rule 0. The editor shows markers and overlays on the offending elements and lists the problems; clicking one selects its element.
+- Saving a draft with errors is allowed. Deploy runs the same validator on tracker workflows (XML with the `wfp` namespace) and rejects one with errors as a 400 whose `details.violations` lists them. Plain BPMN processes deploy unchecked until 20.e removes the old process API.
+- Rule 1 also rejects a multi-instance user task as a status; parallel work belongs in a status subprocess.
 
 ## 20.4 Moving open items to a new workflow version
 
