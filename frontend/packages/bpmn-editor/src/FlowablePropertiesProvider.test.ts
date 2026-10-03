@@ -14,8 +14,12 @@ vi.mock('@bpmn-io/properties-panel', () => ({
 }));
 
 function element(types: string[], businessObject: Record<string, unknown> = {}) {
-  return { businessObject: { ...businessObject, $instanceOf: (type: string) => types.includes(type) } };
+  return {
+    businessObject: { $type: types[0], ...businessObject, $instanceOf: (type: string) => types.includes(type) },
+  };
 }
+
+const statusSubprocess = { $type: 'bpmn:SubProcess', get: () => 'IN_PROGRESS' };
 
 function groupIds(target: ReturnType<typeof element>) {
   const propertiesPanel = { registerProvider: vi.fn() };
@@ -47,6 +51,14 @@ describe('FlowablePropertiesProvider', () => {
     expect(groupIds(element(['bpmn:SubProcess', 'bpmn:Activity'], { triggeredByEvent: true }))).toEqual([
       'flowable-async',
     ]);
+  });
+
+  it('offers no status category on steps inside a status subprocess, or on transactions', () => {
+    expect(groupIds(element(['bpmn:UserTask', 'bpmn:Activity'], { $parent: statusSubprocess }))).toEqual([
+      'flowable-user-task',
+      'flowable-async',
+    ]);
+    expect(groupIds(element(['bpmn:Transaction', 'bpmn:SubProcess', 'bpmn:Activity']))).toEqual(['flowable-async']);
   });
 
   it('gives a service task its Flowable properties and no status', () => {

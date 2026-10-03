@@ -18,8 +18,10 @@ export function showViolations(
   overlays.remove({ type: OVERLAY_TYPE });
 
   const messagesByElement = new Map<string, string[]>();
+  const root = canvas.getRootElement();
   violations
     .filter((violation) => violation.elementId && elementRegistry.get(violation.elementId))
+    .filter((violation) => elementRegistry.get(violation.elementId) !== root)
     .forEach((violation) => {
       const id = violation.elementId as string;
       messagesByElement.set(id, [...(messagesByElement.get(id) ?? []), violation.message]);

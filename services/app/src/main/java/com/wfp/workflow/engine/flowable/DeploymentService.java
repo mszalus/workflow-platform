@@ -4,9 +4,6 @@ import com.wfp.common.exception.NotFoundException;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.DeploymentDto;
 import com.wfp.workflow.dto.ProcessDefinitionDto;
-import com.wfp.workflow.engine.InvalidWorkflowException;
-import com.wfp.workflow.engine.Violation;
-import com.wfp.workflow.engine.WorkflowEngine;
 import lombok.RequiredArgsConstructor;
 import org.flowable.engine.RepositoryService;
 import org.flowable.engine.repository.Deployment;
@@ -22,17 +19,10 @@ import java.util.List;
 public class DeploymentService {
 
     private final RepositoryService repositoryService;
-    private final WorkflowEngine workflowEngine;
     private final DeploymentXml deploymentXml = new DeploymentXml();
 
     public DeploymentDto deploy(String name, String category, String bpmnXml) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        if (DeploymentXml.isTrackerWorkflow(bpmnXml)) {
-            List<Violation> violations = workflowEngine.validate(bpmnXml);
-            if (!violations.isEmpty()) {
-                throw new InvalidWorkflowException(violations);
-            }
-        }
         Deployment deployment = repositoryService.createDeployment()
                 .name(name)
                 .category(category)

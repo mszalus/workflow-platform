@@ -12,7 +12,8 @@ export default function ProcessDesigner() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [violations, setViolations] = useState<Violation[]>([]);
-  const [selectedElementId, setSelectedElementId] = useState<string>();
+  const [selectRequest, setSelectRequest] = useState<{ elementId: string }>();
+  const [validationError, setValidationError] = useState<string>();
   const [deployError, setDeployError] = useState<string>();
 
   // Load existing BPMN XML when editing a process definition
@@ -30,13 +31,23 @@ export default function ProcessDesigner() {
 
   useEffect(() => {
     if (!xml) return;
+    let stale = false;
     const timer = setTimeout(() => {
       apiClient
         .post<Violation[]>('/workflow/workflows/validate', { bpmnXml: xml })
-        .then((response) => setViolations(response.data))
-        .catch(() => setViolations([]));
+        .then((response) => {
+          if (stale) return;
+          setViolations(response.data);
+          setValidationError(undefined);
+        })
+        .catch((error: AxiosError) => {
+          if (!stale) setValidationError(error.message);
+        });
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
   }, [xml]);
 
   const deployMutation = useMutation({
@@ -141,16 +152,21 @@ export default function ProcessDesigner() {
         </div>
       </div>
       <div style={{ flex: 1 }}>
-        <BpmnEditor xml={xml} onXmlChange={setXml} violations={violations} selectElementId={selectedElementId} />
+        <BpmnEditor xml={xml} onXmlChange={setXml} violations={violations} selectRequest={selectRequest} />
       </div>
       <div style={{ maxHeight: '25vh', overflowY: 'auto', borderTop: '1px solid #ccc', padding: '0.5rem 0' }}>
         {deployError && <div style={{ color: '#d32f2f', marginBottom: '0.5rem' }}>Deploy failed: {deployError}</div>}
+        {validationError && (
+          <div style={{ color: '#d32f2f', marginBottom: '0.5rem' }}>
+            Couldn't check the workflow ({validationError}); the problems below may be out of date.
+          </div>
+        )}
         <strong>Problems ({violations.length})</strong>
         <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1.25rem' }}>
           {violations.map((violation, index) => (
             <li key={`${violation.elementId}-${violation.rule}-${index}`}>
               <button
-                onClick={() => violation.elementId && setSelectedElementId(violation.elementId)}
+                onClick={() => violation.elementId && setSelectRequest({ elementId: violation.elementId })}
                 style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
               >
                 {violation.message}{' '}

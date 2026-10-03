@@ -39,7 +39,7 @@ class TrackerProfileValidatorTest {
                 Arguments.of("rule1-non-interrupting-timer", List.of("reminder"), 1),
                 Arguments.of("rule1-non-interrupting-event-subprocess", List.of("note"), 1),
                 Arguments.of("rule1-timer-event-subprocess-with-task", List.of("nightly"), 1),
-                Arguments.of("rule1-multi-instance-status", List.of("review"), 1),
+                Arguments.of("rule1-multi-instance-status", List.of("review", "approval"), 1),
                 Arguments.of("rule2-two-start-events", List.of("startA", "startB"), 2),
                 Arguments.of("rule2-ambiguous-initial-status", List.of("start"), 2),
                 Arguments.of("rule3-missing-category", List.of("doing"), 3),

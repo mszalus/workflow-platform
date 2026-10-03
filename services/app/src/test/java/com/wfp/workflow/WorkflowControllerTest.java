@@ -87,7 +87,7 @@ class WorkflowControllerTest {
     void deployRefusesAnInvalidTrackerWorkflowWithItsViolations() throws Exception {
         deploy(Samples.xml("invalid/rule1-multi-instance-status"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.details.violations[*].elementId", containsInAnyOrder("review")))
+                .andExpect(jsonPath("$.details.violations[*].elementId", containsInAnyOrder("review", "approval")))
                 .andExpect(jsonPath("$.details.violations[0].rule").value(1));
 
         assertThat(repositoryService.createDeploymentQuery().deploymentTenantId(tenant).count()).isZero();

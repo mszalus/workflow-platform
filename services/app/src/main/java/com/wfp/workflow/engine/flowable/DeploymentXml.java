@@ -2,8 +2,11 @@ package com.wfp.workflow.engine.flowable;
 
 import com.wfp.common.exception.BadRequestException;
 import com.wfp.workflow.engine.Flow;
+import com.wfp.workflow.engine.InvalidWorkflowException;
 import com.wfp.workflow.engine.Node;
 import com.wfp.workflow.engine.NodeType;
+import com.wfp.workflow.engine.TrackerProfileValidator;
+import com.wfp.workflow.engine.Violation;
 import com.wfp.workflow.engine.WorkflowGraph;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -21,16 +24,14 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 class DeploymentXml {
 
     private final FlowableWorkflowParser parser = new FlowableWorkflowParser();
-
-    static boolean isTrackerWorkflow(String bpmnXml) {
-        return bpmnXml.contains(FlowableWorkflowParser.TRACKER_NAMESPACE);
-    }
+    private final TrackerProfileValidator validator = new TrackerProfileValidator();
 
     String prepare(String bpmnXml) {
         Document document = parse(bpmnXml);
@@ -38,10 +39,26 @@ class DeploymentXml {
         for (int i = 0; i < processes.getLength(); i++) {
             ((Element) processes.item(i)).setAttribute("isExecutable", "true");
         }
-        if (isTrackerWorkflow(bpmnXml)) {
-            setTransitionConditions(document, transitionFlowIds(parser.parse(bpmnXml)));
+        if (usesStatusCategories(document)) {
+            WorkflowGraph graph = parser.parse(bpmnXml);
+            List<Violation> violations = validator.validate(graph);
+            if (!violations.isEmpty()) {
+                throw new InvalidWorkflowException(violations);
+            }
+            setTransitionConditions(document, transitionFlowIds(graph));
         }
         return serialize(document);
+    }
+
+    private static boolean usesStatusCategories(Document document) {
+        NodeList elements = document.getElementsByTagNameNS("*", "*");
+        for (int i = 0; i < elements.getLength(); i++) {
+            if (((Element) elements.item(i)).hasAttributeNS(FlowableWorkflowParser.TRACKER_NAMESPACE,
+                    FlowableWorkflowParser.STATUS_CATEGORY)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void setTransitionConditions(Document document, Set<String> transitionFlowIds) {

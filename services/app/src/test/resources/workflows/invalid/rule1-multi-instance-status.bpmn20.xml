@@ -10,6 +10,9 @@
       </multiInstanceLoopCharacteristics>
     </userTask>
     <subProcess id="approval" name="In Approval" wfp:statusCategory="IN_PROGRESS">
+      <multiInstanceLoopCharacteristics isSequential="true">
+        <loopCardinality>2</loopCardinality>
+      </multiInstanceLoopCharacteristics>
       <startEvent id="approvalStart"/>
       <userTask id="approve" name="Approve">
         <multiInstanceLoopCharacteristics isSequential="false">

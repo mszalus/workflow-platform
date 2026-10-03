@@ -10,5 +10,6 @@ public record Node(
         String statusCategory,
         String parentId,
         String attachedToId,
-        List<String> candidateGroups) {
+        List<String> candidateGroups,
+        boolean multiInstance) {
 }

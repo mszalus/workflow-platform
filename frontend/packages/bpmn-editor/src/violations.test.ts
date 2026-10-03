@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { INVALID_MARKER, showViolations } from './violations';
 
 function fakeModeler(existingIds: string[]) {
+  const elements = new Map(['Process_1', ...existingIds].map((id) => [id, { id }]));
   return {
-    canvas: { addMarker: vi.fn(), removeMarker: vi.fn() },
+    canvas: { addMarker: vi.fn(), removeMarker: vi.fn(), getRootElement: () => elements.get('Process_1') },
     overlays: { add: vi.fn(), remove: vi.fn() },
-    elementRegistry: { get: (id: string) => (existingIds.includes(id) ? { id } : undefined) },
+    elementRegistry: { get: (id: string) => elements.get(id) },
   };
 }
 
@@ -30,6 +31,21 @@ describe('showViolations', () => {
     expect(canvas.addMarker).toHaveBeenCalledWith('open', INVALID_MARKER);
     const badge = overlays.add.mock.calls.find(([id]) => id === 'open')?.[2].html as HTMLElement;
     expect(badge.title).toBe('Status Open needs a wfp:statusCategory\nA status has exactly one outgoing flow');
+  });
+
+  it('never marks the process itself, which would outline the whole diagram', () => {
+    const { canvas, overlays, elementRegistry } = fakeModeler([]);
+
+    const marked = showViolations(
+      canvas,
+      overlays,
+      elementRegistry,
+      [{ elementId: 'Process_1', rule: 3, message: 'At least one status needs the category DONE' }],
+      [],
+    );
+
+    expect(marked).toEqual([]);
+    expect(canvas.addMarker).not.toHaveBeenCalled();
   });
 
   it('skips violations without an element or for elements no longer on the canvas', () => {

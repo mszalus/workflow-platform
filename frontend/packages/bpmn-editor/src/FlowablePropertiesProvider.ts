@@ -46,7 +46,18 @@ FlowablePropertiesProvider.$inject = ['propertiesPanel'];
 // --- Status Group ---
 
 function canBeStatus(element: any) {
-  return is(element, 'bpmn:UserTask') || (is(element, 'bpmn:SubProcess') && !element.businessObject.triggeredByEvent);
+  const bo = element.businessObject;
+  const isStatusShape = is(element, 'bpmn:UserTask') || (bo.$type === 'bpmn:SubProcess' && !bo.triggeredByEvent);
+  return isStatusShape && !insideStatusSubprocess(bo);
+}
+
+function insideStatusSubprocess(bo: any) {
+  for (let parent = bo.$parent; parent; parent = parent.$parent) {
+    if (parent.$type === 'bpmn:SubProcess' && parent.get?.('wfp:statusCategory')) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function statusGroup(element: any) {

@@ -38,7 +38,7 @@ export interface BpmnEditorProps {
   readOnly?: boolean;
   height?: string | number;
   violations?: Violation[];
-  selectElementId?: string;
+  selectRequest?: { elementId: string };
 }
 
 export function BpmnEditor({
@@ -48,7 +48,7 @@ export function BpmnEditor({
   readOnly = false,
   height = '100%',
   violations = [],
-  selectElementId,
+  selectRequest,
 }: BpmnEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const propertiesPanelRef = useRef<HTMLDivElement>(null);
@@ -133,11 +133,11 @@ export function BpmnEditor({
 
   useEffect(() => {
     const modeler = modelerRef.current;
-    const element = selectElementId && modeler?.get('elementRegistry').get(selectElementId);
+    const element = selectRequest && modeler?.get('elementRegistry').get(selectRequest.elementId);
     if (!modeler || !element) return;
     modeler.get('selection').select(element);
     modeler.get('canvas').scrollToElement(element);
-  }, [selectElementId]);
+  }, [selectRequest]);
 
   return (
     <div style={{ display: 'flex', height: typeof height === 'number' ? `${height}px` : height, width: '100%' }}>

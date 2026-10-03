@@ -5,6 +5,7 @@ import com.wfp.workflow.engine.Node;
 import com.wfp.workflow.engine.NodeType;
 import com.wfp.workflow.engine.WorkflowGraph;
 import org.flowable.bpmn.converter.BpmnXMLConverter;
+import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.EndEvent;
@@ -40,8 +41,7 @@ import java.util.Map;
 public class FlowableWorkflowParser {
 
     public static final String TRACKER_NAMESPACE = "http://wfp.com/schema/tracker";
-    private static final String STATUS_CATEGORY = "statusCategory";
-    private static final String MULTI_INSTANCE_USER_TASK = "multi-instance userTask";
+    static final String STATUS_CATEGORY = "statusCategory";
 
     public WorkflowGraph parse(String bpmnXml) {
         Map<String, String> statusCategories = readStatusCategories(bpmnXml);
@@ -77,8 +77,9 @@ public class FlowableWorkflowParser {
                 ? List.copyOf(userTask.getCandidateGroups())
                 : List.of();
         String attachedToId = element instanceof BoundaryEvent boundary ? boundary.getAttachedToRefId() : null;
+        boolean multiInstance = element instanceof Activity activity && activity.getLoopCharacteristics() != null;
         return new Node(element.getId(), element.getName(), nodeType(element), elementType(element), statusCategory,
-                parentId, attachedToId, candidateGroups);
+                parentId, attachedToId, candidateGroups, multiInstance);
     }
 
     private NodeType nodeType(FlowElement element) {
@@ -120,7 +121,6 @@ public class FlowableWorkflowParser {
             case BoundaryEvent boundary when hasTimer(boundary) && !boundary.isCancelActivity() ->
                     "non-interrupting boundary timer";
             case EventSubProcess eventSubProcess -> "eventSubProcess without an interrupting message start";
-            case UserTask userTask when userTask.getLoopCharacteristics() != null -> MULTI_INSTANCE_USER_TASK;
             default -> {
                 String className = element.getClass().getSimpleName();
                 yield Character.toLowerCase(className.charAt(0)) + className.substring(1);
