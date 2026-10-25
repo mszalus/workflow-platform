@@ -42,11 +42,12 @@ public class ItemController {
     public PagedResponse<ItemDto> list(@RequestParam(required = false) String project,
                                        @RequestParam(required = false) String assignee,
                                        @RequestParam(name = "filter", required = false) List<String> filters,
+                                       @RequestParam(required = false) String sort,
                                        @RequestParam(defaultValue = "0") int page,
                                        @RequestParam(defaultValue = "25") int size,
                                        @AuthenticationPrincipal Jwt jwt) {
         List<ItemFilter> parsed = filters == null ? List.of() : filters.stream().map(ItemFilter::parse).toList();
-        return itemService.list(project, assignee, parsed, username(jwt), page, size);
+        return itemService.list(project, assignee, parsed, username(jwt), sort, page, size);
     }
 
     @GetMapping("/{key}")

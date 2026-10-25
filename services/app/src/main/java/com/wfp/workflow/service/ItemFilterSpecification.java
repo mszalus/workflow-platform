@@ -39,9 +39,17 @@ final class ItemFilterSpecification {
     }
 
     static Specification<Item> of(ItemFilter filter, String currentUser) {
-        return (root, query, cb) -> filter.isCustomField()
-                ? customFieldPredicate(filter, root, cb)
-                : fixedFieldPredicate(filter, root, cb, currentUser);
+        if (filter.isCustomField()) {
+            return (root, query, cb) -> customFieldPredicate(filter, root, cb);
+        }
+        Function<Root<Item>, Path<?>> path = FIXED_FIELDS.get(filter.field());
+        if (path == null) {
+            throw new BadRequestException("Unknown filter field '" + filter.field() + "'");
+        }
+        List<Object> values = filter.values().stream()
+                .map(value -> typed(filter.field(), value, currentUser))
+                .toList();
+        return (root, query, cb) -> fixedFieldPredicate(filter.operator(), path.apply(root), values, cb);
     }
 
     private static Predicate customFieldPredicate(ItemFilter filter, Root<Item> root, CriteriaBuilder cb) {
@@ -56,17 +64,9 @@ final class ItemFilterSpecification {
         };
     }
 
-    private static Predicate fixedFieldPredicate(ItemFilter filter, Root<Item> root, CriteriaBuilder cb,
-                                                 String currentUser) {
-        Function<Root<Item>, Path<?>> path = FIXED_FIELDS.get(filter.field());
-        if (path == null) {
-            throw new BadRequestException("Unknown filter field '" + filter.field() + "'");
-        }
-        Path<?> attribute = path.apply(root);
-        List<Object> values = filter.values().stream()
-                .map(value -> typed(filter.field(), value, currentUser))
-                .toList();
-        return switch (filter.operator()) {
+    private static Predicate fixedFieldPredicate(ItemFilter.Operator operator, Path<?> attribute,
+                                                 List<Object> values, CriteriaBuilder cb) {
+        return switch (operator) {
             case EQ -> cb.equal(attribute, values.getFirst());
             case NE -> cb.or(cb.notEqual(attribute, values.getFirst()), attribute.isNull());
             case IN -> attribute.in(values);
