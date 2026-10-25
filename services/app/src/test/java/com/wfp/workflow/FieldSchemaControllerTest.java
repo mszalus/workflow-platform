@@ -50,7 +50,7 @@ class FieldSchemaControllerTest {
 
         mockMvc.perform(post("/api/fields/schemas")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-test")))
+                                .claim("tenant_id", "tenant-test")).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-test")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -63,7 +63,7 @@ class FieldSchemaControllerTest {
     void shouldListSchemasByProcessDefinition() throws Exception {
         mockMvc.perform(get("/api/fields/schemas")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-test")))
+                                .claim("tenant_id", "tenant-test")).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-test")
                         .param("processDefinitionKey", "testProcess"))
                 .andExpect(status().isOk());

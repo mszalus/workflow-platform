@@ -62,7 +62,7 @@ class DeploymentControllerTest {
 
         mockMvc.perform(post("/api/workflow/deployments")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-test")))
+                                .claim("tenant_id", "tenant-test")).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-test")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -79,14 +79,14 @@ class DeploymentControllerTest {
 
         mockMvc.perform(post("/api/workflow/deployments")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-list")))
+                                .claim("tenant_id", "tenant-list")).authorities(TestRoles.ADMIN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(get("/api/workflow/deployments")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-list"))))
+                                .claim("tenant_id", "tenant-list")).authorities(TestRoles.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").exists())

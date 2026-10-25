@@ -120,7 +120,7 @@ class WorkflowControllerTest {
 
     private ResultActions send(String path, Map<String, String> body) throws Exception {
         return mockMvc.perform(post(path)
-                .with(jwt().jwt(token -> token.claim("preferred_username", "admin").claim("tenant_id", tenant)))
+                .with(jwt().jwt(token -> token.claim("preferred_username", "admin").claim("tenant_id", tenant)).authorities(TestRoles.ADMIN))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)));
     }
