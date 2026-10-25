@@ -51,6 +51,10 @@ class ItemControllerTest {
         {"project":"PROJ","type":"Task","title":"Fix login","assignee":"bob","fields":{"severity":"High"}}
         """;
 
+    private static final String APPROVAL_ITEM = """
+        {"project":"PROJ","type":"Request","title":"New supplier","assignee":"bob"}
+        """;
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -82,7 +86,10 @@ class ItemControllerTest {
 
     @BeforeEach
     void createProject() throws Exception {
-        TenantContext.runAs(tenant, () -> deploymentService.deploy("simple", null, Samples.xml("valid/simple")));
+        TenantContext.runAs(tenant, () -> {
+            deploymentService.deploy("simple", null, Samples.xml("valid/simple"));
+            deploymentService.deploy("approval", null, Samples.xml("valid/approval-subprocess"));
+        });
         FieldSchema severity = FieldSchema.builder().tenantId(tenant).processDefinitionKey("simple")
                 .fieldKey("severity").label("Severity").fieldType(FieldType.DROPDOWN).required(true).build();
         severity.getOptions().add(FieldOption.builder().fieldSchema(severity).label("High").value("High").build());
@@ -90,7 +97,8 @@ class ItemControllerTest {
         fieldSchemaRepository.save(severity);
 
         perform(post("/api/projects"), "admin", """
-                {"key":"PROJ","name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
+                {"key":"PROJ","name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"},
+                                                             {"name":"Request","workflowKey":"approval"}]}
                 """).andExpect(status().isCreated());
     }
 
@@ -141,6 +149,46 @@ class ItemControllerTest {
         assertThat(notificationTitles("bob")).containsExactlyInAnyOrder("PROJ-1 assigned to you",
                 "PROJ-1 moved to Doing", "PROJ-1 moved to Done", "PROJ-1 moved to Closed");
         assertThat(notificationTitles("alice")).isEmpty();
+    }
+
+    @Test
+    void movesAnItemThroughAStatusSubprocessByCompletingItsSteps() throws Exception {
+        perform(post("/api/items"), "alice", APPROVAL_ITEM).andExpect(status().isCreated());
+        transition("submit")
+                .andExpect(jsonPath("$.statusName").value("In Approval"))
+                .andExpect(jsonPath("$.transitions").isEmpty())
+                .andExpect(jsonPath("$.openSteps.length()").value(2))
+                .andExpect(jsonPath("$.openSteps[0].id").value("legal"))
+                .andExpect(jsonPath("$.openSteps[0].name").value("Legal approval"))
+                .andExpect(jsonPath("$.openSteps[1].id").value("finance"));
+
+        completeStep("legal")
+                .andExpect(jsonPath("$.statusName").value("In Approval"))
+                .andExpect(jsonPath("$.openSteps.length()").value(1))
+                .andExpect(jsonPath("$.openSteps[0].id").value("finance"));
+        completeStep("finance")
+                .andExpect(jsonPath("$.statusName").value("Approved"))
+                .andExpect(jsonPath("$.openSteps").isEmpty());
+
+        assertThat(asTenant(() -> transitionRepository.findByItemIdOrderByTransitionedAtAsc(itemId("PROJ-1"))))
+                .extracting(ItemTransition::getFromStatus, ItemTransition::getToStatus, ItemTransition::getTransitionId)
+                .containsExactly(
+                        tuple(null, "draft", null),
+                        tuple("draft", "inApproval", "submit"),
+                        tuple("inApproval", "approved", null));
+        assertThat(auditEvents("PROJ-1")).containsExactly("item.created", "item.transitioned",
+                "item.step.completed", "item.transitioned", "item.step.completed");
+    }
+
+    @Test
+    void refusesToLeaveAStatusSubprocessByTransitionOrToRepeatAStep() throws Exception {
+        perform(post("/api/items"), "alice", APPROVAL_ITEM).andExpect(status().isCreated());
+        transition("submit").andExpect(status().isOk());
+
+        transition("complete").andExpect(status().isBadRequest());
+        completeStep("draft").andExpect(status().isBadRequest());
+        completeStep("legal").andExpect(status().isOk());
+        completeStep("legal").andExpect(status().isBadRequest());
     }
 
     @Test
@@ -256,6 +304,11 @@ class ItemControllerTest {
         return perform(post("/api/items/PROJ-1/transitions"), "alice",
                 "{\"transitionId\":\"" + transitionId + "\"}");
     }
+
+    private ResultActions completeStep(String stepId) throws Exception {
+        return perform(post("/api/items/PROJ-1/steps"), "alice", "{\"stepId\":\"" + stepId + "\"}");
+    }
+
 
     private UUID itemId(String key) {
         return asTenant(() -> itemRepository.findByKey(key)).orElseThrow().getId();

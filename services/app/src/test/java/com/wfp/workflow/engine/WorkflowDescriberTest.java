@@ -52,8 +52,25 @@ class WorkflowDescriberTest {
 
         assertThat(descriptor.statuses()).extracting(Status::id).containsExactly("draft", "inApproval", "approved");
         assertThat(status(descriptor, "inApproval").category()).isEqualTo(StatusCategory.IN_PROGRESS);
-        assertThat(transitions(descriptor, "inApproval"))
-                .containsExactly(new Transition("complete", "Complete", List.of("approved")));
+    }
+
+    @Test
+    void describesAStatusSubprocessByItsStepsAndOffersNoTransition() {
+        WorkflowDescriptor descriptor = describer.describe(graph("valid/approval-subprocess"));
+
+        assertThat(status(descriptor, "inApproval").steps())
+                .containsExactly(new Step("legal", "Legal approval", List.of()),
+                        new Step("finance", "Finance approval", List.of()));
+        assertThat(transitions(descriptor, "inApproval")).isEmpty();
+    }
+
+    @Test
+    void givesAPlainStatusNoSteps() {
+        WorkflowDescriptor descriptor = describer.describe(graph("valid/approval-subprocess"));
+
+        assertThat(status(descriptor, "draft").steps()).isEmpty();
+        assertThat(transitions(descriptor, "draft"))
+                .containsExactly(new Transition("submit", "Submit", List.of("inApproval")));
     }
 
     @Test

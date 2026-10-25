@@ -16,13 +16,28 @@ public class WorkflowDescriber {
         String initialStatusId = graph.statusesAndEndsReachedFrom(graph.topLevelStartEvents().getFirst().id())
                 .iterator().next();
         List<Status> statuses = graph.statuses().stream()
-                .map(status -> new Status(status.id(), status.name(), StatusCategory.valueOf(status.statusCategory()),
-                        status.candidateGroups(), transitionsFrom(graph, status)))
+                .map(status -> describeStatus(graph, status))
                 .toList();
         List<Transition> anyStatusTransitions = graph.topLevelEventSubprocessStartEvents().stream()
                 .map(start -> anyStatusTransition(graph, start))
                 .toList();
         return new WorkflowDescriptor(initialStatusId, statuses, anyStatusTransitions);
+    }
+
+    private Status describeStatus(WorkflowGraph graph, Node status) {
+        StatusCategory category = StatusCategory.valueOf(status.statusCategory());
+        if (status.type() == NodeType.SUBPROCESS) {
+            return new Status(status.id(), status.name(), category, status.candidateGroups(), List.of(),
+                    stepsOf(graph, status));
+        }
+        return new Status(status.id(), status.name(), category, status.candidateGroups(),
+                transitionsFrom(graph, status), List.of());
+    }
+
+    private List<Step> stepsOf(WorkflowGraph graph, Node statusSubprocess) {
+        return graph.stepsOf(statusSubprocess).stream()
+                .map(step -> new Step(step.id(), firstNonBlank(step.name(), step.id()), step.candidateGroups()))
+                .toList();
     }
 
     private List<Transition> transitionsFrom(WorkflowGraph graph, Node status) {

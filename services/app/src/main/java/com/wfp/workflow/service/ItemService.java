@@ -8,6 +8,7 @@ import com.wfp.workflow.dto.CreateItemRequest;
 import com.wfp.workflow.dto.ItemDto;
 import com.wfp.workflow.engine.Status;
 import com.wfp.workflow.engine.StatusCategory;
+import com.wfp.workflow.engine.Step;
 import com.wfp.workflow.engine.Transition;
 import com.wfp.workflow.engine.WorkflowDescriptor;
 import com.wfp.workflow.engine.WorkflowEngine;
@@ -185,6 +186,20 @@ public class ItemService implements WorkflowRunListener {
         return toDto(item, true);
     }
 
+    @Transactional
+    public ItemDto completeStep(String key, String stepId, String reason, String actor) {
+        Item item = requireItem(key);
+        if (WorkflowGraph.END.equals(item.getStatusKey())) {
+            throw new BadRequestException(item.getKey() + " is closed");
+        }
+        String statusName = item.getStatusName();
+        withCause(new Cause(actor, null, reason),
+                () -> engine.completeStep(item.getTenantId(), item.getRunId(), stepId));
+        auditService.record("item.step.completed", "ITEM", item.getKey(), actor,
+                Map.of("status", statusName, "step", stepId));
+        return toDto(item, true);
+    }
+
     @Override
     @Transactional
     public void statusEntered(String tenantId, UUID itemId, String statusId) {
@@ -335,7 +350,7 @@ public class ItemService implements WorkflowRunListener {
         return change;
     }
 
-    private ItemDto toDto(Item item, boolean withTransitions) {
+    private ItemDto toDto(Item item, boolean withWorkflow) {
         return ItemDto.builder()
                 .key(item.getKey())
                 .project(item.getProject().getKey())
@@ -351,8 +366,16 @@ public class ItemService implements WorkflowRunListener {
                 .fields(item.getFields())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
-                .transitions(withTransitions ? availableTransitions(item) : null)
+                .transitions(withWorkflow ? availableTransitions(item) : null)
+                .openSteps(withWorkflow ? openSteps(item) : null)
                 .build();
+    }
+
+    private List<Step> openSteps(Item item) {
+        if (WorkflowGraph.END.equals(item.getStatusKey())) {
+            return List.of();
+        }
+        return engine.openSteps(item.getTenantId(), item.getRunId());
     }
 
     private List<Transition> availableTransitions(Item item) {

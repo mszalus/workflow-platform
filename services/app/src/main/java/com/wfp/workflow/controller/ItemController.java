@@ -1,6 +1,7 @@
 package com.wfp.workflow.controller;
 
 import com.wfp.common.dto.PagedResponse;
+import com.wfp.workflow.dto.CompleteStepRequest;
 import com.wfp.workflow.dto.CreateItemRequest;
 import com.wfp.workflow.dto.ItemDto;
 import com.wfp.workflow.dto.TransitionItemRequest;
@@ -58,6 +59,12 @@ public class ItemController {
     public ItemDto transition(@PathVariable String key, @Valid @RequestBody TransitionItemRequest request,
                               @AuthenticationPrincipal Jwt jwt) {
         return itemService.transition(key, request.getTransitionId(), request.getReason(), username(jwt));
+    }
+
+    @PostMapping("/{key}/steps")
+    public ItemDto completeStep(@PathVariable String key, @Valid @RequestBody CompleteStepRequest request,
+                                @AuthenticationPrincipal Jwt jwt) {
+        return itemService.completeStep(key, request.getStepId(), request.getReason(), username(jwt));
     }
 
     private static String username(Jwt jwt) {

@@ -1,6 +1,7 @@
 package com.wfp.workflow.dto;
 
 import com.wfp.workflow.engine.StatusCategory;
+import com.wfp.workflow.engine.Step;
 import com.wfp.workflow.engine.Transition;
 import com.wfp.workflow.entity.Priority;
 import lombok.Builder;
@@ -28,4 +29,5 @@ public class ItemDto {
     private Instant createdAt;
     private Instant updatedAt;
     private List<Transition> transitions;
+    private List<Step> openSteps;
 }

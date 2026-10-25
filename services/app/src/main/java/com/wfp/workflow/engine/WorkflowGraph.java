@@ -35,14 +35,27 @@ public record WorkflowGraph(String processId, List<Node> nodes, List<Flow> flows
     }
 
     public boolean insideStatusSubprocess(Node node) {
+        return enclosingStatusSubprocess(node).isPresent();
+    }
+
+    public Optional<Node> enclosingStatusSubprocess(Node node) {
         Optional<Node> parent = parentOf(node);
         while (parent.isPresent()) {
             if (parent.get().type() == NodeType.SUBPROCESS && parent.get().statusCategory() != null) {
-                return true;
+                return parent;
             }
             parent = parentOf(parent.get());
         }
-        return false;
+        return Optional.empty();
+    }
+
+    public List<Node> stepsOf(Node statusSubprocess) {
+        return nodes.stream()
+                .filter(node -> node.type() == NodeType.USER_TASK)
+                .filter(node -> enclosingStatusSubprocess(node)
+                        .map(subprocess -> subprocess.id().equals(statusSubprocess.id()))
+                        .orElse(false))
+                .toList();
     }
 
     public List<Node> topLevelStartEvents() {

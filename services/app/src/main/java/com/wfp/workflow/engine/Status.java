@@ -7,5 +7,6 @@ public record Status(
         String name,
         StatusCategory category,
         List<String> candidateGroups,
-        List<Transition> transitions) {
+        List<Transition> transitions,
+        List<Step> steps) {
 }
