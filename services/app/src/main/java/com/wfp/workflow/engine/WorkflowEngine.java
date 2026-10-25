@@ -1,8 +1,11 @@
 package com.wfp.workflow.engine;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface WorkflowEngine {
+
+    List<Violation> validate(String bpmnXml);
 
     String latestVersion(String tenantId, String workflowKey);
 

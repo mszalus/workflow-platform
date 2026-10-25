@@ -1,0 +1,22 @@
+{
+  "name": "Work item tracker",
+  "uri": "http://wfp.com/schema/tracker",
+  "prefix": "wfp",
+  "xml": {
+    "tagAlias": "lowerCase"
+  },
+  "associations": [],
+  "types": [
+    {
+      "name": "StatusCategorized",
+      "extends": ["bpmn:UserTask", "bpmn:SubProcess"],
+      "properties": [
+        {
+          "name": "statusCategory",
+          "isAttr": true,
+          "type": "String"
+        }
+      ]
+    }
+  ]
+}
