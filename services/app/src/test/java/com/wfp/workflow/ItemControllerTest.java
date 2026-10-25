@@ -249,7 +249,7 @@ class ItemControllerTest {
         perform(get("/api/workflow/tasks"), "alice", null).andExpect(jsonPath("$.totalElements").value(0));
         perform(get("/api/workflow/processes"), "alice", null).andExpect(jsonPath("$.totalElements").value(0));
         perform(post("/api/workflow/tasks/{id}/complete", taskId), "alice", "{}").andExpect(status().isNotFound());
-        perform(delete("/api/workflow/processes/{id}", runId), "alice", null).andExpect(status().isNotFound());
+        perform(delete("/api/workflow/processes/{id}", runId), "admin", null).andExpect(status().isNotFound());
     }
 
     @Test
@@ -348,7 +348,8 @@ class ItemControllerTest {
 
     private ResultActions send(MockHttpServletRequestBuilder request, String tenantId, String user, String body)
             throws Exception {
-        request.with(jwt().jwt(token -> token.claim("preferred_username", user).claim("tenant_id", tenantId)));
+        request.with(jwt().jwt(token -> token.claim("preferred_username", user)
+                .claim("tenant_id", tenantId)).authorities("admin".equals(user) ? TestRoles.ADMIN : TestRoles.USER));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

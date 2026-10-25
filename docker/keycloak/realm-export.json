@@ -15,10 +15,6 @@
         "description": "Platform administrator"
       },
       {
-        "name": "manager",
-        "description": "Workflow manager"
-      },
-      {
         "name": "user",
         "description": "Regular user"
       }

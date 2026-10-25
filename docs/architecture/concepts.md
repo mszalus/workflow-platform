@@ -106,6 +106,19 @@ none of them holds a session.
 4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`; the
    tenant comes only from the JWT, never from a header — see Multi-Tenancy.
 
+### Roles
+
+Two realm roles, enforced in `SecurityConfig` (#72). `manager` was removed as unused (R-12).
+
+| Role | May do |
+|---|---|
+| `admin` | Tenant administration: create projects, deploy and delete workflows, validate a draft, create and delete field definitions, cancel a process, read the audit log |
+| `user` | Everything else: items, comments, notifications, tasks, field values |
+
+The gate is by **operation, not by resource**. Writes to tenant configuration need `admin`, while the reads the tracker screens depend on stay open to any authenticated user: the project list for the project switcher, field definitions for the dynamic form, and the workflow BPMN for the read-only diagram on an item. The audit log is the exception, `admin` to read as well as to write.
+
+A path not listed in `SecurityConfig` falls through to `.authenticated()`, which means any signed-in user. `RoleEnforcementTest` pins the gate by asserting that each admin path refuses a plain `user` and admits an `admin`.
+
 ### Public endpoints
 
 Whitelisted in `SecurityConfig`, no token required:

@@ -92,6 +92,6 @@ class EventFlowTest {
 
     private ResultActions perform(MockHttpServletRequestBuilder request) throws Exception {
         return mockMvc.perform(request.with(jwt().jwt(j -> j.claim("preferred_username", "notified-user")
-                .claim("tenant_id", "tenant-notify"))));
+                .claim("tenant_id", "tenant-notify")).authorities(TestRoles.ADMIN)));
     }
 }

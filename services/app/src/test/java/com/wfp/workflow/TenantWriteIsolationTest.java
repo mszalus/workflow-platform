@@ -145,7 +145,7 @@ class TenantWriteIsolationTest {
     private org.springframework.test.web.servlet.ResultActions perform(MockHttpServletRequestBuilder request, String tenantId)
             throws Exception {
         return mockMvc.perform(request.with(jwt().jwt(j -> j.claim("preferred_username", "user-" + tenantId)
-                .claim("tenant_id", tenantId))));
+                .claim("tenant_id", tenantId)).authorities(TestRoles.ADMIN)));
     }
 
     private boolean deploymentExists() {
