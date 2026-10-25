@@ -187,7 +187,7 @@ class ItemControllerTest {
     @Test
     void refusesToCreateAnItemOnANewVersionThatIsNotATrackerWorkflow() throws Exception {
         String brokenVersion = Samples.xml("valid/simple").replace(" wfp:statusCategory=\"DONE\"", "");
-        TenantContext.runAs(tenant, () -> deploymentService.deploy("simple", null, brokenVersion));
+        deployUnchecked("simple", brokenVersion);
 
         perform(post("/api/items"), "alice", ITEM).andExpect(status().isBadRequest());
     }
@@ -219,7 +219,7 @@ class ItemControllerTest {
     void refusesAProjectWhoseWorkflowIsNotATrackerWorkflow() throws Exception {
         String plainBpmn = Samples.xml("valid/simple").replace(" wfp:statusCategory=\"OPEN\"", "")
                 .replace("id=\"simple\"", "id=\"plain\"");
-        TenantContext.runAs(tenant, () -> deploymentService.deploy("plain", null, plainBpmn));
+        deployUnchecked("plain", plainBpmn);
 
         perform(post("/api/projects"), "admin", """
                 {"key":"PLAIN","name":"Plain","itemTypes":[{"name":"Task","workflowKey":"plain"}]}
@@ -246,6 +246,10 @@ class ItemControllerTest {
         perform(get("/api/items/PROJ-1"), "alice", null)
                 .andExpect(jsonPath("$.title").value("Fix login"))
                 .andExpect(jsonPath("$.statusName").value("Open"));
+    }
+
+    private void deployUnchecked(String name, String bpmnXml) {
+        repositoryService.createDeployment().addString(name + ".bpmn20.xml", bpmnXml).tenantId(tenant).deploy();
     }
 
     private ResultActions transition(String transitionId) throws Exception {

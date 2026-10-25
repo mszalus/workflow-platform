@@ -96,7 +96,8 @@ The editor is based on [bpmn-js](https://bpmn.io/toolkit/bpmn-js/) with Flowable
 
 - **Visual canvas** — drag-and-drop BPMN elements (tasks, events, gateways, sequence flows)
 - **Properties panel** (right sidebar) — configure element properties
-- **Palette** (left sidebar) — BPMN element toolbox
+- **Palette** (left sidebar) — the elements a tracker workflow may use: start and end events, user task (a status), service task, exclusive gateway and subprocess. Boundary timers, event subprocesses and parallel gateways are made through an element's replace menu (the wrench)
+- **Problems** (below the canvas) — the tracker rules the diagram breaks, checked as you edit. Invalid elements are outlined in red with a **!** badge; click a problem to select its element
 
 ### Supported BPMN Elements
 
@@ -109,6 +110,10 @@ The editor is based on [bpmn-js](https://bpmn.io/toolkit/bpmn-js/) with Flowable
 | Exclusive Gateway | Decision point (XOR split/join)             |
 | Parallel Gateway  | Parallel split/join                          |
 | Sequence Flow  | Connection between elements                    |
+
+### Status Category
+
+User tasks and subprocesses have a **Status** group with a **Status category**: Open, To do, In progress or Done. A user task with a category is a status of the tracker workflow; the category decides the board column. Every status needs one, and at least one status must be Done.
 
 ### Flowable Properties
 
@@ -155,7 +160,7 @@ Compatible sources for BPMN files include:
 - Any BPMN 2.0 compliant modeler (Camunda Modeler, Signavio, etc.)
 - Exported files from this platform's **Export** button
 
-> **Note:** Files using the legacy `activiti:` namespace are supported by Flowable but `flowable:` is recommended. The process must have `isExecutable="true"`.
+> **Note:** Files using the legacy `activiti:` namespace are supported by Flowable but `flowable:` is recommended.
 
 Sample BPMN files are included in `e2e/samples/` for testing:
 - `vacation-request.bpmn20.xml` — multi-step vacation approval with manager review, approval/rejection gateway, and resubmission loop
@@ -177,7 +182,7 @@ From the Process Definitions list, click **Edit** on any process to load its BPM
 4. The process is sent to the app and deployed to the Flowable engine
 5. You'll be redirected to the Process Definitions list
 
-> **Important:** The BPMN process must have `isExecutable="true"` and a valid process `id` for deployment to succeed.
+A tracker workflow (one that uses status categories) is checked against the tracker rules first; if it breaks any, the deploy is refused and the problems are listed below the canvas. The process needs a valid process `id`; deploy marks it executable itself.
 
 ---
 

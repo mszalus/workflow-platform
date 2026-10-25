@@ -1,0 +1,19 @@
+.wfp-invalid:not(.djs-connection) .djs-visual > :nth-child(1) {
+  stroke: #d32f2f !important;
+  stroke-width: 3px !important;
+}
+
+.wfp-invalid.djs-connection .djs-visual > path {
+  stroke: #d32f2f !important;
+}
+
+.wfp-violation {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d32f2f;
+  color: #fff;
+  font: bold 12px/18px sans-serif;
+  text-align: center;
+  cursor: help;
+}
