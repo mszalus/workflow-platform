@@ -6,6 +6,7 @@ import com.wfp.common.exception.NotFoundException;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.CreateItemRequest;
 import com.wfp.workflow.dto.ItemDto;
+import com.wfp.workflow.dto.ItemFilter;
 import com.wfp.workflow.engine.Status;
 import com.wfp.workflow.engine.StatusCategory;
 import com.wfp.workflow.engine.Step;
@@ -117,12 +118,16 @@ public class ItemService implements WorkflowRunListener {
     }
 
     @Transactional(readOnly = true)
-    public PagedResponse<ItemDto> list(String projectKey, String assignee, int page, int size) {
+    public PagedResponse<ItemDto> list(String projectKey, String assignee, List<ItemFilter> filters,
+                                       String currentUser, int page, int size) {
         Specification<Item> spec = (root, query, cb) -> cb.and(Stream.of(
                         projectKey == null ? null : cb.equal(root.get("project").get("key"), projectKey),
                         assignee == null ? null : cb.equal(root.get("assignee"), assignee))
                 .filter(Objects::nonNull)
                 .toArray(Predicate[]::new));
+        for (ItemFilter filter : filters) {
+            spec = spec.and(ItemFilterSpecification.of(filter, currentUser));
+        }
         Page<Item> items = itemRepository.findAll(spec,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt")));
         return PagedResponse.of(items.getContent().stream().map(item -> toDto(item, false)).toList(),

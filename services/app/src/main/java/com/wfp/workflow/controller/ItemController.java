@@ -4,6 +4,7 @@ import com.wfp.common.dto.PagedResponse;
 import com.wfp.workflow.dto.CompleteStepRequest;
 import com.wfp.workflow.dto.CreateItemRequest;
 import com.wfp.workflow.dto.ItemDto;
+import com.wfp.workflow.dto.ItemFilter;
 import com.wfp.workflow.dto.TransitionItemRequest;
 import com.wfp.workflow.service.ItemService;
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -39,9 +41,12 @@ public class ItemController {
     @GetMapping
     public PagedResponse<ItemDto> list(@RequestParam(required = false) String project,
                                        @RequestParam(required = false) String assignee,
+                                       @RequestParam(name = "filter", required = false) List<String> filters,
                                        @RequestParam(defaultValue = "0") int page,
-                                       @RequestParam(defaultValue = "25") int size) {
-        return itemService.list(project, assignee, page, size);
+                                       @RequestParam(defaultValue = "25") int size,
+                                       @AuthenticationPrincipal Jwt jwt) {
+        List<ItemFilter> parsed = filters == null ? List.of() : filters.stream().map(ItemFilter::parse).toList();
+        return itemService.list(project, assignee, parsed, username(jwt), page, size);
     }
 
     @GetMapping("/{key}")
