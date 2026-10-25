@@ -59,6 +59,10 @@ public class ItemService implements WorkflowRunListener {
     private static final String FIELDS = "fields";
     private static final int MAX_TEXT_LENGTH = 255;
     private static final Set<String> EDITABLE = Set.of("title", "description", "priority", "assignee", FIELDS);
+    private static final Map<String, String> SORTABLE = Map.of(
+            "key", "key", "title", "title", "priority", "priority", "status", "statusName",
+            "statusCategory", "statusCategory", "assignee", "assignee", "reporter", "reporter",
+            "createdAt", "createdAt", "updatedAt", "updatedAt");
 
     private final ItemRepository itemRepository;
     private final ProjectRepository projectRepository;
@@ -119,7 +123,7 @@ public class ItemService implements WorkflowRunListener {
 
     @Transactional(readOnly = true)
     public PagedResponse<ItemDto> list(String projectKey, String assignee, List<ItemFilter> filters,
-                                       String currentUser, int page, int size) {
+                                       String currentUser, String sort, int page, int size) {
         Specification<Item> spec = (root, query, cb) -> cb.and(Stream.of(
                         projectKey == null ? null : cb.equal(root.get("project").get("key"), projectKey),
                         assignee == null ? null : cb.equal(root.get("assignee"), assignee))
@@ -128,8 +132,7 @@ public class ItemService implements WorkflowRunListener {
         for (ItemFilter filter : filters) {
             spec = spec.and(ItemFilterSpecification.of(filter, currentUser));
         }
-        Page<Item> items = itemRepository.findAll(spec,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt")));
+        Page<Item> items = itemRepository.findAll(spec, PageRequest.of(page, size, sortOf(sort)));
         return PagedResponse.of(items.getContent().stream().map(item -> toDto(item, false)).toList(),
                 page, size, items.getTotalElements());
     }
@@ -270,6 +273,19 @@ public class ItemService implements WorkflowRunListener {
         } finally {
             currentCause.remove();
         }
+    }
+
+    private static Sort sortOf(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, "updatedAt");
+        }
+        String[] parts = sort.split(",", 2);
+        String property = SORTABLE.get(parts[0].trim());
+        if (property == null) {
+            throw new BadRequestException("Cannot sort items by '" + parts[0].trim() + "'");
+        }
+        boolean descending = parts.length == 2 && "desc".equalsIgnoreCase(parts[1].trim());
+        return Sort.by(descending ? Sort.Direction.DESC : Sort.Direction.ASC, property);
     }
 
     private void notifyAssignee(Item item, String actor) {
