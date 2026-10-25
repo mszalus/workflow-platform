@@ -14,4 +14,8 @@ public interface WorkflowEngine {
     WorkflowRun start(String tenantId, String versionId, UUID itemId);
 
     void transition(String tenantId, String runId, String transitionId);
+
+    void completeStep(String tenantId, String runId, String stepId);
+
+    List<Step> openSteps(String tenantId, String runId);
 }

@@ -2,7 +2,9 @@ package com.wfp.workflow.engine.flowable;
 
 import com.wfp.common.exception.BadRequestException;
 import com.wfp.common.exception.NotFoundException;
+import com.wfp.workflow.engine.Node;
 import com.wfp.workflow.engine.Status;
+import com.wfp.workflow.engine.Step;
 import com.wfp.workflow.engine.TrackerProfileValidator;
 import com.wfp.workflow.engine.Transition;
 import com.wfp.workflow.engine.Violation;
@@ -28,8 +30,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -95,6 +99,59 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
 
     @Override
     public void transition(String tenantId, String runId, String transitionId) {
+        ProcessInstance run = requireRun(tenantId, runId);
+        WorkflowDescriptor descriptor = describe(run.getProcessDefinitionId());
+        Optional<Status> current = currentStatus(runId, run.getProcessDefinitionId(), descriptor);
+        if (current.isPresent() && offers(current.get().transitions(), transitionId)) {
+            completeStatusTask(runId, current.get(), transitionId);
+        } else if (offers(descriptor.anyStatusTransitions(), transitionId)) {
+            triggerEventSubprocess(runId, transitionId);
+        } else if (current.isPresent() && !current.get().steps().isEmpty()) {
+            throw new BadRequestException("Status " + current.get().name()
+                    + " is left by completing its steps, not by a transition");
+        } else {
+            throw new BadRequestException("Transition '" + transitionId + "' is not available in status "
+                    + current.map(Status::name).orElse("(none)"));
+        }
+    }
+
+    @Override
+    public void completeStep(String tenantId, String runId, String stepId) {
+        ProcessInstance run = requireRun(tenantId, runId);
+        Status current = currentStatus(runId, run.getProcessDefinitionId(), describe(run.getProcessDefinitionId()))
+                .orElseThrow(() -> new BadRequestException("Step '" + stepId + "' is not open"));
+        if (current.steps().stream().noneMatch(step -> step.id().equals(stepId))) {
+            throw new BadRequestException("Step '" + stepId + "' is not a step of status " + current.name());
+        }
+        Task task = taskService.createTaskQuery()
+                .processInstanceId(runId)
+                .taskDefinitionKey(stepId)
+                .singleResult();
+        if (task == null) {
+            throw new BadRequestException("Step '" + stepId + "' is already completed");
+        }
+        taskService.complete(task.getId());
+    }
+
+    @Override
+    public List<Step> openSteps(String tenantId, String runId) {
+        ProcessInstance run = requireRun(tenantId, runId);
+        List<Step> steps = currentStatus(runId, run.getProcessDefinitionId(), describe(run.getProcessDefinitionId()))
+                .map(Status::steps)
+                .orElse(List.of());
+        if (steps.isEmpty()) {
+            return List.of();
+        }
+        Set<String> openTaskKeys = taskService.createTaskQuery()
+                .processInstanceId(runId)
+                .list()
+                .stream()
+                .map(Task::getTaskDefinitionKey)
+                .collect(Collectors.toSet());
+        return steps.stream().filter(step -> openTaskKeys.contains(step.id())).toList();
+    }
+
+    private ProcessInstance requireRun(String tenantId, String runId) {
         ProcessInstance run = runtimeService.createProcessInstanceQuery()
                 .processInstanceId(runId)
                 .processInstanceTenantId(tenantId)
@@ -102,16 +159,7 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
         if (run == null) {
             throw new NotFoundException("Workflow run", runId);
         }
-        WorkflowDescriptor descriptor = describe(run.getProcessDefinitionId());
-        Optional<Status> current = currentStatus(runId, descriptor);
-        if (current.isPresent() && offers(current.get().transitions(), transitionId)) {
-            completeStatusTask(runId, current.get(), transitionId);
-        } else if (offers(descriptor.anyStatusTransitions(), transitionId)) {
-            triggerEventSubprocess(runId, transitionId);
-        } else {
-            throw new BadRequestException("Transition '" + transitionId + "' is not available in status "
-                    + current.map(Status::name).orElse("(none)"));
-        }
+        return run;
     }
 
     WorkflowGraph graph(String versionId) {
@@ -128,9 +176,16 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
         }
     }
 
-    private Optional<Status> currentStatus(String runId, WorkflowDescriptor descriptor) {
-        List<String> activeIds = runtimeService.getActiveActivityIds(runId);
-        return descriptor.statuses().stream().filter(status -> activeIds.contains(status.id())).findFirst();
+    private Optional<Status> currentStatus(String runId, String versionId, WorkflowDescriptor descriptor) {
+        WorkflowGraph graph = graph(versionId);
+        Set<String> activeStatusIds = runtimeService.getActiveActivityIds(runId).stream()
+                .map(graph::node)
+                .flatMap(Optional::stream)
+                .map(node -> graph.isStatus(node) ? Optional.of(node) : graph.enclosingStatusSubprocess(node))
+                .flatMap(Optional::stream)
+                .map(Node::id)
+                .collect(Collectors.toSet());
+        return descriptor.statuses().stream().filter(status -> activeStatusIds.contains(status.id())).findFirst();
     }
 
     private static boolean offers(List<Transition> transitions, String transitionId) {
@@ -143,8 +198,7 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
                 .taskDefinitionKey(status.id())
                 .singleResult();
         if (task == null) {
-            throw new BadRequestException(
-                    "Status " + status.name() + " is completed by its steps, not by a transition");
+            throw new BadRequestException("Status " + status.name() + " has no open task to complete");
         }
         taskService.complete(task.getId(), Map.of(), Map.of(TRANSITION, transitionId));
     }

@@ -47,6 +47,8 @@ The *tracker profile* is this project's own concept: the subset of BPMN that the
 
 A **status** is a user task, or a subprocess that carries `wfp:statusCategory` (a *status subprocess*). User tasks inside a status subprocess are steps of that one status, not statuses of their own, and need no category.
 
+A status subprocess is **left by completing its steps, not by a transition** (decided 2026-10-25, #90). It offers no transitions; `describe()` lists its steps instead, the item shows the open ones, and `POST /api/items/{key}/steps` completes one. When the last step finishes, the subprocess ends and its outgoing flow fires on its own. Deploy already treats these the same way: `${transition == '...'}` conditions are written only for gateways after a *user task* status, so a gateway after a status subprocess routes on item data, as it does after a service task.
+
 The adapter parses the XML into an engine-neutral `WorkflowGraph` (nodes and flows). The validator and `describe()` both work on that graph, so all the rules live in one place, in Java.
 
 **Rules:**
