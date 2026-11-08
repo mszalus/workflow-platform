@@ -13,7 +13,7 @@ C4Context
 
     System_Ext(keycloak, "Keycloak", "OpenID Connect identity provider. Single realm with Organizations for tenant isolation. Issues JWTs with tenant_id claim.")
 
-    System_Ext(browser, "Web Browser", "Hosts the React SPA frontends (Admin Portal, User Portal)")
+    System_Ext(browser, "Web Browser", "Hosts the tracker single-page app")
 
     Rel(admin, browser, "Uses")
     Rel(endUser, browser, "Uses")

@@ -1,0 +1,84 @@
+import { expect, test, type Page } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+
+const WEB_URL = 'http://localhost:5175';
+const TOKEN_URL = 'http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token';
+const WORKFLOW_XML = fs.readFileSync(path.join(__dirname, 'samples', 'tracker-flow.bpmn20.xml'), 'utf-8');
+
+const projectKey = `T${Date.now() % 10_000_000}`;
+const title = `Tracker flow ${projectKey}`;
+
+async function login(page: Page, username: string) {
+  await page.goto(WEB_URL);
+  await page.getByLabel('Username or email').fill(username);
+  await page.getByLabel('Password', { exact: true }).fill('password');
+  await page.getByRole('button', { name: 'Sign In' }).click();
+  await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible({ timeout: 20000 });
+}
+
+function column(page: Page, name: string) {
+  return page.getByRole('region', { name, exact: true });
+}
+
+test.describe.serial('Tracker', () => {
+  test('an admin deploys a workflow and creates a project', async ({ page, request }) => {
+    const tokenResponse = await request.post(TOKEN_URL, {
+      form: { grant_type: 'password', client_id: 'wfp-web', username: 'admin-a', password: 'password' },
+    });
+    const { access_token: token } = await tokenResponse.json();
+    const deployment = await request.post(`${WEB_URL}/api/workflow/deployments`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { name: 'trackerFlow', bpmnXml: WORKFLOW_XML },
+    });
+    expect(deployment.status()).toBe(201);
+
+    await login(page, 'admin-a');
+    await page.getByRole('link', { name: 'Projects' }).click();
+    await page.getByRole('button', { name: '+ New project' }).click();
+    const form = page.getByRole('form', { name: 'New project' });
+    await form.getByLabel('Key').fill(projectKey);
+    await form.getByLabel('Name', { exact: true }).fill('Tracker flow');
+    await form.getByLabel('Item type name').fill('Task');
+    await form.getByLabel('Workflow').selectOption('trackerFlow');
+    await form.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByRole('cell', { name: projectKey, exact: true })).toBeVisible();
+  });
+
+  test('a user creates an item, moves it across the board, closes and reopens it', async ({ page }) => {
+    await login(page, 'user-a');
+    await page.getByLabel('Project').selectOption(projectKey);
+
+    await page.getByRole('button', { name: '+ Create' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Create item' });
+    await dialog.getByLabel('Title').fill(title);
+    await dialog.getByLabel('Assignee').fill('user-a');
+    await dialog.getByRole('button', { name: 'Create' }).click();
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+
+    const key = `${projectKey}-1`;
+    await expect(page.locator('[data-element-id="open"].wfp-current-status')).toHaveCount(1);
+    await page.getByLabel('Add a comment').fill('Picking this up');
+    await page.getByRole('button', { name: 'Post' }).click();
+    await expect(page.getByText('Picking this up')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Board' }).click();
+    const card = page.getByTestId(`card-${key}`);
+    await expect(column(page, 'Open').getByTestId(`card-${key}`)).toBeVisible();
+
+    await card.dragTo(column(page, 'In progress'));
+    await expect(column(page, 'In progress').getByTestId(`card-${key}`)).toContainText('Doing');
+
+    await card.dragTo(column(page, 'Done'));
+    await expect(column(page, 'Done').getByTestId(`card-${key}`)).toContainText('Done');
+
+    await card.dragTo(column(page, 'Open'));
+    await expect(column(page, 'Open').getByTestId(`card-${key}`)).toContainText('Open');
+  });
+
+  test('another tenant cannot see the project', async ({ page }) => {
+    await login(page, 'user-b');
+
+    await expect(page.getByLabel('Project').locator('option', { hasText: projectKey })).toHaveCount(0);
+  });
+});

@@ -36,43 +36,19 @@
       ]
     },
     {
-      "clientId": "wfp-admin-portal",
+      "clientId": "wfp-web",
       "enabled": true,
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "protocol": "openid-connect",
-      "rootUrl": "http://localhost:5173",
+      "rootUrl": "http://localhost:5175",
       "redirectUris": [
-        "http://localhost:5173/*",
+        "http://localhost:5175/*",
         "*"
       ],
       "webOrigins": [
-        "http://localhost:5173",
-        "*"
-      ],
-      "defaultClientScopes": [
-        "openid",
-        "profile",
-        "email",
-        "roles",
-        "tenant"
-      ]
-    },
-    {
-      "clientId": "wfp-user-portal",
-      "enabled": true,
-      "publicClient": true,
-      "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
-      "protocol": "openid-connect",
-      "rootUrl": "http://localhost:5174",
-      "redirectUris": [
-        "http://localhost:5174/*",
-        "*"
-      ],
-      "webOrigins": [
-        "http://localhost:5174",
+        "http://localhost:5175",
         "*"
       ],
       "defaultClientScopes": [

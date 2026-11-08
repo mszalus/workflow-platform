@@ -5,13 +5,12 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React
 ## Architecture
 
 ```
-   ┌─────────────┐   ┌─────────────┐        ┌──────────────┐
-   │Admin Portal │   │ User Portal │        │   Keycloak   │
-   │   :5173     │   │   :5174     │        │  (OIDC/JWT)  │
-   └──────┬──────┘   └──────┬──────┘        └──────────────┘
-          │ nginx /api proxy│
-          └────────┬────────┘
-                   │
+   ┌─────────────┐                        ┌──────────────┐
+   │ Tracker app │                        │   Keycloak   │
+   │    :5175    │                        │  (OIDC/JWT)  │
+   └──────┬──────┘                        └──────────────┘
+          │ nginx /api proxy
+          │
        ┌───────────┴───────────┐
        │   App                 │
        │        :8081          │
@@ -65,8 +64,7 @@ Once running, the services are available at:
 | Service | URL |
 |---------|-----|
 | Keycloak Admin | http://localhost:8180 (admin/admin) |
-| Admin Portal | http://localhost:5173 |
-| User Portal | http://localhost:5174 |
+| Tracker app | http://localhost:5175 |
 | App (API) | http://localhost:8081 |
 | PostgreSQL | localhost:5433 (wfp/wfp_secret) |
 
@@ -96,13 +94,10 @@ cd frontend
 # Install dependencies
 npm ci
 
-# Start admin portal dev server
-npm run dev:admin
+# Start the dev server
+npm run dev:web
 
-# Start user portal dev server
-npm run dev:user
-
-# Build all packages and apps
+# Build the app
 npm run build
 
 # TypeScript type check
@@ -160,10 +155,7 @@ workflow-platform/
 ├── services/
 │   └── app/                     # Flowable BPMN engine, custom fields, notifications, audit, REST API
 ├── frontend/
-│   ├── packages/shared-ui/      # Shared components, API client, auth
-│   ├── packages/bpmn-editor/    # bpmn-js wrapper
-│   ├── apps/admin-portal/       # Process design + admin UI
-│   └── apps/user-portal/        # Task inbox + user UI
+│   └── apps/web/                # Tracker app: user and admin screens, BPMN editor
 ├── docker/                      # Docker Compose + Keycloak realm config
 └── helm/                        # Kubernetes Helm charts
 ```

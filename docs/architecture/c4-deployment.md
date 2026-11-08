@@ -18,8 +18,7 @@ architecture-beta
         service workflow(server)[Workflow, custom fields, notifications, audit :8081] in backends
 
     group frontends(server)[Frontends] in dockerHost
-        service adminPortal(server)[Admin Portal :5173] in frontends
-        service userPortal(server)[User Portal :5174] in frontends
+        service web(server)[Tracker app :5175] in frontends
 ```
 
 ### Docker Compose — Port Mapping & Dependencies
@@ -29,8 +28,7 @@ architecture-beta
 | `wfp-postgres` | postgres:16-alpine | 5433 | 5432 | - |
 | `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
 | `wfp-app` | wfp/app | 8081 | 8081 | postgres (healthy) |
-| `wfp-admin-portal` | wfp/admin-portal | 5173 | 80 | app (started) |
-| `wfp-user-portal` | wfp/user-portal | 5174 | 80 | app (started) |
+| `wfp-web` | wfp/web | 5175 | 8080 | app (started) |
 
 ### Startup Order
 
@@ -38,8 +36,7 @@ architecture-beta
 flowchart LR
     PG[PostgreSQL] --> KC[Keycloak]
     PG --> WF[App]
-    WF --> AP[Admin Portal]
-    WF --> UP[User Portal]
+    WF --> WEB[Tracker app]
 ```
 
 ### Database Schemas
@@ -63,12 +60,10 @@ flowchart TD
 flowchart TD
     Browser["Browser"]
 
-    Browser -->|":5173"| AP["Admin Portal<br/>(nginx)"]
-    Browser -->|":5174"| UP["User Portal<br/>(nginx)"]
+    Browser -->|":5175"| WEB["Tracker app<br/>(nginx)"]
     Browser -->|":8180"| KC["Keycloak"]
 
-    AP -->|"/api/* proxy"| WF["App :8081"]
-    UP -->|"/api/* proxy"| WF
+    WEB -->|"/api/* proxy"| WF["App :8081"]
 
 
     WF -.->|"JWK Set"| KC
@@ -102,7 +97,7 @@ flowchart TD
             end
         end
 
-        FW["Firewall Rule: allow-wfp<br/>Ports: 5173, 5174, 8180"]
+        FW["Firewall Rule: allow-wfp<br/>Ports: 5175, 8180"]
         CS["Cloud Scheduler<br/>Auto-stop VM at midnight UTC"]
     end
 
@@ -146,8 +141,7 @@ flowchart TD
 
         subgraph "Application Pods"
             WF["App<br/>2-5 replicas (HPA)"]
-            AP["Admin Portal<br/>2 replicas"]
-            UP["User Portal<br/>2 replicas"]
+            WEB["Tracker app<br/>2 replicas"]
         end
 
         subgraph "Infrastructure (local only)"
@@ -160,10 +154,8 @@ flowchart TD
         end
     end
 
-    ING --> AP
-    ING --> UP
-    AP --> WF
-    UP --> WF
+    ING --> WEB
+    WEB --> WF
     WF --> PG
     WF -.-> CSQL
 
@@ -182,8 +174,7 @@ flowchart TD
 | Service | CPU Request | CPU Limit | Memory Request | Memory Limit | Min/Max Replicas |
 |---------|------------|-----------|---------------|-------------|-----------------|
 | App | 500m | 1000m | 512Mi | 1Gi | 2 / 5 |
-| Admin Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
-| User Portal | 50m | 200m | 64Mi | 128Mi | 2 / - |
+| Tracker app | 50m | 200m | 64Mi | 128Mi | 2 / - |
 
 ## Notes for Editors
 

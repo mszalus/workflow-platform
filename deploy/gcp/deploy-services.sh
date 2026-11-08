@@ -151,18 +151,10 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  admin-portal:
-    image: us-central1-docker.pkg.dev/workflow-platform-demo/wfp-images/admin-portal:latest
+  web:
+    image: us-central1-docker.pkg.dev/workflow-platform-demo/wfp-images/web:latest
     ports:
-      - "5173:80"
-    depends_on:
-      - gateway
-    restart: unless-stopped
-
-  user-portal:
-    image: us-central1-docker.pkg.dev/workflow-platform-demo/wfp-images/user-portal:latest
-    ports:
-      - "5174:80"
+      - "5175:80"
     depends_on:
       - gateway
     restart: unless-stopped

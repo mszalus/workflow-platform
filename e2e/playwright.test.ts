@@ -8,17 +8,10 @@ test.describe('Workflow Platform E2E', () => {
     expect(body.issuer).toContain('workflow-platform');
   });
 
-  test('Admin Portal loads and redirects to Keycloak', async ({ page }) => {
-    await page.goto('http://localhost:5173/');
+  test('Tracker app loads and redirects to Keycloak', async ({ page }) => {
+    await page.goto('http://localhost:5175/');
     // OIDC-protected app redirects to Keycloak login
-    await expect(page).toHaveURL(/realms\/workflow-platform.*client_id=wfp-admin-portal/);
-    await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
-  });
-
-  test('User Portal loads and redirects to Keycloak', async ({ page }) => {
-    await page.goto('http://localhost:5174/');
-    // OIDC-protected app redirects to Keycloak login
-    await expect(page).toHaveURL(/realms\/workflow-platform.*client_id=wfp-user-portal/);
+    await expect(page).toHaveURL(/realms\/workflow-platform.*client_id=wfp-web/);
     await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
   });
 
@@ -36,7 +29,7 @@ test.describe('Workflow Platform E2E', () => {
     const tokenResponse = await request.post('http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token', {
       form: {
         grant_type: 'password',
-        client_id: 'wfp-admin-portal',
+        client_id: 'wfp-web',
         username: 'admin-a',
         password: 'password',
       },
@@ -108,7 +101,7 @@ test.describe('Workflow Platform E2E', () => {
     // Get tokens for both tenants
     const getToken = async (username: string) => {
       const response = await request.post('http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token', {
-        form: { grant_type: 'password', client_id: 'wfp-admin-portal', username, password: 'password' },
+        form: { grant_type: 'password', client_id: 'wfp-web', username, password: 'password' },
       });
       return (await response.json()).access_token;
     };

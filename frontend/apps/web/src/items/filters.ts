@@ -1,4 +1,4 @@
-import type { FieldSchema } from '@wfp/shared-ui';
+import type { FieldSchema } from '../shared-ui';
 
 export type Operator = 'eq' | 'ne' | 'in' | 'gte' | 'lte';
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '@wfp/shared-ui';
+import { apiClient } from '../shared-ui';
 
 export interface Project {
   key: string;

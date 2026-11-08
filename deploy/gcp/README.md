@@ -33,8 +33,7 @@ Wait ~5 minutes after the script finishes for Java services to start (first boot
 
 | Service | URL |
 |---------|-----|
-| Admin Portal | `http://EXTERNAL_IP:5173` |
-| User Portal | `http://EXTERNAL_IP:5174` |
+| Tracker app | `http://EXTERNAL_IP:5175` |
 | Keycloak | `http://EXTERNAL_IP:8180` |
 | Gateway API | `http://EXTERNAL_IP:9080` |
 
@@ -95,8 +94,8 @@ docker build -t $REGISTRY/workflow-service:latest -f services/workflow-service/D
 docker push $REGISTRY/workflow-service:latest
 
 # Frontend example:
-docker build -t $REGISTRY/admin-portal:latest -f frontend/apps/admin-portal/Dockerfile .
-docker push $REGISTRY/admin-portal:latest
+docker build -t $REGISTRY/web:latest -f frontend/apps/web/Dockerfile .
+docker push $REGISTRY/web:latest
 
 # 2. Pull and restart on the VM
 gcloud compute ssh wfp-vm --zone=us-central1-a --command="
@@ -170,8 +169,7 @@ Internet
 |  +- custom-fields    :8082   |
 |  +- notification     :8083   |
 |  +- audit            :8084   |
-|  +- admin-portal     :5173   |
-|  +- user-portal      :5174   |
+|  +- web              :5175   |
 +------------------------------+
        |
        v

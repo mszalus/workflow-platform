@@ -7,7 +7,7 @@ import BoardPage from './BoardPage';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 
-vi.mock('@wfp/shared-ui', () => ({ apiClient: api }));
+vi.mock('../shared-ui', () => ({ apiClient: api }));
 
 const projects: Project[] = [
   {

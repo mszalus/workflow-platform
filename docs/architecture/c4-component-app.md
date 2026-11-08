@@ -6,7 +6,7 @@ The workflow service is the core of the platform. It wraps the Flowable 7.1 BPMN
 C4Component
     title App — Component Diagram
 
-    Container_Ext(portals, "Admin and User Portal", "nginx proxies /api/** to this service")
+    Container_Ext(portals, "Tracker app", "nginx proxies /api/** to this service")
     ContainerDb_Ext(postgres, "PostgreSQL", "Schema: workflow")
     System_Ext(flowableEngine, "Flowable Engine", "Embedded BPMN engine (in-process)")
 

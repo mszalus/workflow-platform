@@ -11,7 +11,7 @@ const viewer = vi.hoisted(() => ({
   elements: new Set<string>(),
 }));
 
-vi.mock('@wfp/shared-ui', () => ({ apiClient: {} }));
+vi.mock('../shared-ui', () => ({ apiClient: {} }));
 vi.mock('../items/api', () => ({ getWorkflowXml: () => Promise.resolve('<xml/>') }));
 vi.mock('bpmn-js/lib/NavigatedViewer', () => ({
   default: function NavigatedViewer() {

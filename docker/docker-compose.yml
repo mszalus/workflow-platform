@@ -137,23 +137,13 @@ services:
       otel-collector:
         condition: service_started
 
-  admin-portal:
+  web:
     build:
       context: ..
-      dockerfile: frontend/apps/admin-portal/Dockerfile
-    container_name: wfp-admin-portal
+      dockerfile: frontend/apps/web/Dockerfile
+    container_name: wfp-web
     ports:
-      - "5173:8080"
-    depends_on:
-      - app
-
-  user-portal:
-    build:
-      context: ..
-      dockerfile: frontend/apps/user-portal/Dockerfile
-    container_name: wfp-user-portal
-    ports:
-      - "5174:8080"
+      - "5175:8080"
     depends_on:
       - app
 

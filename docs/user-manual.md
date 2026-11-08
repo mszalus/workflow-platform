@@ -4,25 +4,29 @@
 
 1. [Getting Started](#getting-started)
 2. [Login](#login)
-3. [Dashboard](#dashboard)
-4. [Task Inbox](#task-inbox)
-5. [Completing a Task](#completing-a-task)
-6. [Starting a New Process](#starting-a-new-process)
-7. [My Processes](#my-processes)
+3. [My Work](#my-work)
+4. [Items](#items)
+5. [Creating an Item](#creating-an-item)
+6. [Item Detail](#item-detail)
+7. [Board](#board)
 8. [Notifications](#notifications)
+9. [Multi-Tenant Isolation](#multi-tenant-isolation)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Getting Started
 
-The Workflow Platform User Portal is a web application for end users to interact with BPMN workflows. You can:
+The Workflow Platform is a work item tracker. Each item belongs to a project, has a type such as Bug or Task, and moves through the statuses of its workflow. You can:
 
-- View and complete tasks assigned to you
-- Start new workflow processes
-- Track your running processes
-- Receive notifications about task assignments and completed tasks
+- See the items assigned to you
+- Create, filter and sort items
+- Move items through their workflow from the item page or the board
+- Comment on items and be notified about changes
 
-**URL:** `http://localhost:5174` (local development)
+**URL:** `http://localhost:5175` (local development)
+
+The project selector at the top left chooses the project that **Items**, **Board** and **+ Create** start in.
 
 ### Prerequisites
 
@@ -33,142 +37,94 @@ The Workflow Platform User Portal is a web application for end users to interact
 
 ## Login
 
-When you navigate to the User Portal, you'll be redirected to the Keycloak login page.
+1. Open the URL above. You are redirected to the Keycloak login page.
+2. Enter your username and password and click **Sign In**.
+3. You land on **My work**.
 
-1. Enter your **username** (e.g., `admin-a`) and **password** (default: `password`)
-2. Click **Sign In**
-3. You'll be redirected back to the User Portal dashboard
-
-> **Tip:** Your session persists until the JWT token expires. If you're logged out unexpectedly, simply log in again.
+![Login page](screenshots/keycloak-login.png)
 
 ### Default Users
 
 | Username  | Tenant    | Role  | Password |
 |-----------|-----------|-------|----------|
 | `admin-a` | tenant-a  | admin | password |
+| `user-a`  | tenant-a  | user  | password |
 | `admin-b` | tenant-b  | admin | password |
+| `user-b`  | tenant-b  | user  | password |
+
+Administrators also see the **Admin** section in the sidebar, described in the [Admin Manual](admin-manual.md).
 
 ---
 
-## Dashboard
+## My Work
 
-The dashboard is your landing page after login. It shows:
+**My work** lists the items assigned to you across all projects, grouped by status category. Done items are shown for the last 7 days. Below them are the recently updated items you reported.
 
-- **My Tasks** — count of tasks currently assigned to you
-- **Unread Notifications** — count of unread notifications
-- **Start New Process** — quick link to start a workflow
-
-The dashboard gives you a quick overview of your workload at a glance.
+![My work](screenshots/my-work.png)
 
 ---
 
-## Task Inbox
+## Items
 
-Navigate to **My Tasks** in the sidebar to view your task inbox.
+**Items** lists the current project's items, 25 to a page.
 
-The task inbox has two sections:
+![Items](screenshots/items.png)
 
-### My Tasks
+- Click a column heading to sort by it. Click again to reverse the order.
+- Click **+ Add filter** to add a row of field, operator and value, then **Apply**. Rows are combined with AND. **Clear** removes them all.
+- Custom fields are marked **(cf)** in the field list.
+- Type `me` as the value of Assignee or Reporter to mean yourself.
+- With **is any of**, select several values, or type them separated by commas. To type a value that contains a comma, write it as `\,`.
 
-Tasks currently assigned to you. Each row shows:
-
-| Column    | Description                              |
-|-----------|------------------------------------------|
-| Task      | Task name (clickable link to task detail) |
-| Process   | The process definition key               |
-| Created   | Date the task was created                |
-| Priority  | Task priority level                      |
-| Actions   | Link to open the task                    |
-
-### Available to Claim
-
-Tasks not yet assigned to anyone, but available to your user group (e.g., `managers`). These are created by workflows that use `candidateGroups` instead of a direct assignee.
-
-Click **Claim** to assign the task to yourself. Once claimed, it moves to the "My Tasks" section and you can open and complete it.
+Greater-than and less-than on custom fields compare text, so dates in `YYYY-MM-DD` form order correctly but numbers do not.
 
 ---
 
-## Completing a Task
+## Creating an Item
 
-Click on a task name or the **Open** link to view the task detail page.
+Click **+ Create** at the top right of any page.
 
-### Task Detail Page
+![Create item](screenshots/create-item.png)
 
-The task detail page has three sections:
-
-#### Task Info
-Displays task metadata:
-- **Assignee** — who the task is assigned to
-- **Priority** — task priority
-- **Created** — when the task was created
-- **Due Date** — deadline (if set)
-
-#### Custom Fields
-Shows any custom fields configured for this process. Custom fields are dynamic form fields defined by administrators and are scoped to the process instance — values entered on one task are visible on every subsequent task in the same process. Click **Edit Fields** to enter or update values, then **Save**. If no custom fields are configured, you'll see "No custom fields configured."
-
-#### Comments
-A comment thread for collaboration:
-- View existing comments with author and timestamp
-- Add new comments using the text input and **Add** button
-- Comments are associated with the process instance, visible to all participants
-
-### Completing
-
-Click the green **Complete Task** button to mark the task as done. You'll be redirected back to the task inbox. The next task in the workflow (if any) will be created automatically.
-
-> **Note:** Completing a task is irreversible. Make sure all required work is done before completing.
+Choose the project and type, then enter a title. The custom fields shown depend on that project and type, and a `*` marks a required one. Assignee is a username and can be left empty.
 
 ---
 
-## Starting a New Process
+## Item Detail
 
-Navigate to **Start Process** in the sidebar.
+Click an item's key to open it.
 
-You'll see a grid of available process definitions (deployed by administrators). Each card shows:
-- **Process name**
-- **Process key** (technical identifier)
-- **Start** button
+![Item detail](screenshots/item-detail.png)
 
-Click **Start** to create a new instance of that process. The first task will be created and assigned according to the BPMN definition. You'll be redirected to **My Processes** to track it.
+- The buttons next to the status move the item through its workflow. If the status has steps to finish, each one has a **Complete** button.
+- **Edit** changes the description.
+- Change the assignee, priority or custom fields on the right, then click **Save changes**.
+- Add a comment below the description. The reporter and assignee are notified, except whoever wrote it.
+- The diagram shows the workflow with the current status highlighted.
 
 ---
 
-## My Processes
+## Board
 
-Navigate to **My Processes** in the sidebar to see all process instances in your tenant.
+**Board** shows the current project's items in four columns: Open, To do, In progress and Done. The column is the status category, and the label on the card is the item's actual status.
 
-The table shows:
+![Board](screenshots/board.png)
 
-| Column       | Description                          |
-|--------------|--------------------------------------|
-| Process      | Process definition name              |
-| Business Key | Optional business identifier         |
-| Started      | When the process was started         |
-| Status       | Current status (Running / Completed) |
+Drag a card to another column to move it:
+
+- If one transition leads there, it runs.
+- If several do, you choose which one.
+- If none does, the card stays where it is and a message explains why.
+
+Filter the board by type or assignee with the lists at the top right.
 
 ---
 
 ## Notifications
 
-Navigate to **Notifications** in the sidebar.
+The bell at the top right shows how many notifications you have not read, and updates every 30 seconds. Click it to see them. Clicking one marks it as read and opens its item. **Mark all read** clears the count.
 
-Notifications are generated automatically when:
-- A task is **assigned** to you
-- A task is **created** in a process you're involved in
-- A process you started is **completed**
-
-### Notification List
-
-Each notification shows:
-- **Title** — summary of the event
-- **Message** — detailed description
-- **Timestamp** — when the notification was created
-- Visual indicator: **blue highlight** for unread, **white** for read
-
-### Marking as Read
-
-- Click **Mark All Read** to mark all notifications as read
-- The unread count on the dashboard updates automatically
+You are notified when an item is assigned to you, and when an item you reported or are assigned to changes status or gets a comment.
 
 ---
 
@@ -176,7 +132,7 @@ Each notification shows:
 
 The platform supports multiple tenants (organizations). Each tenant's data is completely isolated:
 
-- You can only see processes, tasks, and notifications belonging to your tenant
+- You can only see projects, items and notifications belonging to your tenant
 - Tenant membership is determined by your Keycloak account
 - There is no way to access another tenant's data
 
@@ -188,6 +144,7 @@ The platform supports multiple tenants (organizations). Each tenant's data is co
 |-------|----------|
 | "Loading..." stuck on screen | Check that all backend services are running. Verify the API health at `http://localhost:8081/actuator/health` |
 | Redirected to login repeatedly | Your JWT token may have expired. Clear browser cookies and log in again |
-| No processes available to start | Ask an administrator to deploy a BPMN process definition |
-| Tasks not appearing | Verify you're logged in as the correct user. Tasks are filtered by assignee |
-| Notifications not appearing | Notifications are created together with the task change. Refresh the page; if one is still missing, the change itself didn't happen |
+| "There are no projects yet" | Ask an administrator to create a project |
+| A drop on the board is refused | The workflow has no transition from the item's status to that column |
+| "This workflow has no diagram to show" | The workflow was deployed without a layout. Everything else on the item works |
+| Notifications not appearing | The bell updates every 30 seconds. You are not notified about your own changes |
