@@ -112,6 +112,7 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.statusCategory").value("OPEN"))
                 .andExpect(jsonPath("$.fields.severity").value("High"))
                 .andExpect(jsonPath("$.workflowVersionId").isNotEmpty())
+                .andExpect(jsonPath("$.statuses[?(@.id=='doing')].category").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.transitions[0].id").value("startWork"));
 
         perform(post("/api/items"), "alice", ITEM).andExpect(jsonPath("$.key").value("PROJ-2"));

@@ -7,6 +7,13 @@ export type FieldValues = Record<string, unknown>;
 export interface Transition {
   id: string;
   name: string;
+  targetStatusIds: string[];
+}
+
+export interface WorkflowStatus {
+  id: string;
+  name: string;
+  category: StatusCategory;
 }
 
 export interface Step {
@@ -32,6 +39,7 @@ export interface Item {
   updatedAt: string;
   transitions: Transition[] | null;
   openSteps: Step[] | null;
+  statuses: WorkflowStatus[] | null;
 }
 
 export interface ItemComment {

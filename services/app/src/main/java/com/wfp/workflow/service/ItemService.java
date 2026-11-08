@@ -389,7 +389,14 @@ public class ItemService implements WorkflowRunListener {
                 .updatedAt(item.getUpdatedAt())
                 .transitions(withWorkflow ? availableTransitions(item) : null)
                 .openSteps(withWorkflow ? openSteps(item) : null)
+                .statuses(withWorkflow ? workflowStatuses(item) : null)
                 .build();
+    }
+
+    private List<ItemDto.WorkflowStatus> workflowStatuses(Item item) {
+        return engine.describe(item.getWorkflowVersionId()).statuses().stream()
+                .map(status -> new ItemDto.WorkflowStatus(status.id(), status.name(), status.category()))
+                .toList();
     }
 
     private List<Step> openSteps(Item item) {

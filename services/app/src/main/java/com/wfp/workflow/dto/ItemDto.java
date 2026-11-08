@@ -31,4 +31,8 @@ public class ItemDto {
     private Instant updatedAt;
     private List<Transition> transitions;
     private List<Step> openSteps;
+    private List<WorkflowStatus> statuses;
+
+    public record WorkflowStatus(String id, String name, StatusCategory category) {
+    }
 }
