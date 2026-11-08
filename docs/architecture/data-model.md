@@ -13,7 +13,8 @@ erDiagram
 
     wf_comments {
         uuid id PK
-        string process_instance_id "NOT NULL"
+        uuid item_id FK "nullable, set on item comments"
+        string process_instance_id "nullable, old process comments"
         string task_id "nullable"
         string user_id "NOT NULL"
         text content "NOT NULL"
@@ -140,7 +141,8 @@ erDiagram
 
     field_schema {
         uuid id PK
-        string process_definition_key "NOT NULL"
+        uuid project_id FK "set on project definitions"
+        string process_definition_key "nullable, old workflow definitions"
         string field_key "NOT NULL"
         string label "NOT NULL"
         enum field_type "NOT NULL (TEXT, TEXTAREA, NUMBER, DATE, DATETIME, BOOLEAN, DROPDOWN, MULTI_SELECT, FILE, USER_PICKER)"
@@ -222,9 +224,12 @@ erDiagram
     wf_project ||--o{ wf_item : "items"
     wf_item_type ||--o{ wf_item : "type"
     wf_item ||--o{ wf_item_transition : "status history"
+    wf_item ||--o{ wf_comments : "comments"
 
     %% Custom fields relationships
     field_schema ||--o{ field_option : "has options (cascade ALL, orphanRemoval)"
+    wf_project ||--o{ field_schema : "field definitions"
+    field_schema }o--o{ wf_item_type : "applies to (field_schema_item_type, none means all types)"
     field_schema ||--o{ field_value : "values reference schema (logical FK)"
 
     %% Cross-schema logical relationships (no physical FK)
@@ -265,6 +270,7 @@ erDiagram
 | `INFO` | General-purpose notifications |
 | `ITEM_ASSIGNED` | A work item is created with, or changed to, an assignee other than the actor |
 | `ITEM_TRANSITIONED` | A work item changes status; sent to its reporter and assignee, except the actor |
+| `ITEM_COMMENTED` | A comment is added to a work item; sent to its reporter and assignee, except the author |
 
 ### Multi-Tenancy Pattern
 

@@ -1,11 +1,14 @@
 package com.wfp.workflow.controller;
 
 import com.wfp.common.dto.PagedResponse;
+import com.wfp.workflow.dto.CommentDto;
 import com.wfp.workflow.dto.CompleteStepRequest;
+import com.wfp.workflow.dto.CreateCommentRequest;
 import com.wfp.workflow.dto.CreateItemRequest;
 import com.wfp.workflow.dto.ItemDto;
 import com.wfp.workflow.dto.ItemFilter;
 import com.wfp.workflow.dto.TransitionItemRequest;
+import com.wfp.workflow.service.CommentService;
 import com.wfp.workflow.service.ItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +38,7 @@ import java.util.Map;
 public class ItemController {
 
     private final ItemService itemService;
+    private final CommentService commentService;
 
     @InitBinder
     void keepCommasInsideFilterValues(WebDataBinder binder) {
@@ -80,6 +84,18 @@ public class ItemController {
     public ItemDto completeStep(@PathVariable String key, @Valid @RequestBody CompleteStepRequest request,
                                 @AuthenticationPrincipal Jwt jwt) {
         return itemService.completeStep(key, request.getStepId(), request.getReason(), username(jwt));
+    }
+
+    @GetMapping("/{key}/comments")
+    public List<CommentDto> comments(@PathVariable String key) {
+        return commentService.listForItem(key);
+    }
+
+    @PostMapping("/{key}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentDto addComment(@PathVariable String key, @Valid @RequestBody CreateCommentRequest request,
+                                 @AuthenticationPrincipal Jwt jwt) {
+        return commentService.addToItem(key, request.getContent(), username(jwt));
     }
 
     private static String username(Jwt jwt) {

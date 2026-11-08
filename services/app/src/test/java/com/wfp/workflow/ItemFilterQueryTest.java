@@ -3,9 +3,6 @@ package com.wfp.workflow;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.engine.Samples;
 import com.wfp.workflow.engine.flowable.DeploymentService;
-import com.wfp.workflow.entity.FieldSchema;
-import com.wfp.workflow.entity.FieldType;
-import com.wfp.workflow.repository.FieldSchemaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,19 +42,16 @@ class ItemFilterQueryTest {
     @Autowired
     private DeploymentService deploymentService;
 
-    @Autowired
-    private FieldSchemaRepository fieldSchemaRepository;
-
     private final String tenant = "tenant-" + UUID.randomUUID();
 
     @BeforeEach
     void seedItems() throws Exception {
         TenantContext.runAs(tenant, () -> deploymentService.deploy("simple", null, Samples.xml("valid/simple")));
-        fieldSchemaRepository.save(optionalTextField("severity"));
-        fieldSchemaRepository.save(optionalTextField("due"));
         perform(post("/api/projects"), "admin", """
                 {"key":"PROJ","name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
                 """).andExpect(status().isCreated());
+        declareOptionalTextField("severity");
+        declareOptionalTextField("due");
 
         create("Fix login", "alice", "HIGH", "{\"severity\":\"High\",\"due\":\"2026-11-01\"}");
         create("Add export", "bob", "LOW", "{\"severity\":\"Low\",\"due\":\"2026-12-24\"}");
@@ -156,9 +150,10 @@ class ItemFilterQueryTest {
                 .andExpect(jsonPath("$.totalElements").value(0));
     }
 
-    private FieldSchema optionalTextField(String key) {
-        return FieldSchema.builder().tenantId(tenant).processDefinitionKey("simple")
-                .fieldKey(key).label(key).fieldType(FieldType.TEXT).build();
+    private void declareOptionalTextField(String key) throws Exception {
+        perform(post("/api/fields/schemas"), "admin", """
+                {"project":"PROJ","fieldKey":"%s","label":"%s","fieldType":"TEXT"}
+                """.formatted(key, key)).andExpect(status().isCreated());
     }
 
     private void create(String title, String assignee, String priority, String fields) throws Exception {

@@ -101,7 +101,7 @@ public class ItemService implements WorkflowRunListener {
                 .priority(Objects.requireNonNullElse(request.getPriority(), Priority.MEDIUM))
                 .assignee(request.getAssignee())
                 .reporter(actor)
-                .fields(validFields(type.getWorkflowKey(), request.getFields()))
+                .fields(validFields(type, request.getFields()))
                 .workflowVersionId(versionId)
                 .build());
         withCause(new Cause(actor, null, "CREATED"),
@@ -167,7 +167,7 @@ public class ItemService implements WorkflowRunListener {
         if (changes.get(FIELDS) instanceof Map<?, ?> fieldChanges) {
             Map<String, Object> merged = new LinkedHashMap<>(item.getFields());
             fieldChanges.forEach((field, value) -> merged.put(field.toString(), value));
-            Map<String, Object> valid = validFields(item.getType().getWorkflowKey(), merged);
+            Map<String, Object> valid = validFields(item.getType(), merged);
             Stream.concat(item.getFields().keySet().stream(), valid.keySet().stream()).distinct()
                     .filter(field -> !Objects.equals(item.getFields().get(field), valid.get(field)))
                     .forEach(field -> diff.add(change(FIELDS + "." + field, item.getFields().get(field),
@@ -300,10 +300,9 @@ public class ItemService implements WorkflowRunListener {
         return itemRepository.findByKey(key).orElseThrow(() -> new NotFoundException("Item", key));
     }
 
-    private Map<String, Object> validFields(String workflowKey, Map<String, Object> fields) {
+    private Map<String, Object> validFields(ItemType type, Map<String, Object> fields) {
         Map<String, FieldSchema> definitions = fieldSchemaRepository
-                .findByProcessDefinitionKeyAndTenantIdOrderBySortOrder(workflowKey,
-                        TenantContext.requireCurrentTenantId())
+                .findApplicableTo(type.getProject(), type)
                 .stream()
                 .collect(Collectors.toMap(FieldSchema::getFieldKey, Function.identity()));
         Map<String, Object> valid = new LinkedHashMap<>();

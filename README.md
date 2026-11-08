@@ -132,6 +132,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | GET | `/api/items/{key}` | Get a work item with its available transitions |
 | PATCH | `/api/items/{key}` | Change fixed or custom fields |
 | POST | `/api/items/{key}/transitions` | Move a work item to another status |
+| GET | `/api/items/{key}/comments` | List a work item's comments, oldest first |
+| POST | `/api/items/{key}/comments` | Comment on a work item and notify its reporter and assignee |
 | POST | `/api/workflow/deployments` | Deploy a BPMN process (tracker workflows are validated first) |
 | POST | `/api/workflow/workflows/validate` | Check BPMN against the tracker profile: `[{elementId, rule, message}]` |
 | GET | `/api/workflow/deployments` | List deployments |
@@ -140,7 +142,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | GET | `/api/workflow/tasks` | List tasks |
 | POST | `/api/workflow/tasks/{id}/complete` | Complete a task |
 | GET | `/api/workflow/history/processes` | Process history |
-| POST | `/api/fields/schemas` | Create a custom field schema |
+| POST | `/api/fields/schemas` | Create a custom field schema for a `project` and `itemTypes` (none means all), or for a `processDefinitionKey` |
+| GET | `/api/fields/schemas?project=...&type=...` | List a project's field schemas, optionally those that apply to one item type |
 | GET | `/api/fields/schemas?processDefinitionKey=...` | List field schemas |
 | POST | `/api/fields/values` | Save field values |
 | GET | `/api/fields/values?processInstanceId=...` | Get field values |
