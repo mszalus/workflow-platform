@@ -111,6 +111,7 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.statusName").value("Open"))
                 .andExpect(jsonPath("$.statusCategory").value("OPEN"))
                 .andExpect(jsonPath("$.fields.severity").value("High"))
+                .andExpect(jsonPath("$.workflowVersionId").isNotEmpty())
                 .andExpect(jsonPath("$.transitions[0].id").value("startWork"));
 
         perform(post("/api/items"), "alice", ITEM).andExpect(jsonPath("$.key").value("PROJ-2"));

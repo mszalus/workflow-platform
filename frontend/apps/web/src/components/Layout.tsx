@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@wfp/shared-ui';
 import { useIsAdmin } from '../auth/useIsAdmin';
+import CreateItemDialog from './CreateItemDialog';
 import NotificationBell from './NotificationBell';
 import ProjectSwitcher from './ProjectSwitcher';
 
@@ -39,6 +40,7 @@ function NavLinks({ links }: { links: { to: string; label: string }[] }) {
 export default function Layout() {
   const { username, tenantId, logout } = useAuth();
   const isAdmin = useIsAdmin();
+  const [creating, setCreating] = useState(false);
 
   return (
     <div style={{ display: 'flex', height: '100vh' }}>
@@ -71,13 +73,15 @@ export default function Layout() {
         </div>
       </nav>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
-        <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.75rem 1.5rem' }}>
+        <header style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', padding: '0.75rem 1.5rem' }}>
           <NotificationBell />
+          <button onClick={() => setCreating(true)}>+ Create</button>
         </header>
         <main style={{ flex: 1, overflow: 'auto', padding: '0 1.5rem 1.5rem' }}>
           <Outlet />
         </main>
       </div>
+      {creating && <CreateItemDialog onClose={() => setCreating(false)} />}
     </div>
   );
 }

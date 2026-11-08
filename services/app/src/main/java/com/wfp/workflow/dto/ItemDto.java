@@ -26,6 +26,7 @@ public class ItemDto {
     private String statusName;
     private StatusCategory statusCategory;
     private Map<String, Object> fields;
+    private String workflowVersionId;
     private Instant createdAt;
     private Instant updatedAt;
     private List<Transition> transitions;

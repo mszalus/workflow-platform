@@ -12,6 +12,7 @@ vi.mock('@wfp/shared-ui', () => ({
   useAuth: () => ({ username: 'user-a', tenantId: 'tenant-a', roles: auth.roles, logout: vi.fn() }),
   apiClient: api,
 }));
+vi.mock('./components/ItemDiagram', () => ({ default: () => null }));
 
 const projects: Project[] = [
   { key: 'PROJ', name: 'Platform', itemTypes: [] },
@@ -25,6 +26,17 @@ const itemNotification = {
   read: false,
   referenceId: 'PROJ-1',
   referenceType: 'ITEM',
+};
+
+const openedItem = {
+  key: 'PROJ-1',
+  title: 'Fix login',
+  priority: 'LOW',
+  reporter: 'user-b',
+  statusName: 'Open',
+  fields: {},
+  createdAt: '2026-11-01T10:00:00Z',
+  updatedAt: '2026-11-01T10:00:00Z',
 };
 
 function renderApp(path = '/') {
@@ -48,6 +60,9 @@ beforeEach(() => {
   api.get.mockReset().mockImplementation((url: string) => {
     if (url === '/notifications/unread-count') return Promise.resolve({ data: { count: 1 } });
     if (url === '/notifications') return Promise.resolve({ data: { content: [itemNotification] } });
+    if (url === '/items') return Promise.resolve({ data: { content: [] } });
+    if (url === '/items/PROJ-1') return Promise.resolve({ data: openedItem });
+    if (url === '/items/PROJ-1/comments' || url === '/fields/schemas') return Promise.resolve({ data: [] });
     return Promise.resolve({ data: projects });
   });
 });
@@ -126,7 +141,7 @@ describe('notification bell', () => {
     fireEvent.click(await screen.findByText('PROJ-1 assigned to you'));
 
     await waitFor(() => expect(api.put).toHaveBeenCalledWith('/notifications/mark-read', ['n1']));
-    expect(screen.getByRole('heading', { name: 'Item' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Fix login' })).toBeTruthy();
   });
 
   it('marks everything read', async () => {
