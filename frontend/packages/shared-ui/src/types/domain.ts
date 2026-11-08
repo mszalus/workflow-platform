@@ -87,6 +87,8 @@ export interface AuditEntry {
 export interface FieldSchema {
   id: string;
   processDefinitionKey: string;
+  project?: string;
+  itemTypes?: string[];
   fieldKey: string;
   label: string;
   fieldType: FieldType;

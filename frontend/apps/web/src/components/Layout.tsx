@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '@wfp/shared-ui';
+import { keycloakUsersUrl } from '../auth/keycloakUrl';
 import { useIsAdmin } from '../auth/useIsAdmin';
 import CreateItemDialog from './CreateItemDialog';
 import NotificationBell from './NotificationBell';
@@ -63,6 +64,9 @@ export default function Layout() {
           <>
             <h3 style={{ fontSize: '0.75rem', margin: '1.5rem 1rem 0.5rem', color: '#bbdefb' }}>ADMIN</h3>
             <NavLinks links={adminLinks} />
+            <a href={keycloakUsersUrl} target="_blank" rel="noreferrer" style={linkStyle({ isActive: false })}>
+              Users and groups
+            </a>
           </>
         )}
         <div style={{ marginTop: 'auto', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
