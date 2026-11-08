@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import RequireAdmin from './components/RequireAdmin';
+import BoardPage from './pages/BoardPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import ItemsPage from './pages/ItemsPage';
 import MyWorkPage from './pages/MyWorkPage';
@@ -14,7 +15,7 @@ export default function App() {
         <Route path="/my-work" element={<MyWorkPage />} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/items/:key" element={<ItemDetailPage />} />
-        <Route path="/board" element={<PlannedPage title="Board" />} />
+        <Route path="/board" element={<BoardPage />} />
         <Route path="/admin" element={<RequireAdmin />}>
           <Route path="projects" element={<PlannedPage title="Projects" />} />
           <Route path="workflows" element={<PlannedPage title="Workflows" />} />
