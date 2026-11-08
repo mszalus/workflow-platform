@@ -384,6 +384,7 @@ public class ItemService implements WorkflowRunListener {
                 .statusName(item.getStatusName())
                 .statusCategory(item.getStatusCategory())
                 .fields(item.getFields())
+                .workflowVersionId(item.getWorkflowVersionId())
                 .createdAt(item.getCreatedAt())
                 .updatedAt(item.getUpdatedAt())
                 .transitions(withWorkflow ? availableTransitions(item) : null)
