@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import Keycloak from 'keycloak-js';
 import { setTokenProvider } from '../api/apiClient';
 
@@ -35,8 +35,14 @@ export function AuthProvider({ children, keycloakUrl, realm, clientId }: AuthPro
   );
   const [initialized, setInitialized] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
+  const initStarted = useRef(false);
 
   useEffect(() => {
+    if (initStarted.current) {
+      return;
+    }
+    initStarted.current = true;
+
     keycloak
       .init({
         onLoad: 'login-required',

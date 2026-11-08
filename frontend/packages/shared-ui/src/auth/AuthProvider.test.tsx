@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -70,6 +71,19 @@ describe('AuthProvider', () => {
 
     await act(async () => finishInit(true));
     expect(screen.getByTestId('identity')).toBeTruthy();
+  });
+
+  it('initialises Keycloak once under StrictMode', async () => {
+    render(
+      <StrictMode>
+        <AuthProvider keycloakUrl="http://keycloak" realm="workflow-platform" clientId="portal">
+          <Identity />
+        </AuthProvider>
+      </StrictMode>,
+    );
+
+    await screen.findByTestId('identity');
+    expect(keycloak.init).toHaveBeenCalledTimes(1);
   });
 
   it('logs in with PKCE and exposes the identity from the token', async () => {
