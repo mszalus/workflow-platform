@@ -4,13 +4,9 @@ import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.engine.Samples;
 import com.wfp.workflow.engine.flowable.DeploymentService;
 import com.wfp.workflow.entity.AuditEntry;
-import com.wfp.workflow.entity.FieldOption;
-import com.wfp.workflow.entity.FieldSchema;
-import com.wfp.workflow.entity.FieldType;
 import com.wfp.workflow.entity.ItemTransition;
 import com.wfp.workflow.entity.Notification;
 import com.wfp.workflow.repository.AuditEntryRepository;
-import com.wfp.workflow.repository.FieldSchemaRepository;
 import com.wfp.workflow.repository.ItemRepository;
 import com.wfp.workflow.repository.ItemTransitionRepository;
 import com.wfp.workflow.repository.NotificationRepository;
@@ -35,6 +31,7 @@ import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -69,9 +66,6 @@ class ItemControllerTest {
     private TaskService flowableTaskService;
 
     @Autowired
-    private FieldSchemaRepository fieldSchemaRepository;
-
-    @Autowired
     private ItemRepository itemRepository;
 
     @Autowired
@@ -91,15 +85,13 @@ class ItemControllerTest {
             deploymentService.deploy("simple", null, Samples.xml("valid/simple"));
             deploymentService.deploy("approval", null, Samples.xml("valid/approval-subprocess"));
         });
-        FieldSchema severity = FieldSchema.builder().tenantId(tenant).processDefinitionKey("simple")
-                .fieldKey("severity").label("Severity").fieldType(FieldType.DROPDOWN).required(true).build();
-        severity.getOptions().add(FieldOption.builder().fieldSchema(severity).label("High").value("High").build());
-        severity.getOptions().add(FieldOption.builder().fieldSchema(severity).label("Low").value("Low").build());
-        fieldSchemaRepository.save(severity);
-
         perform(post("/api/projects"), "admin", """
                 {"key":"PROJ","name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"},
                                                              {"name":"Request","workflowKey":"approval"}]}
+                """).andExpect(status().isCreated());
+        createField("""
+                {"project":"PROJ","itemTypes":["Task"],"fieldKey":"severity","label":"Severity","fieldType":"DROPDOWN",
+                 "required":true,"options":[{"label":"High","value":"High"},{"label":"Low","value":"Low"}]}
                 """).andExpect(status().isCreated());
     }
 
@@ -327,6 +319,57 @@ class ItemControllerTest {
     }
 
     @Test
+    void resolvesFieldDefinitionsByProjectAndItemType() throws Exception {
+        createField(textField("[]", "component")).andExpect(status().isCreated());
+        createField(textField("[\"Request\"]", "budget")).andExpect(status().isCreated());
+
+        perform(get("/api/fields/schemas?project=PROJ&type=Task"), "alice", null)
+                .andExpect(jsonPath("$[*].fieldKey", containsInAnyOrder("severity", "component")));
+        perform(get("/api/fields/schemas?project=PROJ&type=Request"), "alice", null)
+                .andExpect(jsonPath("$[*].fieldKey", containsInAnyOrder("component", "budget")));
+        perform(get("/api/fields/schemas?project=PROJ"), "alice", null)
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[?(@.fieldKey=='severity')].itemTypes[0]").value("Task"));
+    }
+
+    @Test
+    void validatesAnItemAgainstTheDefinitionsOfItsItemType() throws Exception {
+        perform(post("/api/items"), "alice", APPROVAL_ITEM).andExpect(status().isCreated());
+
+        perform(post("/api/items"), "alice", """
+                {"project":"PROJ","type":"Request","title":"New supplier","fields":{"severity":"High"}}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refusesAFieldKeyThatOverlapsAnotherDefinitionsItemTypes() throws Exception {
+        createField(textField("[\"Task\"]", "severity")).andExpect(status().isBadRequest());
+        createField(textField("[]", "severity")).andExpect(status().isBadRequest());
+
+        createField(textField("[\"Request\"]", "severity")).andExpect(status().isCreated());
+    }
+
+    @Test
+    void refusesAFieldDefinitionWithoutOneValidScope() throws Exception {
+        createField("""
+                {"fieldKey":"noScope","label":"x","fieldType":"TEXT"}
+                """).andExpect(status().isBadRequest());
+        createField("""
+                {"project":"PROJ","processDefinitionKey":"simple","fieldKey":"both","label":"x","fieldType":"TEXT"}
+                """).andExpect(status().isBadRequest());
+        createField("""
+                {"project":"NOPE","fieldKey":"x","label":"x","fieldType":"TEXT"}
+                """).andExpect(status().isNotFound());
+        createField(textField("[\"Missing\"]", "x")).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void anotherTenantCannotListAProjectsFieldDefinitions() throws Exception {
+        mockMvc.perform(get("/api/fields/schemas?project=PROJ").with(otherTenantUser()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void anotherTenantCannotReadOrAddComments() throws Exception {
         perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
         perform(post("/api/items/PROJ-1/comments"), "alice", "{\"content\":\"Private\"}")
@@ -386,6 +429,16 @@ class ItemControllerTest {
                 .filter(notification -> notification.getUserId().equals(user))
                 .map(Notification::getTitle)
                 .toList();
+    }
+
+    private ResultActions createField(String body) throws Exception {
+        return perform(post("/api/fields/schemas"), "admin", body);
+    }
+
+    private static String textField(String itemTypes, String key) {
+        return """
+                {"project":"PROJ","itemTypes":%s,"fieldKey":"%s","label":"%s","fieldType":"TEXT"}
+                """.formatted(itemTypes, key, key);
     }
 
     private RequestPostProcessor otherTenantUser() {

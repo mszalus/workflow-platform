@@ -16,6 +16,8 @@ public interface ProjectRepository extends JpaRepository<Project, UUID> {
 
     boolean existsByKey(String key);
 
+    Optional<Project> findByKey(String key);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Project p where p.key = :key")
     Optional<Project> findByKeyForUpdate(String key);

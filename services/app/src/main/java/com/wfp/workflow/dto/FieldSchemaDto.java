@@ -11,6 +11,8 @@ import java.util.List;
 public class FieldSchemaDto {
     private String id;
     private String processDefinitionKey;
+    private String project;
+    private List<String> itemTypes;
     private String fieldKey;
     private String label;
     private FieldType fieldType;

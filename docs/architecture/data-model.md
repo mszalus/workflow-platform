@@ -141,7 +141,8 @@ erDiagram
 
     field_schema {
         uuid id PK
-        string process_definition_key "NOT NULL"
+        uuid project_id FK "set on project definitions"
+        string process_definition_key "nullable, old workflow definitions"
         string field_key "NOT NULL"
         string label "NOT NULL"
         enum field_type "NOT NULL (TEXT, TEXTAREA, NUMBER, DATE, DATETIME, BOOLEAN, DROPDOWN, MULTI_SELECT, FILE, USER_PICKER)"
@@ -227,6 +228,8 @@ erDiagram
 
     %% Custom fields relationships
     field_schema ||--o{ field_option : "has options (cascade ALL, orphanRemoval)"
+    wf_project ||--o{ field_schema : "field definitions"
+    field_schema }o--o{ wf_item_type : "applies to (field_schema_item_type, none means all types)"
     field_schema ||--o{ field_value : "values reference schema (logical FK)"
 
     %% Cross-schema logical relationships (no physical FK)

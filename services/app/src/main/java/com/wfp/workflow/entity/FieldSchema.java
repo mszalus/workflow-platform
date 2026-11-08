@@ -5,9 +5,14 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
@@ -22,7 +27,9 @@ import org.hibernate.annotations.Filter;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -35,8 +42,19 @@ public class FieldSchema {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "process_definition_key", nullable = false)
+    @Column(name = "process_definition_key")
     private String processDefinitionKey;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+
+    @ManyToMany
+    @JoinTable(name = "field_schema_item_type",
+            joinColumns = @JoinColumn(name = "field_schema_id"),
+            inverseJoinColumns = @JoinColumn(name = "item_type_id"))
+    @Builder.Default
+    private Set<ItemType> itemTypes = new HashSet<>();
 
     @Column(name = "field_key", nullable = false)
     private String fieldKey;

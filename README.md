@@ -142,7 +142,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | GET | `/api/workflow/tasks` | List tasks |
 | POST | `/api/workflow/tasks/{id}/complete` | Complete a task |
 | GET | `/api/workflow/history/processes` | Process history |
-| POST | `/api/fields/schemas` | Create a custom field schema |
+| POST | `/api/fields/schemas` | Create a custom field schema for a `project` and `itemTypes` (none means all), or for a `processDefinitionKey` |
+| GET | `/api/fields/schemas?project=...&type=...` | List a project's field schemas, optionally those that apply to one item type |
 | GET | `/api/fields/schemas?processDefinitionKey=...` | List field schemas |
 | POST | `/api/fields/values` | Save field values |
 | GET | `/api/fields/values?processInstanceId=...` | Get field values |
