@@ -27,6 +27,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.util.List;
 import java.util.UUID;
@@ -281,6 +282,64 @@ class ItemControllerTest {
     }
 
     @Test
+    void commentsRoundTripOnAnItemOldestFirst() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+
+        perform(post("/api/items/PROJ-1/comments"), "carol", "{\"content\":\"First\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userId").value("carol"));
+        perform(post("/api/items/PROJ-1/comments"), "alice", "{\"content\":\"Second\"}")
+                .andExpect(status().isCreated());
+
+        perform(get("/api/items/PROJ-1/comments"), "bob", null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].content").value("First"))
+                .andExpect(jsonPath("$[1].content").value("Second"));
+        assertThat(auditEvents("PROJ-1")).containsExactly("item.created", "item.commented", "item.commented");
+    }
+
+    @Test
+    void aCommentNotifiesTheReporterAndAssigneeExceptItsAuthor() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+
+        perform(post("/api/items/PROJ-1/comments"), "carol", "{\"content\":\"Hello\"}")
+                .andExpect(status().isCreated());
+        perform(post("/api/items/PROJ-1/comments"), "bob", "{\"content\":\"Hi\"}")
+                .andExpect(status().isCreated());
+
+        assertThat(notificationTitles("alice"))
+                .containsExactlyInAnyOrder("carol commented on PROJ-1", "bob commented on PROJ-1");
+        assertThat(notificationTitles("bob"))
+                .contains("carol commented on PROJ-1")
+                .doesNotContain("bob commented on PROJ-1");
+        assertThat(notificationTitles("carol")).isEmpty();
+    }
+
+    @Test
+    void refusesAnEmptyCommentOrACommentOnAnUnknownItem() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+
+        perform(post("/api/items/PROJ-1/comments"), "alice", "{\"content\":\" \"}")
+                .andExpect(status().isBadRequest());
+        perform(post("/api/items/PROJ-99/comments"), "alice", "{\"content\":\"Hello\"}")
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void anotherTenantCannotReadOrAddComments() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+        perform(post("/api/items/PROJ-1/comments"), "alice", "{\"content\":\"Private\"}")
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/items/PROJ-1/comments").with(otherTenantUser()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/api/items/PROJ-1/comments").with(otherTenantUser())
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"content\":\"Hello\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void anotherTenantCannotReadChangeOrTransitionAnItem() throws Exception {
         perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
 
@@ -327,6 +386,11 @@ class ItemControllerTest {
                 .filter(notification -> notification.getUserId().equals(user))
                 .map(Notification::getTitle)
                 .toList();
+    }
+
+    private RequestPostProcessor otherTenantUser() {
+        return jwt().jwt(token -> token.claim("preferred_username", "mallory").claim("tenant_id", "tenant-other"))
+                .authorities(TestRoles.USER);
     }
 
     private <T> T asTenant(Supplier<T> query) {

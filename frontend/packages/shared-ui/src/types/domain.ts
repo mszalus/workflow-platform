@@ -65,7 +65,8 @@ export interface Notification {
     | 'SLA_BREACH'
     | 'INFO'
     | 'ITEM_ASSIGNED'
-    | 'ITEM_TRANSITIONED';
+    | 'ITEM_TRANSITIONED'
+    | 'ITEM_COMMENTED';
   read: boolean;
   createdAt: string;
   referenceId?: string;

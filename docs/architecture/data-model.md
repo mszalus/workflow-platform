@@ -13,7 +13,8 @@ erDiagram
 
     wf_comments {
         uuid id PK
-        string process_instance_id "NOT NULL"
+        uuid item_id FK "nullable, set on item comments"
+        string process_instance_id "nullable, old process comments"
         string task_id "nullable"
         string user_id "NOT NULL"
         text content "NOT NULL"
@@ -222,6 +223,7 @@ erDiagram
     wf_project ||--o{ wf_item : "items"
     wf_item_type ||--o{ wf_item : "type"
     wf_item ||--o{ wf_item_transition : "status history"
+    wf_item ||--o{ wf_comments : "comments"
 
     %% Custom fields relationships
     field_schema ||--o{ field_option : "has options (cascade ALL, orphanRemoval)"
@@ -265,6 +267,7 @@ erDiagram
 | `INFO` | General-purpose notifications |
 | `ITEM_ASSIGNED` | A work item is created with, or changed to, an assignee other than the actor |
 | `ITEM_TRANSITIONED` | A work item changes status; sent to its reporter and assignee, except the actor |
+| `ITEM_COMMENTED` | A comment is added to a work item; sent to its reporter and assignee, except the author |
 
 ### Multi-Tenancy Pattern
 

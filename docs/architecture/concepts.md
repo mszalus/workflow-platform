@@ -78,7 +78,8 @@ Process completion, cancellation and SLA events return as item events in the tra
 `ItemService` doesn't use events. Creating, changing or moving an item writes the item,
 its `wf_item_transition` row, its audit entry (`item.created`, `item.updated` with the
 field diff, `item.transitioned`) and its notifications (`ITEM_ASSIGNED`,
-`ITEM_TRANSITIONED`) itself, in one transaction. The process and task events below go
+`ITEM_TRANSITIONED`) itself, in one transaction. `CommentService` does the same for a
+comment on an item (`item.commented`, `ITEM_COMMENTED`). The process and task events below go
 away with the old process and task API (20.e).
 
 ### Two publication paths
