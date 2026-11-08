@@ -3,6 +3,9 @@ package com.wfp.workflow;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.engine.Samples;
 import com.wfp.workflow.engine.flowable.DeploymentService;
+import com.wfp.workflow.entity.FieldSchema;
+import com.wfp.workflow.entity.FieldType;
+import com.wfp.workflow.repository.FieldSchemaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,8 +18,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.UUID;
 
@@ -29,12 +30,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("pgtest")
-@Testcontainers
 class ItemFilterQueryTest {
 
-    @Container
     @ServiceConnection
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    static {
+        postgres.start();
+    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,11 +45,16 @@ class ItemFilterQueryTest {
     @Autowired
     private DeploymentService deploymentService;
 
+    @Autowired
+    private FieldSchemaRepository fieldSchemaRepository;
+
     private final String tenant = "tenant-" + UUID.randomUUID();
 
     @BeforeEach
     void seedItems() throws Exception {
         TenantContext.runAs(tenant, () -> deploymentService.deploy("simple", null, Samples.xml("valid/simple")));
+        fieldSchemaRepository.save(optionalTextField("severity"));
+        fieldSchemaRepository.save(optionalTextField("due"));
         perform(post("/api/projects"), "admin", """
                 {"key":"PROJ","name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
                 """).andExpect(status().isCreated());
@@ -66,6 +74,28 @@ class ItemFilterQueryTest {
     @Test
     void filtersOnSeveralCustomFieldValuesAtOnce() throws Exception {
         list("filter=cf.severity:in:High,Critical").andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void keepsACommaInsideASingleValue() throws Exception {
+        create("Comma in value", "alice", "LOW", "{\"severity\":\"High,urgent\"}");
+
+        list("filter=cf.severity:eq:High,urgent")
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Comma in value"));
+    }
+
+    @Test
+    void keepsAnEscapedCommaInsideAnInList() throws Exception {
+        create("Comma in option", "alice", "LOW", "{\"severity\":\"Yes, please\"}");
+
+        list("filter=cf.severity:in:Yes\\, please,Critical").andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void treatsSqlInAFilterAsPlainData() throws Exception {
+        list("filter=cf.x') OR 1=1 --:eq:a").andExpect(jsonPath("$.totalElements").value(0));
+        list("filter=cf.severity:eq:High' OR '1'='1").andExpect(jsonPath("$.totalElements").value(0));
     }
 
     @Test
@@ -124,6 +154,11 @@ class ItemFilterQueryTest {
                         .with(jwt().jwt(token -> token.claim("preferred_username", "mallory")
                                 .claim("tenant_id", "tenant-other")).authorities(TestRoles.USER)))
                 .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    private FieldSchema optionalTextField(String key) {
+        return FieldSchema.builder().tenantId(tenant).processDefinitionKey("simple")
+                .fieldKey(key).label(key).fieldType(FieldType.TEXT).build();
     }
 
     private void create(String title, String assignee, String priority, String fields) throws Exception {

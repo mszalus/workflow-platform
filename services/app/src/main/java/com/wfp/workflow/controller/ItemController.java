@@ -9,10 +9,13 @@ import com.wfp.workflow.dto.TransitionItemRequest;
 import com.wfp.workflow.service.ItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.propertyeditors.StringArrayPropertyEditor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +36,11 @@ public class ItemController {
 
     private final ItemService itemService;
 
+    @InitBinder
+    void keepCommasInsideFilterValues(WebDataBinder binder) {
+        binder.registerCustomEditor(String[].class, new StringArrayPropertyEditor(null));
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ItemDto create(@Valid @RequestBody CreateItemRequest request, @AuthenticationPrincipal Jwt jwt) {
@@ -41,12 +50,12 @@ public class ItemController {
     @GetMapping
     public PagedResponse<ItemDto> list(@RequestParam(required = false) String project,
                                        @RequestParam(required = false) String assignee,
-                                       @RequestParam(name = "filter", required = false) List<String> filters,
+                                       @RequestParam(name = "filter", required = false) String[] filters,
                                        @RequestParam(required = false) String sort,
                                        @RequestParam(defaultValue = "0") int page,
                                        @RequestParam(defaultValue = "25") int size,
                                        @AuthenticationPrincipal Jwt jwt) {
-        List<ItemFilter> parsed = filters == null ? List.of() : filters.stream().map(ItemFilter::parse).toList();
+        List<ItemFilter> parsed = filters == null ? List.of() : Arrays.stream(filters).map(ItemFilter::parse).toList();
         return itemService.list(project, assignee, parsed, username(jwt), sort, page, size);
     }
 

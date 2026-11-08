@@ -10,6 +10,7 @@ import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import org.hibernate.query.criteria.HibernateCriteriaBuilder;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.time.Instant;
@@ -54,7 +55,7 @@ final class ItemFilterSpecification {
 
     private static Predicate customFieldPredicate(ItemFilter filter, Root<Item> root, CriteriaBuilder cb) {
         Expression<String> value = cb.function(JSON_TEXT, String.class,
-                root.get("fields"), cb.literal(filter.customFieldKey()));
+                root.get("fields"), ((HibernateCriteriaBuilder) cb).value(filter.customFieldKey()));
         return switch (filter.operator()) {
             case EQ -> cb.equal(value, filter.value());
             case NE -> cb.or(cb.notEqual(value, filter.value()), value.isNull());
