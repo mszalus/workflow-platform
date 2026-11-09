@@ -122,6 +122,7 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 |--------|------|-------------|
 | POST | `/api/projects` | Create a project with its item types |
 | GET | `/api/projects` | List projects |
+| PUT | `/api/projects/{key}` | Rename a project and add or remove item types |
 | POST | `/api/items` | Create a work item |
 | GET | `/api/items?project=...&assignee=...` | List work items |
 | GET | `/api/items/{key}` | Get a work item with its available transitions |

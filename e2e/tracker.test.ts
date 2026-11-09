@@ -50,6 +50,24 @@ test.describe.serial('Tracker', () => {
     await expect(page.getByRole('cell', { name: projectKey, exact: true })).toBeVisible();
   });
 
+  test('an admin renames the project and adds an item type', async ({ page }) => {
+    await login(page, 'admin-a');
+    await page.getByRole('link', { name: 'Projects' }).click();
+    await page.getByRole('button', { name: `Edit ${projectKey}` }).click();
+    const form = page.getByRole('form', { name: `Edit project ${projectKey}` });
+    await expect(form.getByLabel('Key')).toBeDisabled();
+
+    await form.getByLabel('Name', { exact: true }).fill('Tracker flow renamed');
+    await form.getByRole('button', { name: '+ Add item type' }).click();
+    await form.getByLabel('Item type name').last().fill('Story');
+    await form.getByLabel('Workflow').last().selectOption('trackerFlow');
+    await form.getByRole('button', { name: 'Save' }).click();
+
+    const row = page.getByRole('row', { name: new RegExp(projectKey) });
+    await expect(row).toContainText('Tracker flow renamed');
+    await expect(row).toContainText('Story -> trackerFlow');
+  });
+
   test('a user creates an item, moves it across the board, closes and reopens it', async ({ page }) => {
     await login(page, 'user-a');
     await page.getByLabel('Project').selectOption(projectKey);

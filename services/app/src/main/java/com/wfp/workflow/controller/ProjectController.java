@@ -1,6 +1,7 @@
 package com.wfp.workflow.controller;
 
 import com.wfp.workflow.dto.ProjectDto;
+import com.wfp.workflow.dto.UpdateProjectRequest;
 import com.wfp.workflow.service.ProjectService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +9,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -32,5 +35,11 @@ public class ProjectController {
     @ResponseStatus(HttpStatus.CREATED)
     public ProjectDto create(@Valid @RequestBody ProjectDto request, @AuthenticationPrincipal Jwt jwt) {
         return projectService.create(request, jwt.getClaimAsString("preferred_username"));
+    }
+
+    @PutMapping("/{key}")
+    public ProjectDto update(@PathVariable String key, @Valid @RequestBody UpdateProjectRequest request,
+                             @AuthenticationPrincipal Jwt jwt) {
+        return projectService.update(key, request, jwt.getClaimAsString("preferred_username"));
     }
 }

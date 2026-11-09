@@ -124,6 +124,58 @@ describe('Projects', () => {
   });
 });
 
+describe('Editing a project', () => {
+  async function openEditor() {
+    renderAt('/admin/projects');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit PROJ' }));
+    const form = within(screen.getByRole('form', { name: 'Edit project PROJ' }));
+    await form.findByRole('option', { name: 'bug-flow' });
+    return form;
+  }
+
+  it('fixes the key and the existing item types', async () => {
+    const form = await openEditor();
+
+    expect((form.getByLabelText('Key') as HTMLInputElement).disabled).toBe(true);
+    expect((form.getAllByLabelText('Item type name')[0] as HTMLInputElement).disabled).toBe(true);
+    expect((form.getAllByLabelText('Workflow')[0] as HTMLSelectElement).disabled).toBe(true);
+  });
+
+  it('saves a new name and a new item type', async () => {
+    api.put.mockResolvedValue({ data: {} });
+    const form = await openEditor();
+
+    fireEvent.change(form.getByLabelText('Name'), { target: { value: 'Renamed' } });
+    fireEvent.click(form.getByRole('button', { name: '+ Add item type' }));
+    fireEvent.change(form.getAllByLabelText('Item type name')[2], { target: { value: 'Story' } });
+    fireEvent.change(form.getAllByLabelText('Workflow')[2], { target: { value: 'bug-flow' } });
+    fireEvent.click(form.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith('/projects/PROJ', {
+        name: 'Renamed',
+        itemTypes: [
+          { name: 'Bug', workflowKey: 'bug-flow' },
+          { name: 'Task', workflowKey: 'simple' },
+          { name: 'Story', workflowKey: 'bug-flow' },
+        ],
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole('form', { name: 'Edit project PROJ' })).toBeNull());
+  });
+
+  it('shows why an item type cannot be removed', async () => {
+    api.put.mockRejectedValue({ response: { data: { message: 'Item type Bug still has items' } } });
+    const form = await openEditor();
+
+    fireEvent.click(form.getAllByRole('button', { name: 'Remove' })[0]);
+    fireEvent.click(form.getByRole('button', { name: 'Save' }));
+
+    expect(await form.findByText('Item type Bug still has items')).toBeTruthy();
+    expect(screen.getByRole('form', { name: 'Edit project PROJ' })).toBeTruthy();
+  });
+});
+
 describe('Workflows', () => {
   it('lists the latest version and links to the editor', async () => {
     renderAt('/admin/workflows');
