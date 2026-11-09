@@ -19,8 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -126,10 +124,7 @@ public class WorkflowUpgradeService {
         if (statusIds.contains(item.getStatusKey())) {
             return new Target(item.getStatusKey(), Outcome.SAME_STATUS);
         }
-        List<ItemTransition> newestFirst =
-                new ArrayList<>(transitionRepository.findByItemIdOrderByTransitionedAtAsc(item.getId()));
-        Collections.reverse(newestFirst);
-        return newestFirst.stream()
+        return transitionRepository.findByItemIdOrderByTransitionedAtAsc(item.getId()).stream()
                 .map(ItemTransition::getToStatus)
                 .filter(statusIds::contains)
                 .findFirst()

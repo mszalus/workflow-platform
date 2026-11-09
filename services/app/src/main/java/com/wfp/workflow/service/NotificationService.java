@@ -52,7 +52,7 @@ public class NotificationService {
 
     @Transactional
     public void markAsRead(List<UUID> ids) {
-        notificationRepository.markAsRead(ids, TenantContext.requireCurrentTenantId());
+        notificationRepository.markAsRead(ids);
     }
 
     @Transactional
