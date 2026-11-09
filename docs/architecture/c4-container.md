@@ -15,7 +15,7 @@ C4Container
 
         Container(web, "Tracker app", "React 18, TypeScript, Vite, nginx", "My work, items, board, item detail; admin screens for projects, workflows, fields and the audit log")
 
-        Container(workflowSvc, "App", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
+        Container(workflowSvc, "App", "Spring Boot 4.0, Flowable 8.0, Java 21", "BPMN engine: deploy, start, complete tasks, comments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
 
         ContainerDb(postgres, "PostgreSQL 16", "2 schemas: workflow, keycloak", "Shared instance, one schema per service")
     }
@@ -40,7 +40,7 @@ C4Container
 | Container | Technology | Port | Database Schema | Description |
 |-----------|-----------|------|----------------|-------------|
 | Tracker app | React 18 + nginx | 5175 (host) | - | User and admin screens, BPMN editor |
-| App | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
+| App | Spring Boot + Flowable 8.0 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
 | PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 2 schemas | Shared database instance |
 | Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
 

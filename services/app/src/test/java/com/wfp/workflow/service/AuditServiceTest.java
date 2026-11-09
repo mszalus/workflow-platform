@@ -1,6 +1,6 @@
 package com.wfp.workflow.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.entity.AuditEntry;
 import com.wfp.workflow.repository.AuditEntryRepository;
@@ -17,7 +17,7 @@ class AuditServiceTest {
 
     private final AuditEntryRepository auditEntryRepository = mock(AuditEntryRepository.class);
     private final AuditService auditService =
-            new AuditService(auditEntryRepository, new ObjectMapper().findAndRegisterModules());
+            new AuditService(auditEntryRepository, new ObjectMapper());
 
     @Test
     void recordsAnEventInTheCurrentTenantWithItsDetails() {
