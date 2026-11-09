@@ -99,6 +99,7 @@ Click an item's key to open it.
 - The buttons next to the status move the item through its workflow. If the status has steps to finish, each one has a **Complete** button.
 - **Edit** changes the description.
 - Change the assignee, priority or custom fields on the right, then click **Save changes**.
+- **History** lists status changes and field changes, newest first.
 - Add a comment below the description. The reporter and assignee are notified, except whoever wrote it.
 - The diagram shows the workflow with the current status highlighted.
 

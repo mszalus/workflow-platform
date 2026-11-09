@@ -49,6 +49,17 @@ export interface ItemComment {
   createdAt: string;
 }
 
+export interface ItemHistoryEntry {
+  timestamp: string;
+  actor: string;
+  kind: 'CREATED' | 'STATUS' | 'FIELD';
+  field?: string;
+  from?: unknown;
+  to?: unknown;
+  transition?: string;
+  reason?: string;
+}
+
 export interface ItemQuery {
   project?: string;
   filters?: string[];
@@ -96,6 +107,10 @@ export function transitionItem(key: string, transitionId: string) {
 
 export function completeStep(key: string, stepId: string) {
   return apiClient.post<Item>(`/items/${key}/steps`, { stepId }).then((response) => response.data);
+}
+
+export function listHistory(key: string) {
+  return apiClient.get<ItemHistoryEntry[]>(`/items/${key}/history`).then((response) => response.data);
 }
 
 export function listComments(key: string) {
