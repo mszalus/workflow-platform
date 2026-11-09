@@ -423,8 +423,8 @@ curl -X POST http://localhost:8081/api/workflow/deployments \
   -H "Content-Type: application/json" \
   -d '{"name":"My Process","bpmnXml":"<xml>..."}'
 
-# List tasks
-curl http://localhost:8081/api/workflow/tasks?assignee=admin-a \
+# List a project's items
+curl "http://localhost:8081/api/items?project=PROJ" \
   -H "Authorization: Bearer $TOKEN"
 
 # View audit log

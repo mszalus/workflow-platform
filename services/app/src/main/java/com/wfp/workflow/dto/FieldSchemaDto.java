@@ -10,7 +10,6 @@ import java.util.List;
 @Builder
 public class FieldSchemaDto {
     private String id;
-    private String processDefinitionKey;
     private String project;
     private List<String> itemTypes;
     private String fieldKey;

@@ -1,8 +1,5 @@
 package com.wfp.workflow.service;
 
-import com.wfp.workflow.event.EventConstants;
-import com.wfp.workflow.event.TaskCompletedEvent;
-import com.wfp.workflow.event.TaskCreatedEvent;
 import com.wfp.workflow.entity.Notification;
 import com.wfp.workflow.entity.NotificationType;
 import com.wfp.workflow.repository.NotificationRepository;
@@ -10,9 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 class NotificationServiceTest {
@@ -21,48 +16,22 @@ class NotificationServiceTest {
     private final NotificationService notificationService = new NotificationService(notificationRepository);
 
     @Test
-    void notifiesTheAssigneeOfANewTaskInTheEventTenant() {
-        TaskCreatedEvent event = TaskCreatedEvent.builder().taskId("task-1").taskName("Review").assignee("user-a").build();
-        event.initDefaults(EventConstants.TASK_CREATED, "tenant-a", "user-a");
-
-        notificationService.notify(event);
-
-        Notification saved = savedNotification();
-        assertThat(saved.getUserId()).isEqualTo("user-a");
-        assertThat(saved.getTenantId()).isEqualTo("tenant-a");
-        assertThat(saved.getType()).isEqualTo(NotificationType.TASK_ASSIGNED);
-    }
-
-    @Test
-    void notifiesTheUserWhoCompletedATask() {
-        TaskCompletedEvent event = TaskCompletedEvent.builder().taskId("task-1").taskName("Review").completedBy("user-b").build();
-        event.initDefaults(EventConstants.TASK_COMPLETED, "tenant-a", "user-b");
-
-        notificationService.notify(event);
+    void createsANotificationInTheGivenTenant() {
+        notificationService.createNotification("user-a", "tenant-a", "PROJ-1 assigned to you", "Fix login",
+                NotificationType.ITEM_ASSIGNED, "PROJ-1", "ITEM");
 
         assertThat(savedNotification())
-                .extracting(Notification::getUserId, Notification::getType)
-                .containsExactly("user-b", NotificationType.TASK_COMPLETED);
+                .extracting(Notification::getUserId, Notification::getTenantId, Notification::getType,
+                        Notification::getReferenceId)
+                .containsExactly("user-a", "tenant-a", NotificationType.ITEM_ASSIGNED, "PROJ-1");
     }
 
     @Test
     void truncatesTitlesToTheColumnLength() {
-        TaskCreatedEvent event = TaskCreatedEvent.builder().taskId("task-1").taskName("x".repeat(255)).assignee("user-a").build();
-        event.initDefaults(EventConstants.TASK_CREATED, "tenant-a", "user-a");
+        notificationService.createNotification("user-a", "tenant-a", "x".repeat(300), "Fix login",
+                NotificationType.INFO, "PROJ-1", "ITEM");
 
-        notificationService.notify(event);
-
-        assertThat(savedNotification().getTitle()).hasSize(255).startsWith("New Task: ");
-    }
-
-    @Test
-    void skipsNewTasksWithoutAnAssignee() {
-        TaskCreatedEvent event = TaskCreatedEvent.builder().taskId("task-1").taskName("Review").build();
-        event.initDefaults(EventConstants.TASK_CREATED, "tenant-a", null);
-
-        notificationService.notify(event);
-
-        verify(notificationRepository, never()).save(any());
+        assertThat(savedNotification().getTitle()).hasSize(255);
     }
 
     private Notification savedNotification() {

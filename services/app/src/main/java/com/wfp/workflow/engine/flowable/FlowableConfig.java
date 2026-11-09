@@ -1,27 +1,18 @@
 package com.wfp.workflow.engine.flowable;
 
-import org.flowable.common.engine.api.delegate.event.FlowableEngineEventType;
 import org.flowable.spring.SpringProcessEngineConfiguration;
 import org.flowable.spring.boot.EngineConfigurationConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.Collections;
-
 @Configuration
 public class FlowableConfig {
 
     @Bean
-    public EngineConfigurationConfigurer<SpringProcessEngineConfiguration> engineConfigurer(
-            FlowableEventListener listener) {
+    public EngineConfigurationConfigurer<SpringProcessEngineConfiguration> engineConfigurer() {
         return configuration -> {
             configuration.setDatabaseSchemaUpdate("true");
             configuration.setAsyncExecutorActivate(true);
-            configuration.setTypedEventListeners(java.util.Map.of(
-                    FlowableEngineEventType.TASK_CREATED.name() + ","
-                    + FlowableEngineEventType.TASK_ASSIGNED.name(),
-                    Collections.singletonList(listener)
-            ));
         };
     }
 }

@@ -11,7 +11,6 @@ import com.wfp.workflow.repository.ItemRepository;
 import com.wfp.workflow.repository.ItemTransitionRepository;
 import com.wfp.workflow.repository.NotificationRepository;
 import org.flowable.engine.RepositoryService;
-import org.flowable.engine.TaskService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,9 +59,6 @@ class ItemControllerTest {
 
     @Autowired
     private RepositoryService repositoryService;
-
-    @Autowired
-    private TaskService flowableTaskService;
 
     @Autowired
     private ItemRepository itemRepository;
@@ -236,18 +231,6 @@ class ItemControllerTest {
     }
 
     @Test
-    void theOldTaskAndProcessApiDoNotSeeItemRuns() throws Exception {
-        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
-        String taskId = flowableTaskService.createTaskQuery().taskTenantId(tenant).singleResult().getId();
-        String runId = flowableTaskService.createTaskQuery().taskTenantId(tenant).singleResult().getProcessInstanceId();
-
-        perform(get("/api/workflow/tasks"), "alice", null).andExpect(jsonPath("$.totalElements").value(0));
-        perform(get("/api/workflow/processes"), "alice", null).andExpect(jsonPath("$.totalElements").value(0));
-        perform(post("/api/workflow/tasks/{id}/complete", taskId), "alice", "{}").andExpect(status().isNotFound());
-        perform(delete("/api/workflow/processes/{id}", runId), "admin", null).andExpect(status().isNotFound());
-    }
-
-    @Test
     void validatesCustomFields() throws Exception {
         perform(post("/api/items"), "alice", ITEM.replace(",\"fields\":{\"severity\":\"High\"}", ""))
                 .andExpect(status().isBadRequest());
@@ -352,12 +335,9 @@ class ItemControllerTest {
     }
 
     @Test
-    void refusesAFieldDefinitionWithoutOneValidScope() throws Exception {
+    void refusesAFieldDefinitionWithoutAValidProjectAndItemType() throws Exception {
         createField("""
                 {"fieldKey":"noScope","label":"x","fieldType":"TEXT"}
-                """).andExpect(status().isBadRequest());
-        createField("""
-                {"project":"PROJ","processDefinitionKey":"simple","fieldKey":"both","label":"x","fieldType":"TEXT"}
                 """).andExpect(status().isBadRequest());
         createField("""
                 {"project":"NOPE","fieldKey":"x","label":"x","fieldType":"TEXT"}

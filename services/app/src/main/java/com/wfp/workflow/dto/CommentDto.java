@@ -9,8 +9,6 @@ import java.time.Instant;
 @Builder
 public class CommentDto {
     private String id;
-    private String processInstanceId;
-    private String taskId;
     private String userId;
     private String content;
     private Instant createdAt;

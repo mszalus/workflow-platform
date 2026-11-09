@@ -20,39 +20,6 @@ export interface ProcessDefinition {
   suspended: boolean;
 }
 
-export interface ProcessInstance {
-  id: string;
-  processDefinitionId: string;
-  processDefinitionKey: string;
-  processDefinitionName: string;
-  businessKey?: string;
-  startTime: string;
-  endTime?: string;
-  startUserId: string;
-  tenantId: string;
-  status: 'RUNNING' | 'COMPLETED' | 'CANCELLED' | 'SUSPENDED';
-  variables?: Record<string, unknown>;
-}
-
-export interface Task {
-  id: string;
-  name: string;
-  description?: string;
-  assignee?: string;
-  owner?: string;
-  processInstanceId: string;
-  processDefinitionId: string;
-  processDefinitionKey: string;
-  taskDefinitionKey: string;
-  createTime: string;
-  dueDate?: string;
-  priority: number;
-  tenantId: string;
-  formKey?: string;
-  candidateGroups?: string[];
-  candidateUsers?: string[];
-}
-
 export interface Notification {
   id: string;
   userId: string;
@@ -86,7 +53,6 @@ export interface AuditEntry {
 
 export interface FieldSchema {
   id: string;
-  processDefinitionKey: string;
   project?: string;
   itemTypes?: string[];
   fieldKey: string;
@@ -117,11 +83,4 @@ export interface FieldOption {
   label: string;
   value: string;
   sortOrder: number;
-}
-
-export interface FieldValue {
-  id: string;
-  fieldSchemaId: string;
-  processInstanceId: string;
-  value: string;
 }

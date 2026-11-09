@@ -50,7 +50,7 @@ The portals' nginx proxies `/api/` to app unchanged; the service serves `/api/wo
 
 ## Events
 
-App is the only producer and consumer. `EventPublisher` hands each event (`process.started`, `task.created`, `task.assigned`, `task.completed`, `task.delegated`) to `NotificationService` and `AuditService`, which write their rows in the same transaction as the change. There is no message broker.
+`ItemService` and `CommentService` write audit entries and notifications in the same transaction as the change. There is no message broker.
 
 ## Notes for Editors
 

@@ -9,8 +9,7 @@ public class ScenarioContext {
 
     private String currentToken;
     private String currentUsername;
-    private String lastProcessInstanceId;
-    private String lastTaskId;
+    private String lastItemKey;
     private int lastStatusCode;
 
     public String getCurrentToken() {
@@ -29,20 +28,12 @@ public class ScenarioContext {
         this.currentUsername = currentUsername;
     }
 
-    public String getLastProcessInstanceId() {
-        return lastProcessInstanceId;
+    public String getLastItemKey() {
+        return lastItemKey;
     }
 
-    public void setLastProcessInstanceId(String lastProcessInstanceId) {
-        this.lastProcessInstanceId = lastProcessInstanceId;
-    }
-
-    public String getLastTaskId() {
-        return lastTaskId;
-    }
-
-    public void setLastTaskId(String lastTaskId) {
-        this.lastTaskId = lastTaskId;
+    public void setLastItemKey(String lastItemKey) {
+        this.lastItemKey = lastItemKey;
     }
 
     public int getLastStatusCode() {

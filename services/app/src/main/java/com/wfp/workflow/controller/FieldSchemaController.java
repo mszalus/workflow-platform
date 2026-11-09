@@ -38,16 +38,8 @@ public class FieldSchemaController {
     }
 
     @GetMapping
-    public List<FieldSchemaDto> list(@RequestParam(required = false) String processDefinitionKey,
-                                     @RequestParam(required = false) String project,
-                                     @RequestParam(required = false) String type) {
-        if (project != null) {
-            return schemaService.listForProject(project, type);
-        }
-        if (processDefinitionKey != null && !processDefinitionKey.isEmpty()) {
-            return schemaService.listByProcessDefinition(processDefinitionKey);
-        }
-        return schemaService.listAll();
+    public List<FieldSchemaDto> list(@RequestParam String project, @RequestParam(required = false) String type) {
+        return schemaService.listForProject(project, type);
     }
 
     @DeleteMapping("/{id}")

@@ -13,9 +13,7 @@ erDiagram
 
     wf_comments {
         uuid id PK
-        uuid item_id FK "nullable, set on item comments"
-        string process_instance_id "nullable, old process comments"
-        string task_id "nullable"
+        uuid item_id FK "NOT NULL"
         string user_id "NOT NULL"
         text content "NOT NULL"
         instant created_at "NOT NULL, immutable"
@@ -141,8 +139,7 @@ erDiagram
 
     field_schema {
         uuid id PK
-        uuid project_id FK "set on project definitions"
-        string process_definition_key "nullable, old workflow definitions"
+        uuid project_id FK "NOT NULL"
         string field_key "NOT NULL"
         string label "NOT NULL"
         enum field_type "NOT NULL (TEXT, TEXTAREA, NUMBER, DATE, DATETIME, BOOLEAN, DROPDOWN, MULTI_SELECT, FILE, USER_PICKER)"
@@ -162,16 +159,6 @@ erDiagram
         string label "NOT NULL"
         string value "NOT NULL"
         int sort_order
-    }
-
-    field_value {
-        uuid id PK
-        uuid field_schema_id "NOT NULL (logical FK)"
-        string process_instance_id "NOT NULL"
-        text value
-        string tenant_id "NOT NULL, filtered"
-        instant created_at "immutable"
-        instant updated_at
     }
 
     %% ============================================================
@@ -230,7 +217,6 @@ erDiagram
     field_schema ||--o{ field_option : "has options (cascade ALL, orphanRemoval)"
     wf_project ||--o{ field_schema : "field definitions"
     field_schema }o--o{ wf_item_type : "applies to (field_schema_item_type, none means all types)"
-    field_schema ||--o{ field_value : "values reference schema (logical FK)"
 
     %% Cross-schema logical relationships (no physical FK)
 ```
@@ -239,7 +225,7 @@ erDiagram
 
 | Schema | Service | Tables | Description |
 |--------|---------|--------|-------------|
-| `workflow` | app | `wf_project`, `wf_item_type`, `wf_item`, `wf_item_transition`, `wf_comments`, `field_schema`, `field_option`, `field_value`, `notification`, `audit_entry` + ~60 `ACT_*` tables | Projects, work items and their status history, comments, custom field definitions and values, in-app notifications, audit trail + Flowable engine |
+| `workflow` | app | `wf_project`, `wf_item_type`, `wf_item`, `wf_item_transition`, `wf_comments`, `field_schema`, `field_option`, `notification`, `audit_entry` + ~60 `ACT_*` tables | Projects, work items and their status history, comments, custom field definitions and values, in-app notifications, audit trail + Flowable engine |
 | `keycloak` | Keycloak | (managed by Keycloak) | Users, realms, clients, roles, organizations |
 
 ## Entity Details
@@ -277,7 +263,7 @@ erDiagram
 Every entity (except `field_option` and `wf_item_type`) carries a `tenant_id` column. Hibernate filters enforce row-level isolation:
 
 - **One package-level `@FilterDef`** in `com/wfp/workflow/entity/package-info.java`
-- **`@Filter` only** on every tenant-scoped entity: `Project`, `Item`, `ItemTransition`, `Comment`, `FieldSchema`, `FieldValue`, `Notification`, `AuditEntry`
+- **`@Filter` only** on every tenant-scoped entity: `Project`, `Item`, `ItemTransition`, `Comment`, `FieldSchema`, `Notification`, `AuditEntry`
 - The filter is `autoEnabled` and `applyToLoadByKey`, so Hibernate applies it to every query and every load by id from the database, in every session; `CurrentTenantIdResolver` (`com.wfp.security`) supplies the tenant from `TenantContext` and throws when none is set
 
 ### Cross-Schema References
@@ -286,10 +272,6 @@ There are no physical foreign keys across schemas. Services reference each other
 
 | Source Field | References | Example Value |
 |-------------|-----------|---------------|
-| `wf_comments.process_instance_id` | Flowable `ACT_RU_EXECUTION.PROC_INST_ID_` | `"12345"` |
-| `wf_comments.task_id` | Flowable `ACT_RU_TASK.ID_` | `"67890"` |
-| `field_value.field_schema_id` | `field_schema.id` (same schema, logical FK) | UUID |
-| `field_value.process_instance_id` | Flowable `ACT_RU_EXECUTION.PROC_INST_ID_` | `"12345"` |
 | `wf_item.run_id` | Flowable `ACT_RU_EXECUTION.PROC_INST_ID_` | `"12345"` |
 | `wf_item.workflow_version_id` | Flowable `ACT_RE_PROCDEF.ID_` | `"simple:1:42"` |
 | `notification.reference_id` | Flowable task or process ID | `"12345"` |

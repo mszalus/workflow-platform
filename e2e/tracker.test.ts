@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -17,16 +17,21 @@ async function login(page: Page, username: string) {
   await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible({ timeout: 20000 });
 }
 
+async function adminToken(request: APIRequestContext) {
+  const response = await request.post(TOKEN_URL, {
+    form: { grant_type: 'password', client_id: 'wfp-web', username: 'admin-a', password: 'password' },
+  });
+  expect(response.status(), await response.text()).toBe(200);
+  return (await response.json()).access_token;
+}
+
 function column(page: Page, name: string) {
   return page.getByRole('region', { name, exact: true });
 }
 
 test.describe.serial('Tracker', () => {
   test('an admin deploys a workflow and creates a project', async ({ page, request }) => {
-    const tokenResponse = await request.post(TOKEN_URL, {
-      form: { grant_type: 'password', client_id: 'wfp-web', username: 'admin-a', password: 'password' },
-    });
-    const { access_token: token } = await tokenResponse.json();
+    const token = await adminToken(request);
     const deployment = await request.post(`${WEB_URL}/api/workflow/deployments`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { name: 'trackerFlow', bpmnXml: WORKFLOW_XML },
@@ -74,6 +79,16 @@ test.describe.serial('Tracker', () => {
 
     await card.dragTo(column(page, 'Open'));
     await expect(column(page, 'Open').getByTestId(`card-${key}`)).toContainText('Open');
+  });
+
+  test('the audit log records the item', async ({ request }) => {
+    const token = await adminToken(request);
+
+    const audit = await request.get(`${WEB_URL}/api/audit?entityId=${projectKey}-1&eventType=item.transitioned`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    expect((await audit.json()).totalElements).toBe(3);
   });
 
   test('another tenant cannot see the project', async ({ page }) => {
