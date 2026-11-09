@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { apiClient, type Notification, type PagedResponse } from '@wfp/shared-ui';
+import { apiClient, type Notification, type PagedResponse } from '../shared-ui';
 
 const POLL_INTERVAL_MS = 30_000;
 

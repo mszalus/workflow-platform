@@ -13,21 +13,18 @@ C4Container
 
     Container_Boundary(wfp, "Workflow Platform") {
 
-        Container(adminPortal, "Admin Portal", "React 18, TypeScript, Vite, nginx", "BPMN process designer, custom field editor, deployment management, audit log viewer")
-        Container(userPortal, "User Portal", "React 18, TypeScript, Vite, nginx", "Task inbox, start process, notifications, dynamic forms")
+        Container(web, "Tracker app", "React 18, TypeScript, Vite, nginx", "My work, items, board, item detail; admin screens for projects, workflows, fields and the audit log")
 
         Container(workflowSvc, "App", "Spring Boot 3.3, Flowable 7.1, Java 21", "BPMN engine: deploy, start, complete tasks, comments, history; custom field schemas and values; in-app notifications; audit trail. Port 8081")
 
         ContainerDb(postgres, "PostgreSQL 16", "2 schemas: workflow, keycloak", "Shared instance, one schema per service")
     }
 
-    Rel(admin, adminPortal, "Uses", "HTTPS")
-    Rel(endUser, userPortal, "Uses", "HTTPS")
+    Rel(admin, web, "Uses", "HTTPS")
+    Rel(endUser, web, "Uses", "HTTPS")
 
-    Rel(adminPortal, workflowSvc, "API calls", "/api/* via nginx proxy")
-    Rel(userPortal, workflowSvc, "API calls", "/api/* via nginx proxy")
-    Rel(adminPortal, keycloak, "OAuth2 login", "OIDC Code Flow")
-    Rel(userPortal, keycloak, "OAuth2 login", "OIDC Code Flow")
+    Rel(web, workflowSvc, "API calls", "/api/* via nginx proxy")
+    Rel(web, keycloak, "OAuth2 login", "OIDC Code Flow")
 
     Rel(workflowSvc, keycloak, "Validates JWTs", "JWK Set endpoint")
 
@@ -42,8 +39,7 @@ C4Container
 
 | Container | Technology | Port | Database Schema | Description |
 |-----------|-----------|------|----------------|-------------|
-| Admin Portal | React 18 + nginx | 5173 (host) | - | Process designer, field editor, audit viewer |
-| User Portal | React 18 + nginx | 5174 (host) | - | Task inbox, start process, notifications |
+| Tracker app | React 18 + nginx | 5175 (host) | - | User and admin screens, BPMN editor |
 | App | Spring Boot + Flowable 7.1 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
 | PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 2 schemas | Shared database instance |
 | Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |

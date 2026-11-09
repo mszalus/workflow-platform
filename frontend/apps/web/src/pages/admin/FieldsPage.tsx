@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FieldSchema } from '@wfp/shared-ui';
+import type { FieldSchema } from '../../shared-ui';
 import { createField, deleteField } from '../../admin/api';
 import { apiErrorMessage, listFieldDefinitions } from '../../items/api';
 import { useProjects, type Project } from '../../projects/ProjectContext';

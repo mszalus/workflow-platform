@@ -8,7 +8,7 @@ import { ProjectProvider, type Project } from './projects/ProjectContext';
 const auth = vi.hoisted(() => ({ roles: [] as string[] }));
 const api = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn() }));
 
-vi.mock('@wfp/shared-ui', () => ({
+vi.mock('./shared-ui', () => ({
   useAuth: () => ({ username: 'user-a', tenantId: 'tenant-a', roles: auth.roles, logout: vi.fn() }),
   apiClient: api,
 }));

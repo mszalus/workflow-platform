@@ -2,95 +2,78 @@ import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 
 const SCREENSHOTS_DIR = path.join(__dirname, '..', 'docs', 'screenshots');
+const WEB_URL = 'http://localhost:5175';
 
-async function loginViaRoot(page: Page, port: number, sidebarTitle: string) {
-  // Always start from root to avoid OIDC redirect issues with deep links
-  await page.goto(`http://localhost:${port}/`);
-  await page.getByRole('textbox', { name: 'Username or email' }).fill('admin-a');
+async function login(page: Page, username: string) {
+  await page.goto(WEB_URL);
+  await page.getByRole('textbox', { name: 'Username or email' }).fill(username);
   await page.getByRole('textbox', { name: 'Password' }).fill('password');
   await page.getByRole('button', { name: 'Sign In' }).click();
-  // Wait for app shell sidebar to render (auth complete)
-  await expect(page.getByText(sidebarTitle)).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible({ timeout: 20000 });
+}
+
+function capture(page: Page, name: string) {
+  return page.screenshot({ path: path.join(SCREENSHOTS_DIR, `${name}.png`) });
 }
 
 test.describe('Screenshot Capture', () => {
-  test.describe.configure({ timeout: 45000 });
+  test.use({ viewport: { width: 1280, height: 720 } });
 
   test('Keycloak login page', async ({ page }) => {
-    await page.goto('http://localhost:5173/');
-    await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'keycloak-login.png'), fullPage: true });
+    await page.goto(WEB_URL);
+    await expect(page.getByRole('textbox', { name: 'Username or email' })).toBeVisible({ timeout: 15000 });
+    await capture(page, 'keycloak-login');
   });
 
-  test('Admin Portal — Dashboard', async ({ page }) => {
-    await loginViaRoot(page, 5173, 'WFP Admin');
-    // Already on dashboard after login redirect
-    await expect(page.getByText('Deployed Processes')).toBeVisible({ timeout: 10000 });
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'admin-dashboard.png'), fullPage: true });
+  test('User screens', async ({ page }) => {
+    await login(page, 'user-a');
+    await page.getByLabel('Project').selectOption('PROJ');
+    await capture(page, 'my-work');
+
+    await page.getByRole('link', { name: 'Items' }).click();
+    await expect(page.locator('tbody tr').first()).toBeVisible();
+    await page.getByRole('button', { name: '+ Add filter' }).click();
+    await capture(page, 'items');
+
+    await page.getByRole('button', { name: '+ Create' }).click();
+    await expect(page.getByRole('dialog', { name: 'Create item' })).toBeVisible();
+    await capture(page, 'create-item');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await page.locator('tbody tr').first().getByRole('link').click();
+    await expect(page.getByRole('heading', { name: 'Comments' })).toBeVisible();
+    await page.waitForTimeout(800);
+    await capture(page, 'item-detail');
+
+    await page.getByRole('link', { name: 'Board' }).click();
+    await expect(page.getByRole('region', { name: 'Open', exact: true })).toBeVisible();
+    await capture(page, 'board');
   });
 
-  test('Admin Portal — Process Designer', async ({ page }) => {
-    await loginViaRoot(page, 5173, 'WFP Admin');
-    await page.getByRole('link', { name: 'Processes' }).click();
-    await page.getByText('New Process').click();
-    await expect(page.locator('.bjs-container')).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'admin-process-designer.png'), fullPage: true });
-  });
+  test('Admin screens', async ({ page }) => {
+    await login(page, 'admin-a');
+    await page.getByLabel('Project').selectOption('PROJ');
 
-  test('Admin Portal — Process List', async ({ page }) => {
-    await loginViaRoot(page, 5173, 'WFP Admin');
-    await page.getByRole('link', { name: 'Processes' }).click();
-    await expect(page.getByText('Process Definitions')).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'admin-process-list.png'), fullPage: true });
-  });
+    await page.getByRole('link', { name: 'Projects' }).click();
+    await expect(page.getByRole('cell', { name: 'PROJ', exact: true })).toBeVisible();
+    await capture(page, 'admin-projects');
 
-  test('Admin Portal — Custom Fields', async ({ page }) => {
-    await loginViaRoot(page, 5173, 'WFP Admin');
-    await page.getByText('Custom Fields').click();
-    await expect(page.getByText('Custom Field Editor')).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'admin-custom-fields.png'), fullPage: true });
-  });
+    await page.getByRole('link', { name: 'Workflows' }).click();
+    const workflow = page.getByRole('row', { name: /simple/ });
+    await expect(workflow).toBeVisible();
+    await capture(page, 'admin-workflows');
 
-  test('Admin Portal — Audit Log', async ({ page }) => {
-    await loginViaRoot(page, 5173, 'WFP Admin');
-    await page.getByText('Audit Log').click();
-    await expect(page.getByRole('heading', { name: 'Audit Log' })).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(1000); // let data load
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'admin-audit-log.png'), fullPage: true });
-  });
+    await workflow.getByRole('link', { name: 'Edit' }).click();
+    await expect(page.locator('.djs-container svg').first()).toBeVisible({ timeout: 20000 });
+    await page.waitForTimeout(800);
+    await capture(page, 'workflow-editor');
 
-  test('User Portal — Dashboard', async ({ page }) => {
-    await loginViaRoot(page, 5174, 'WFP Portal');
-    await expect(page.getByText('Welcome')).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'user-dashboard.png'), fullPage: true });
-  });
+    await page.getByRole('link', { name: 'Fields' }).click();
+    await expect(page.getByRole('cell', { name: 'Severity', exact: true })).toBeVisible();
+    await capture(page, 'admin-fields');
 
-  test('User Portal — Task Inbox', async ({ page }) => {
-    await loginViaRoot(page, 5174, 'WFP Portal');
-    await page.getByText('My Tasks').first().click();
-    await expect(page.getByRole('heading', { name: 'My Tasks' })).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'user-task-inbox.png'), fullPage: true });
+    await page.getByRole('link', { name: 'Audit log' }).click();
+    await expect(page.locator('tbody tr').first()).toBeVisible();
+    await capture(page, 'admin-audit-log');
   });
-
-  test('User Portal — Start Process', async ({ page }) => {
-    await loginViaRoot(page, 5174, 'WFP Portal');
-    await page.getByRole('link', { name: 'Start Process' }).click();
-    await expect(page.getByRole('heading', { name: 'Start Process' })).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'user-start-process.png'), fullPage: true });
-  });
-
-  test('User Portal — Notifications', async ({ page }) => {
-    await loginViaRoot(page, 5174, 'WFP Portal');
-    await page.getByRole('link', { name: 'Notifications' }).click();
-    await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible({ timeout: 10000 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, 'user-notifications.png'), fullPage: true });
-  });
-
 });

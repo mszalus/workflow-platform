@@ -31,13 +31,7 @@ app:
     SPRING_DATASOURCE_PASSWORD: wfp_secret
     SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://wfp-keycloak:8080/realms/workflow-platform
 
-admin-portal:
-  replicaCount: 1
-  resources:
-    requests: { cpu: 50m, memory: 64Mi }
-    limits: { cpu: 100m, memory: 128Mi }
-
-user-portal:
+web:
   replicaCount: 1
   resources:
     requests: { cpu: 50m, memory: 64Mi }

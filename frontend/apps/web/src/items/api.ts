@@ -1,4 +1,4 @@
-import { apiClient, type FieldSchema, type PagedResponse } from '@wfp/shared-ui';
+import { apiClient, type FieldSchema, type PagedResponse } from '../shared-ui';
 
 export type StatusCategory = 'OPEN' | 'TODO' | 'IN_PROGRESS' | 'DONE';
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';

@@ -1,4 +1,4 @@
-import type { FieldSchema } from '@wfp/shared-ui';
+import type { FieldSchema } from '../shared-ui';
 import { describe, expect, it } from 'vitest';
 import { filterFields, joinValues, splitValues, toFilterParams } from './filters';
 

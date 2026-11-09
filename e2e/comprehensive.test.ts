@@ -6,8 +6,6 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 
 const KEYCLOAK_URL = 'http://localhost:8180';
 const API_URL = 'http://localhost:8081';
-const ADMIN_PORTAL_URL = 'http://localhost:5173';
-const USER_PORTAL_URL = 'http://localhost:5174';
 const TOKEN_ENDPOINT = `${KEYCLOAK_URL}/realms/workflow-platform/protocol/openid-connect/token`;
 const OIDC_DISCOVERY = `${KEYCLOAK_URL}/realms/workflow-platform/.well-known/openid-configuration`;
 
@@ -17,18 +15,6 @@ const USERS = {
   'admin-b': { username: 'admin-b', password: 'password', tenant: 'tenant-b' },
   'user-b': { username: 'user-b', password: 'password', tenant: 'tenant-b' },
 } as const;
-
-/** Navigate to a portal URL and handle Keycloak login if redirected */
-async function loginIfNeeded(page: import('@playwright/test').Page, portalUrl: string, username: string, password: string) {
-  await page.goto(portalUrl);
-  await page.waitForURL((url) => url.href.includes('realms/workflow-platform') || url.pathname.includes('dashboard'));
-  if (page.url().includes('realms/workflow-platform')) {
-    await page.getByLabel('Username or email').fill(username);
-    await page.getByLabel('Password', { exact: true }).fill(password);
-    await page.getByRole('button', { name: 'Sign In' }).click();
-  }
-  await page.waitForURL(/dashboard/, { timeout: 20000 });
-}
 
 // ---------------------------------------------------------------------------
 // BPMN XML templates
@@ -90,7 +76,7 @@ const tokenCache: Record<string, { token: string; expiry: number }> = {};
 async function getToken(
   request: APIRequestContext,
   username: string,
-  clientId = 'wfp-admin-portal',
+  clientId = 'wfp-web',
 ): Promise<string> {
   const cacheKey = `${username}:${clientId}`;
   const cached = tokenCache[cacheKey];
@@ -999,186 +985,5 @@ test.describe.serial('11. BPMN Import/Export Tests', () => {
     expect(xml).toContain('flowable:priority="75"');
     expect(xml).toContain('flowable:class="com.wfp.workflow.delegate.NoOpDelegate"');
     expect(xml).toContain('flowable:async="true"');
-  });
-});
-
-// ==========================================================================
-// 12. Admin Portal UI Tests (using Playwright browser)
-// ==========================================================================
-
-test.describe.serial('12. Admin Portal UI Tests', () => {
-  test('Login to admin portal as admin-a', async ({ page }) => {
-    await page.goto(ADMIN_PORTAL_URL);
-
-    // Should redirect to Keycloak login
-    await expect(page).toHaveURL(/realms\/workflow-platform/, { timeout: 15000 });
-    await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible({
-      timeout: 10000,
-    });
-
-    // Fill in credentials
-    await page.getByLabel('Username or email').fill('admin-a');
-    await page.getByLabel('Password', { exact: true }).fill('password');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-
-    // Should redirect back to admin portal dashboard
-    await expect(page).toHaveURL(new RegExp(`${ADMIN_PORTAL_URL.replace('http://', '')}.*dashboard`), {
-      timeout: 15000,
-    });
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Dashboard shows deployed processes count (not "--")', async ({ page }) => {
-    await loginIfNeeded(page, ADMIN_PORTAL_URL, 'admin-a', 'password');
-
-    // The "Deployed Processes" card should show a number, not "--" or 0 (we deployed processes earlier)
-    const deployedCard = page.locator('text=Deployed Processes').locator('..');
-    await expect(deployedCard).toBeVisible({ timeout: 10000 });
-
-    // Wait for the number to load (not be the initial loading state)
-    await page.waitForFunction(
-      () => {
-        const el = document.querySelector('h3');
-        if (!el) return false;
-        // Find the card containing "Deployed Processes"
-        const cards = Array.from(document.querySelectorAll('h3'));
-        const deployedH3 = cards.find((h) => h.textContent?.includes('Deployed Processes'));
-        if (!deployedH3) return false;
-        const parent = deployedH3.parentElement;
-        const numberDiv = parent?.querySelector('div[style*="font-size"]');
-        return numberDiv && numberDiv.textContent !== '--' && numberDiv.textContent !== '';
-      },
-      { timeout: 10000 },
-    );
-  });
-
-  test('Navigate to Processes page, verify process list loads', async ({ page }) => {
-    await loginIfNeeded(page, ADMIN_PORTAL_URL, 'admin-a', 'password');
-
-    // Click on Processes nav link
-    await page.getByRole('link', { name: 'Processes' }).click();
-    await expect(page).toHaveURL(/processes/, { timeout: 10000 });
-
-    // Verify the heading and table are present
-    await expect(page.getByRole('heading', { name: 'Process Definitions' })).toBeVisible({
-      timeout: 10000,
-    });
-
-    // Should see a table with at least one row (from our deployments)
-    await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
-    // Wait for at least one row with data
-    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Navigate to Audit Log, verify audit entries load', async ({ page }) => {
-    await loginIfNeeded(page, ADMIN_PORTAL_URL, 'admin-a', 'password');
-
-    // Click on Audit Log nav link
-    await page.getByRole('link', { name: 'Audit Log' }).click();
-    await expect(page).toHaveURL(/audit/, { timeout: 10000 });
-
-    // Verify the heading
-    await expect(page.getByRole('heading', { name: 'Audit Log' })).toBeVisible({ timeout: 10000 });
-
-    // Should see a table with audit entries
-    await expect(page.locator('table')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
-  });
-});
-
-// ==========================================================================
-// 13. User Portal UI Tests (using Playwright browser)
-// ==========================================================================
-
-test.describe.serial('13. User Portal UI Tests', () => {
-  test('Login to user portal as user-a', async ({ page }) => {
-    await page.goto(USER_PORTAL_URL);
-
-    // Should redirect to Keycloak login
-    await expect(page).toHaveURL(/realms\/workflow-platform/, { timeout: 15000 });
-    await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible({
-      timeout: 10000,
-    });
-
-    // Fill in credentials
-    await page.getByLabel('Username or email').fill('user-a');
-    await page.getByLabel('Password', { exact: true }).fill('password');
-    await page.getByRole('button', { name: 'Sign In' }).click();
-
-    // Should redirect back to user portal dashboard
-    await expect(page).toHaveURL(new RegExp(`${USER_PORTAL_URL.replace('http://', '')}.*dashboard`), {
-      timeout: 15000,
-    });
-    await expect(page.getByRole('heading', { name: /Welcome/ })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Dashboard shows task count and notification count', async ({ page }) => {
-    await loginIfNeeded(page, USER_PORTAL_URL, 'user-a', 'password');
-
-    // Verify "My Tasks" card exists
-    await expect(page.locator('text=My Tasks').first()).toBeVisible({ timeout: 10000 });
-
-    // Verify "Unread Notifications" card exists
-    await expect(page.locator('text=Unread Notifications').first()).toBeVisible({ timeout: 10000 });
-
-    // Verify "Start New Process" link card exists
-    await expect(page.getByRole('link', { name: 'Start New Process' })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Navigate to My Tasks, verify task table loads', async ({ page }) => {
-    await loginIfNeeded(page, USER_PORTAL_URL, 'user-a', 'password');
-
-    // Click on My Tasks nav link
-    await page.getByRole('link', { name: 'My Tasks' }).click();
-    await expect(page).toHaveURL(/tasks/, { timeout: 10000 });
-
-    // Verify heading
-    await expect(page.getByRole('heading', { name: 'My Tasks' })).toBeVisible({ timeout: 10000 });
-
-    // The table should be visible (even if empty, it renders the table)
-    await expect(page.locator('table').first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Navigate to Start Process, verify process cards appear', async ({ page }) => {
-    await loginIfNeeded(page, USER_PORTAL_URL, 'user-a', 'password');
-
-    // Click on Start Process nav link
-    await page.getByRole('link', { name: 'Start Process' }).click();
-    await expect(page).toHaveURL(/start-process/, { timeout: 10000 });
-
-    // Verify heading
-    await expect(page.getByRole('heading', { name: 'Start Process' })).toBeVisible({ timeout: 10000 });
-
-    // Should see at least one process card with a "Start" button
-    await expect(page.getByRole('button', { name: 'Start' }).first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Click Start on a process, verify redirect to My Processes', async ({ page }) => {
-    await loginIfNeeded(page, USER_PORTAL_URL, 'user-a', 'password');
-    await page.goto(`${USER_PORTAL_URL}/start-process`);
-    await page.waitForURL(/start-process/, { timeout: 15000 });
-
-    // Wait for process cards to load, then click the first Start button
-    const startButton = page.getByRole('button', { name: 'Start' }).first();
-    await expect(startButton).toBeVisible({ timeout: 10000 });
-    await startButton.click();
-
-    // Should redirect to My Processes after starting
-    await expect(page).toHaveURL(/my-processes/, { timeout: 15000 });
-    await expect(page.getByRole('heading', { name: 'My Processes' })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Navigate to Notifications page', async ({ page }) => {
-    await loginIfNeeded(page, USER_PORTAL_URL, 'user-a', 'password');
-
-    // Click on Notifications nav link
-    await page.getByRole('link', { name: 'Notifications' }).click();
-    await expect(page).toHaveURL(/notifications/, { timeout: 10000 });
-
-    // Verify heading
-    await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible({ timeout: 10000 });
-
-    // Verify "Mark All Read" button exists
-    await expect(page.getByRole('button', { name: 'Mark All Read' })).toBeVisible({ timeout: 10000 });
   });
 });

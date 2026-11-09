@@ -99,11 +99,11 @@ none of them holds a session.
 ### Flow
 
 1. The browser runs an OIDC Authorization Code flow against Keycloak
-   (realm `workflow-platform`) from Admin Portal or User Portal.
+   (realm `workflow-platform`) from the tracker app.
 2. The SPA sends the access token as `Authorization: Bearer …` with each `/api` call; the
-   portal's nginx proxies it to app.
+   web app's nginx proxies it to app.
 3. app validates the signature against the Keycloak JWK Set and accepts no
-   unauthenticated traffic, whether it's reached through a portal or directly.
+   unauthenticated traffic, whether it's reached through the web app or directly.
 4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`; the
    tenant comes only from the JWT, never from a header — see Multi-Tenancy.
 
@@ -132,7 +132,7 @@ Admin — Keycloak Administration · User — Login
 
 ## API Routing
 
-There is no gateway. Each portal's nginx proxies `/api/` to app unchanged,
+There is no gateway. The web app's nginx proxies `/api/` to app unchanged,
 Vite does the same in development, and app serves the external paths
 itself:
 
@@ -212,49 +212,42 @@ App · Admin — Process Designer · Data Model ERD
 
 ## Frontend Architecture
 
-An npm **workspaces** monorepo: two apps, two shared packages, one lockfile.
+One app, `frontend/apps/web`, with the former packages as folders inside it:
 
 ```
-frontend/
-├── packages/
-│   ├── shared-ui/     → API client, AuthProvider, shared types
-│   └── bpmn-editor/   → bpmn-js wrapper + Flowable property provider
-└── apps/
-    ├── admin-portal/  → depends on both packages
-    └── user-portal/   → depends on shared-ui
+frontend/apps/web/src/
+├── shared-ui/     → API client, AuthProvider, shared types
+├── bpmn-editor/   → bpmn-js wrapper + Flowable property provider
+├── pages/         → user screens, and admin screens under admin/
+└── components/, items/, projects/, admin/, auth/
 ```
-
-### Build order is not optional
-
-`shared-ui` → `bpmn-editor` → apps. The apps import the packages by workspace name and
-resolve to built output, so a clean build that runs the apps first fails on missing
-types. Recorded in Known Pitfalls.
 
 ```bash
 cd frontend
 npm ci
-npm run build                              # respects the order
+npm run build
 npm run typecheck --workspaces --if-present
 ```
 
+The workflow editor is loaded on demand, so regular users don't download the modeler.
+
 ### Auth and API access
 
-Both apps mount `AuthProvider` from shared-ui, which performs the OIDC code flow
+The app mounts `AuthProvider` from shared-ui, which performs the OIDC code flow
 against Keycloak and injects the bearer token into `apiClient`. All calls go through the
-portal's nginx `/api` proxy, so every path is an API Routing path.
+web app's nginx `/api` proxy, so every path is an API Routing path.
 
 ### Testing posture
 
 Unit tests run on Vitest with React Testing Library and jsdom. A single
-`frontend/vitest.config.ts` picks up every `*.test.ts(x)` under `packages/*/src` and
-`apps/*/src`, so it keeps working when 20.e folds the packages into one app.
+`frontend/vitest.config.ts` picks up every `*.test.ts(x)` under `apps/*/src`.
 `npm test` runs them in the Claude commit and push hooks; CI runs `npm run test:coverage` and
 uploads the report.
 User flows are covered by Playwright at the E2E layer.
 
 ### See also
 
-Admin Portal · User Portal · shared-ui · bpmn-editor
+Tracker app · shared-ui · bpmn-editor
 
 ## Build System
 
@@ -296,7 +289,7 @@ Backend build commands · CI Pipeline · Repository Layout
 | Backend integration | `@SpringBootTest` on H2 | repositories, full Spring context |
 | Backend web | MockMvc + Spring Security `jwt()` | authenticated endpoints |
 | BDD acceptance | Cucumber-style features under `tests/` | cross-service behaviour |
-| E2E | Playwright (`e2e/`) | both portals against the running stack |
+| E2E | Playwright (`e2e/`) | the tracker app and API against the running stack |
 | Frontend unit | Vitest + React Testing Library (jsdom) | components, hooks, `apiClient` |
 
 Integration tests activate `SPRING_PROFILES_ACTIVE=test` and read

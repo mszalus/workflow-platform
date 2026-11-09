@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import type { ProcessDefinition } from '@wfp/shared-ui';
+import type { ProcessDefinition } from '../../shared-ui';
 import { downloadBpmn, listWorkflows } from '../../admin/api';
 import { getWorkflowXml } from '../../items/api';
 

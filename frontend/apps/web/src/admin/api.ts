@@ -1,10 +1,4 @@
-import {
-  apiClient,
-  type AuditEntry,
-  type FieldSchema,
-  type PagedResponse,
-  type ProcessDefinition,
-} from '@wfp/shared-ui';
+import { apiClient, type AuditEntry, type FieldSchema, type PagedResponse, type ProcessDefinition } from '../shared-ui';
 import type { Project } from '../projects/ProjectContext';
 
 export interface NewField {

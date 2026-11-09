@@ -175,18 +175,10 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  admin-portal:
-    image: ${REGISTRY}/admin-portal:latest
+  web:
+    image: ${REGISTRY}/web:latest
     ports:
-      - "5173:80"
-    depends_on:
-      - gateway
-    restart: unless-stopped
-
-  user-portal:
-    image: ${REGISTRY}/user-portal:latest
-    ports:
-      - "5174:80"
+      - "5175:80"
     depends_on:
       - gateway
     restart: unless-stopped

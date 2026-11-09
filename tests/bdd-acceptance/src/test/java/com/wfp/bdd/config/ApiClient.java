@@ -32,7 +32,7 @@ public class ApiClient {
         return RestAssured.given()
                 .contentType("application/x-www-form-urlencoded")
                 .formParam("grant_type", "password")
-                .formParam("client_id", "wfp-admin-portal")
+                .formParam("client_id", "wfp-web")
                 .formParam("username", username)
                 .formParam("password", "password")
                 .when()

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from '@wfp/shared-ui';
-import { BpmnEditor, type Violation } from '@wfp/bpmn-editor';
+import { apiClient } from '../../shared-ui';
+import { BpmnEditor, type Violation } from '../../bpmn-editor';
 import type { AxiosError } from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import { downloadBpmn, listWorkflows } from '../../admin/api';

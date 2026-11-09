@@ -58,7 +58,7 @@ for svc in "${SERVICES[@]}"; do
   docker push "${REGISTRY}/${svc}:latest"
 done
 
-FRONTENDS=(admin-portal user-portal)
+FRONTENDS=(web)
 for app in "${FRONTENDS[@]}"; do
   echo "  Building $app..."
   docker build -t "${REGISTRY}/${app}:latest" -f "frontend/apps/${app}/Dockerfile" .
@@ -71,7 +71,7 @@ echo ">>> All images pushed to ${REGISTRY}"
 echo ">>> Creating firewall rule..."
 gcloud compute firewall-rules describe allow-wfp 2>/dev/null || \
 gcloud compute firewall-rules create allow-wfp \
-  --allow=tcp:5173,tcp:5174,tcp:8180,tcp:9080 \
+  --allow=tcp:5175,tcp:8180,tcp:9080 \
   --target-tags="$NETWORK_TAG" \
   --description="Allow traffic to Workflow Platform" \
   --direction=INGRESS
@@ -157,8 +157,7 @@ echo "  Java services take ~5 minutes to start on first boot."
 echo "  Check progress:"
 echo "    gcloud compute ssh $VM_NAME --zone=$ZONE --command='sudo docker compose -f /opt/wfp/docker-compose.yml logs --tail=1 gateway workflow-service'"
 echo ""
-echo "  Admin Portal:  http://${EXTERNAL_IP}:5173"
-echo "  User Portal:   http://${EXTERNAL_IP}:5174"
+echo "  Tracker:       http://${EXTERNAL_IP}:5175"
 echo "  Keycloak:      http://${EXTERNAL_IP}:8180"
 echo "  Gateway API:   http://${EXTERNAL_IP}:9080"
 echo ""

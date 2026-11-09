@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '@wfp/shared-ui';
+import { useAuth } from '../shared-ui';
 import { keycloakUsersUrl } from '../auth/keycloakUrl';
 import { useIsAdmin } from '../auth/useIsAdmin';
 import CreateItemDialog from './CreateItemDialog';

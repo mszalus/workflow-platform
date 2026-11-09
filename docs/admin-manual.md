@@ -4,11 +4,11 @@
 
 1. [Overview](#overview)
 2. [Architecture](#architecture)
-3. [Admin Portal](#admin-portal)
-4. [Process Designer](#process-designer)
-5. [Deploying Processes](#deploying-processes)
-6. [Managing Process Definitions](#managing-process-definitions)
-7. [Custom Field Schemas](#custom-field-schemas)
+3. [Admin Section](#admin-section)
+4. [Projects](#projects)
+5. [Workflows](#workflows)
+6. [Workflow Editor](#workflow-editor)
+7. [Fields](#fields)
 8. [Audit Log](#audit-log)
 9. [Keycloak Administration](#keycloak-administration)
 10. [Docker Deployment](#docker-deployment)
@@ -19,28 +19,26 @@
 
 ## Overview
 
-The Workflow Platform Admin Portal provides tools for workflow administrators to:
+The **Admin** section of the tracker app gives administrators the tools to:
 
-- Design BPMN workflow processes using a visual editor
-- Deploy and manage process definitions
-- Configure custom fields for processes
-- View audit logs of all platform activity
-- Monitor infrastructure components
+- Create projects and map their item types to workflows
+- Design and deploy BPMN workflows with a visual editor
+- Configure custom fields by project and item type
+- View the audit log of all platform activity
 
-**URL:** `http://localhost:5173` (local development)
+**URL:** `http://localhost:5175` (local development)
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐
-│ Admin Portal│     │ User Portal │
-│  :5173      │     │  :5174      │
-└──────┬──────┘     └──────┬──────┘
-       │ nginx /api proxy  │
-       └────────┬──────────┘
-                │
+┌─────────────┐
+│ Tracker app │
+│  :5175      │
+└──────┬──────┘
+       │ nginx /api proxy
+       │
          ┌──────▼───────┐
          │   Workflow   │
          │custom fields,│
@@ -59,7 +57,7 @@ The Workflow Platform Admin Portal provides tools for workflow administrators to
 
 ### API Routing
 
-Each portal's nginx proxies `/api/` unchanged to `app:8081`. The service serves the
+The web app's nginx proxies `/api/` unchanged to `app:8081`. The service serves the
 external paths itself (`/api/workflow/**`, `/api/fields/**`, `/api/notifications/**`, `/api/audit/**`)
 and validates the JWT on every request. In development, Vite proxies `/api` to `localhost:8081`.
 
@@ -69,26 +67,39 @@ Workflow events (`task.created`, `task.assigned`, `task.completed`, `task.delega
 
 ---
 
-## Admin Portal
+## Admin Section
 
-### Login
+Open the app and log in with an admin account (for example `admin-a` / `password`). The **Admin** section appears in the sidebar only for the `admin` role, and `/admin` pages redirect anyone else to My work. The API enforces the same role.
 
-Navigate to `http://localhost:5173`. You'll be redirected to Keycloak for authentication.
-
-Use an admin account (e.g., `admin-a` / `password`).
-
-### Dashboard
-
-The admin dashboard shows:
-- **Deployed Processes** — count of deployed process definitions
-- **Active Instances** — count of running process instances
-- **Custom Field Schemas** — count of configured field schemas
+**Users and groups** opens the Keycloak console. See [Keycloak Administration](#keycloak-administration).
 
 ---
 
-## Process Designer
+## Projects
 
-Navigate to **Process Designer** in the sidebar to create BPMN workflow diagrams.
+![Projects](screenshots/admin-projects.png)
+
+Click **+ New project**, then enter:
+
+- **Key** — 2 to 10 capital letters or digits, starting with a letter. Item keys are built from it, such as `PROJ-12`.
+- **Name**
+- **Item types** — at least one, each using a deployed workflow.
+
+Projects cannot be edited after they are created.
+
+---
+
+## Workflows
+
+![Workflows](screenshots/admin-workflows.png)
+
+The table shows the latest version of each deployed workflow. **Edit** opens it in the editor, and **Export BPMN** downloads it. Click **+ New** to start a new workflow or to import a file.
+
+---
+
+## Workflow Editor
+
+![Workflow editor](screenshots/workflow-editor.png)
 
 ### BPMN Editor
 
@@ -149,9 +160,9 @@ The properties panel includes Flowable-specific configuration:
 
 You can import existing BPMN 2.0 XML files into the visual editor:
 
-1. Click **Import** in the top-right toolbar
+1. Click **Import BPMN** in the top-right toolbar
 2. Select a `.bpmn` or `.bpmn20.xml` file from your computer
-3. The diagram renders in the canvas and the process name auto-fills from the filename
+3. The diagram renders in the canvas and the workflow name auto-fills from the filename
 4. Review and edit the process in the visual editor
 5. Click **Deploy** to deploy it to the Flowable engine
 
@@ -170,113 +181,58 @@ Sample BPMN files are included in `e2e/samples/` for testing:
 
 Click **Export** to download the current diagram as a `.bpmn` XML file. This preserves all Flowable-specific properties (assignee, candidateGroups, formKey, async settings, etc.).
 
-### Editing Existing Processes
+### Editing Existing Workflows
 
-From the Process Definitions list, click **Edit** on any process to load its BPMN XML into the visual editor. You can modify the diagram and redeploy — Flowable auto-increments the version number.
+On the Workflows screen, click **Edit** on any workflow to load its BPMN XML into the visual editor. You can modify the diagram and redeploy — Flowable auto-increments the version number.
 
-### Deploying from the Designer
+### Deploying
 
 1. Create or import your BPMN diagram in the editor
-2. Enter a **process name** in the top-right input
+2. Enter a **workflow name** in the top-right input
 3. Click **Deploy**
 4. The process is sent to the app and deployed to the Flowable engine
-5. You'll be redirected to the Process Definitions list
+5. You'll be redirected to the Workflows screen
 
 A tracker workflow (one that uses status categories) is checked against the tracker rules first; if it breaks any, the deploy is refused and the problems are listed below the canvas. The process needs a valid process `id`; deploy marks it executable itself.
 
 ---
 
-## Managing Process Definitions
+## Fields
 
-Navigate to **Process Definitions** in the sidebar.
+Custom fields attach structured data to items without changing the workflow. **Fields** shows the definitions for the project selected at the top left.
 
-The table shows all deployed process definitions with:
+![Fields](screenshots/admin-fields.png)
 
-| Column  | Description                          |
-|---------|--------------------------------------|
-| Name    | Process display name                 |
-| Key     | Process definition key (unique ID)   |
-| Version | Deployment version (auto-incremented)|
-| Actions | Edit (open in designer), Delete      |
+Click **+ New field**, then enter:
 
-### Deleting a Process
+- **Name** — the label users see
+- **Key** — the identifier, used in filters as `cf.<key>`
+- **Type** — Text, Long text, Number, Date, Date and time, Yes or no, or Select
+- **Required**
+- **Item types** — tick the types it applies to, or none for all of them
+- **Options** — for Select, one per line
 
-Click **Delete** to remove a deployment. This removes the process definition but does not affect running instances.
-
-> **Warning:** Deleting a process definition is irreversible. Running instances will continue to completion but the process cannot be started again.
-
----
-
-## Custom Field Schemas
-
-Navigate to **Custom Fields** in the sidebar to define dynamic form fields for processes.
-
-Custom fields allow you to attach structured data to process instances without modifying the BPMN definition.
-
-### Creating a Field Schema
-
-1. Select a **process definition** from the dropdown
-2. Fill in the field configuration:
-   - **Field Key** — unique identifier (e.g., `customer_name`)
-   - **Label** — display label (e.g., "Customer Name")
-   - **Field Type** — one of: TEXT, TEXTAREA, NUMBER, DATE, DATETIME, BOOLEAN, DROPDOWN, MULTI_SELECT, FILE, USER_PICKER
-   - **Required** — whether the field is mandatory
-3. Click **Add**
-
-### Managing Fields
-
-The table shows all field schemas for the selected process:
-
-| Column   | Description              |
-|----------|--------------------------|
-| Key      | Field identifier         |
-| Label    | Display label            |
-| Type     | Field data type          |
-| Required | Yes/No                   |
-| Actions  | Delete button            |
-
-### How Custom Fields Work
-
-- Schemas are stored in app, next to the workflow engine
-- Field values are associated with process instances
-- The User Portal displays custom fields on the Task Detail page
-- Fields are queried with `GET /api/fields/values?processInstanceId=...`
+A key can repeat within a project only if the item types do not overlap. **Delete** removes the definition. Values already stored on items are kept.
 
 ---
 
 ## Audit Log
 
-Navigate to **Audit Log** in the sidebar.
+The audit log records every significant change, in the same transaction as the change.
 
-The audit log captures every significant event in the platform, recorded in the same transaction as the change.
+![Audit log](screenshots/admin-audit-log.png)
 
-### Viewing the Audit Log
-
-The table displays audit entries with columns:
-
-| Column    | Description                          |
-|-----------|--------------------------------------|
-| Timestamp | When the event occurred              |
-| Event     | Event type (e.g., `task.completed`)  |
-| Entity    | Entity type (PROCESS or TASK)        |
-| Entity ID | ID of the affected entity            |
-| User      | User who triggered the event         |
-
-### Filtering
-
-- **Type filter** — filter by entity type (All, Process, Task)
-- **User ID** — filter by user who performed the action
-- **Pagination** — navigate through pages (20 entries per page)
+Filter by **Who** (a username), **What** (an event type) and a date range, then click **Apply**.
 
 ### Event Types
 
-| Event Type         | Description                        |
-|-------------------|------------------------------------|
-| `process.started` | A new process instance was created |
-| `task.created`    | A new task was created             |
-| `task.assigned`   | A task was assigned to a user      |
-| `task.completed`  | A task was marked as complete      |
-| `task.delegated`  | A task was delegated to another user |
+| Event Type          | Description                               |
+|---------------------|-------------------------------------------|
+| `project.created`   | A project was created                     |
+| `item.created`      | An item was created                       |
+| `item.updated`      | An item changed, with the field changes   |
+| `item.transitioned` | An item moved to another status           |
+| `item.commented`    | A comment was added to an item            |
 
 ---
 
@@ -291,8 +247,7 @@ Keycloak manages authentication and tenant isolation.
 
 - **Realm:** `workflow-platform` — single realm for all tenants
 - **Clients:**
-  - `wfp-admin-portal` — OIDC client for admin portal
-  - `wfp-user-portal` — OIDC client for user portal
+  - `wfp-web` — OIDC client for the tracker app
 - **Client Scopes:**
   - `tenant` — adds `tenant_id` claim to JWT
   - `profile` — adds `preferred_username`, `given_name`, `family_name`
@@ -347,8 +302,7 @@ docker compose -f docker/docker-compose.yml ps
 | wfp-postgres      | postgres:16-alpine | 5433  | Database (all schemas) |
 | wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
 | wfp-app           | (built)            | 8081  | Workflow engine, custom fields, notifications, audit |
-| wfp-admin-portal  | (built)            | 5173  | Admin frontend         |
-| wfp-user-portal   | (built)            | 5174  | User frontend          |
+| wfp-web           | (built)            | 5175  | Tracker app            |
 
 ### Startup Order
 
@@ -394,8 +348,7 @@ The platform includes Helm charts for Kubernetes deployment.
 helm/
 ├── charts/
 │   ├── app/
-│   ├── admin-portal/
-│   └── user-portal/
+│   └── web/
 └── workflow-platform/          # Umbrella chart
     ├── Chart.yaml
     └── values-local.yaml
@@ -461,7 +414,7 @@ curl http://localhost:8081/actuator/health  # app
 ```bash
 # Get a JWT token
 curl -s -X POST 'http://localhost:8180/realms/workflow-platform/protocol/openid-connect/token' \
-  -d 'grant_type=password&client_id=wfp-admin-portal&username=admin-a&password=password' \
+  -d 'grant_type=password&client_id=wfp-web&username=admin-a&password=password' \
   | jq .access_token -r
 
 # Deploy a BPMN process

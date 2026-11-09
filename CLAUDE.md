@@ -108,7 +108,7 @@ Sessions, branches and merging, gates, review and subagent delegation are descri
 
 Multi-tenant BPMN workflow platform. Users design workflows visually (bpmn-js), deploy them, and end users complete tasks through a task inbox. Every action is audited, custom fields can be attached to any process, and notifications are delivered in real-time.
 
-Services: `app` (8081: Flowable, custom fields, notifications and audit), reached through the portals' nginx `/api` proxy. The React apps are in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
+Services: `app` (8081: Flowable, custom fields, notifications and audit), reached through the web app's nginx `/api` proxy. The React apps are in `frontend/apps/`, the local stack in `docker/docker-compose.yml`. Versions: Spring Boot in `buildSrc/build.gradle`, frontend in `frontend/package.json`.
 
 ## Build Commands
 
@@ -123,10 +123,9 @@ Services: `app` (8081: Flowable, custom fields, notifications and audit), reache
 ```bash
 cd frontend
 npm ci                                              # install deps (clean)
-npm run build                                       # build all packages + apps (order matters)
+npm run build                                       # build the app
 npm run typecheck --workspaces --if-present          # TypeScript type check
-npm run dev:admin                                   # dev server for admin-portal
-npm run dev:user                                    # dev server for user-portal
+npm run dev:web                                     # dev server for the tracker app (:5175)
 ```
 
 ### Docker
@@ -154,18 +153,17 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 2. **Port conflicts**: Local PostgreSQL on 5432 conflicts with Docker. Docker compose maps PG to `5433` externally
 3. **Hibernate tenant filter**: `tenantFilter` is defined once, at package level in `com/wfp/workflow/entity/package-info.java`. Entities declare `@Filter` only; a second `@FilterDef` with that name throws at boot
 4. **Flowable + H2 tests**: Requires `MODE=LEGACY` in the JDBC URL, not `MODE=PostgreSQL`
-5. **Frontend build order**: `shared-ui` → `bpmn-editor` → apps (apps depend on packages)
-6. **CI gradlew permission**: The `gradlew` file must have execute permission in git (`git update-index --chmod=+x gradlew`)
-7. **Gradle daemon JDK**: Gradle 9.2 cannot run on JDK 26+. `gradle/gradle-daemon-jvm.properties` pins the daemon to Java 21, which Gradle picks from locally installed JDKs whatever `JAVA_HOME` says
+5. **CI gradlew permission**: The `gradlew` file must have execute permission in git (`git update-index --chmod=+x gradlew`)
+6. **Gradle daemon JDK**: Gradle 9.2 cannot run on JDK 26+. `gradle/gradle-daemon-jvm.properties` pins the daemon to Java 21, which Gradle picks from locally installed JDKs whatever `JAVA_HOME` says
 
 ## Testing
 
 - Backend integration tests run the full Spring context on H2 (`@SpringBootTest`, `MODE=LEGACY`)
 - Test config: `src/test/resources/application-test.yml` with `SPRING_PROFILES_ACTIVE=test`
 - Authenticated endpoint tests use Spring Security's `jwt()` request post-processor with a `tenant_id` claim; service-layer tests use `TenantContext.runAs`
-- Frontend: Vitest with React Testing Library on jsdom. One config, `frontend/vitest.config.ts`, runs every `*.test.ts(x)` under `packages/*/src` and `apps/*/src`: `cd frontend && npm test` (`npm run test:coverage` for the coverage report, as CI does)
+- Frontend: Vitest with React Testing Library on jsdom. One config, `frontend/vitest.config.ts`, runs every `*.test.ts(x)` under `apps/*/src`: `cd frontend && npm test` (`npm run test:coverage` for the coverage report, as CI does)
 - Acceptance: Cucumber BDD in `tests/bdd-acceptance` and Playwright in `e2e/` (`npm test`), both run in CI against a fresh Docker stack. `npm run screenshots` in `e2e/` refreshes `docs/screenshots/`
 
 ## MCP Servers
 
-- **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, frontend portals, and service health endpoints.
+- **Playwright** (`@playwright/mcp`) — browser automation for E2E testing. Use for verifying Keycloak, the tracker app, and service health endpoints.

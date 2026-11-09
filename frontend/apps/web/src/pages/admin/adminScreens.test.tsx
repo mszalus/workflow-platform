@@ -8,11 +8,11 @@ import { ProjectProvider, type Project } from '../../projects/ProjectContext';
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }));
 const editor = vi.hoisted(() => ({ onXmlChange: undefined as ((xml: string) => void) | undefined }));
 
-vi.mock('@wfp/shared-ui', () => ({
+vi.mock('../../shared-ui', () => ({
   useAuth: () => ({ username: 'admin-a', tenantId: 'tenant-a', roles: ['admin'], logout: vi.fn() }),
   apiClient: api,
 }));
-vi.mock('@wfp/bpmn-editor', () => ({
+vi.mock('../../bpmn-editor', () => ({
   BpmnEditor: ({ xml, onXmlChange }: { xml?: string; onXmlChange: (xml: string) => void }) => {
     editor.onXmlChange = onXmlChange;
     return <pre data-testid="editor">{xml}</pre>;
