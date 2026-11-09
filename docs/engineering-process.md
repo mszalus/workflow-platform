@@ -38,7 +38,6 @@ and `docs/design/`. This file covers only how we work.
 | PR opened or updated | `backend-build`; `frontend-build` (lint, format, typecheck, `npm audit`); `helm-lint` | `.github/workflows/ci.yml` | the merge |
 | PR opened or updated | `acceptance-tests` (BDD against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
 | PR opened or updated | `e2e-playwright` (Playwright against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
-| PR opened or updated | Claude code review | `.github/workflows/claude-code-review.yml` | nothing, advisory |
 | PR opened or updated | `docker-build` (images and Trivy) | `.github/workflows/ci.yml` | the merge |
 | Push to `main` | The PR jobs | `.github/workflows/ci.yml` | nothing; a red run becomes an issue in the current Phase 0 milestone |
 | Weekly | OWASP dependency check, `npm audit` | `.github/workflows/security.yml` | nothing |
@@ -64,7 +63,7 @@ Human attention goes to two checkpoints: approving the plan and reviewing the PR
 1. **Plan.** Work that involves a design choice or spans more than one file of logic starts in plan mode. The human approves the plan before code is written.
 2. **Build.** The work session implements the plan and commits and pushes through the hooks.
 3. **Self-review.** For changes to security, tenancy, events or the database schema, run `/code-review` before marking the PR ready.
-4. **PR review.** The Claude review comments (advisory), CI gates the merge, and the human reads the diff and merges. The merge closes the issue.
+4. **PR review.** CI gates the merge, and the human reads the diff and merges. The merge closes the issue.
 
 ## Delegating to subagents
 
