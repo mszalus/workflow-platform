@@ -1,10 +1,6 @@
 package com.wfp.workflow.service;
 
 import com.wfp.common.dto.PagedResponse;
-import com.wfp.workflow.event.BaseEvent;
-import com.wfp.workflow.event.TaskAssignedEvent;
-import com.wfp.workflow.event.TaskCompletedEvent;
-import com.wfp.workflow.event.TaskCreatedEvent;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.NotificationDto;
 import com.wfp.workflow.entity.Notification;
@@ -26,15 +22,6 @@ public class NotificationService {
     private static final int MAX_TITLE_LENGTH = 255;
 
     private final NotificationRepository notificationRepository;
-
-    public void notify(BaseEvent event) {
-        switch (event) {
-            case TaskCreatedEvent e -> notifyTaskCreated(e);
-            case TaskAssignedEvent e -> notifyTaskAssigned(e);
-            case TaskCompletedEvent e -> notifyTaskCompleted(e);
-            default -> { }
-        }
-    }
 
     public void createNotification(String userId, String tenantId, String title,
                                     String message, NotificationType type,
@@ -71,34 +58,6 @@ public class NotificationService {
     @Transactional
     public void markAllAsRead(String userId) {
         notificationRepository.markAllAsRead(userId, TenantContext.requireCurrentTenantId());
-    }
-
-    private void notifyTaskCreated(TaskCreatedEvent e) {
-        if (e.getAssignee() != null) {
-            createNotification(e.getAssignee(), e.getTenantId(),
-                    "New Task: " + e.getTaskName(),
-                    "You have been assigned a new task: " + e.getTaskName(),
-                    NotificationType.TASK_ASSIGNED, e.getTaskId(), "TASK");
-        }
-    }
-
-    private void notifyTaskAssigned(TaskAssignedEvent e) {
-        if (e.getAssignee() != null) {
-            createNotification(e.getAssignee(), e.getTenantId(),
-                    "Task Assigned: " + e.getTaskName(),
-                    "Task '" + e.getTaskName() + "' has been assigned to you",
-                    NotificationType.TASK_ASSIGNED, e.getTaskId(), "TASK");
-        }
-    }
-
-    private void notifyTaskCompleted(TaskCompletedEvent e) {
-        String userId = e.getCompletedBy() != null ? e.getCompletedBy() : e.getUserId();
-        if (userId != null) {
-            createNotification(userId, e.getTenantId(),
-                    "Task Completed: " + e.getTaskName(),
-                    "Task '" + e.getTaskName() + "' has been completed",
-                    NotificationType.TASK_COMPLETED, e.getTaskId(), "TASK");
-        }
     }
 
     private NotificationDto toDto(Notification n) {

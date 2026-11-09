@@ -32,14 +32,8 @@ public class Comment {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "item_id")
+    @Column(name = "item_id", nullable = false)
     private UUID itemId;
-
-    @Column(name = "process_instance_id")
-    private String processInstanceId;
-
-    @Column(name = "task_id")
-    private String taskId;
 
     @Column(name = "user_id", nullable = false)
     private String userId;

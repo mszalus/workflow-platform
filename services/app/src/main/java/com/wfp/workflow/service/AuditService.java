@@ -6,12 +6,6 @@ import com.wfp.common.dto.PagedResponse;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.AuditEntryDto;
 import com.wfp.workflow.entity.AuditEntry;
-import com.wfp.workflow.event.BaseEvent;
-import com.wfp.workflow.event.ProcessStartedEvent;
-import com.wfp.workflow.event.TaskAssignedEvent;
-import com.wfp.workflow.event.TaskCompletedEvent;
-import com.wfp.workflow.event.TaskCreatedEvent;
-import com.wfp.workflow.event.TaskDelegatedEvent;
 import com.wfp.workflow.repository.AuditEntryRepository;
 import com.wfp.workflow.repository.AuditEntrySpecification;
 import lombok.RequiredArgsConstructor;
@@ -33,19 +27,6 @@ public class AuditService {
 
     private final AuditEntryRepository auditEntryRepository;
     private final ObjectMapper objectMapper;
-
-    public void record(BaseEvent event) {
-        auditEntryRepository.save(AuditEntry.builder()
-                .eventType(event.getEventType())
-                .entityType(resolveEntityType(event))
-                .entityId(resolveEntityId(event))
-                .userId(event.getUserId())
-                .tenantId(event.getTenantId())
-                .timestamp(event.getTimestamp())
-                .details(serialize(event))
-                .sourceService("app")
-                .build());
-    }
 
     public void record(String eventType, String entityType, String entityId, String userId,
                        Map<String, Object> details) {
@@ -101,28 +82,6 @@ public class AuditService {
                 .details(detailsMap)
                 .sourceService(e.getSourceService())
                 .build();
-    }
-
-    private String resolveEntityType(BaseEvent event) {
-        return switch (event) {
-            case ProcessStartedEvent e -> "PROCESS";
-            case TaskCreatedEvent e -> "TASK";
-            case TaskAssignedEvent e -> "TASK";
-            case TaskCompletedEvent e -> "TASK";
-            case TaskDelegatedEvent e -> "TASK";
-            default -> "UNKNOWN";
-        };
-    }
-
-    private String resolveEntityId(BaseEvent event) {
-        return switch (event) {
-            case ProcessStartedEvent e -> e.getProcessInstanceId();
-            case TaskCreatedEvent e -> e.getTaskId();
-            case TaskAssignedEvent e -> e.getTaskId();
-            case TaskCompletedEvent e -> e.getTaskId();
-            case TaskDelegatedEvent e -> e.getTaskId();
-            default -> "unknown";
-        };
     }
 
     private String serialize(Object details) {

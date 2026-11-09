@@ -16,8 +16,7 @@ public class TenantIsolationSteps {
     private final ScenarioContext context;
     private final ApiClient api;
 
-    private List<String> tenantBProcessIds;
-    private List<String> tenantBTaskProcessIds;
+    private List<String> tenantBItemKeys;
     private List<String> tenantBDefinitionKeys;
     private List<String> tenantBAuditEntityIds;
 
@@ -26,31 +25,25 @@ public class TenantIsolationSteps {
         this.api = api;
     }
 
-    @When("I authenticate as {string} and list active processes")
-    public void authenticateAsTenantBAndListProcesses(String username) {
-        tenantBProcessIds = listAs(username, api::listProcesses, "content.id");
+    @When("I authenticate as {string} and list items")
+    public void authenticateAsTenantBAndListItems(String username) {
+        tenantBItemKeys = listAs(username, api::listItems, "content.key");
     }
 
-    @Then("the process instance from tenant A is not in the list")
-    public void processInstanceNotVisibleToTenantB() {
-        String instanceId = context.getLastProcessInstanceId();
-        assertThat(tenantBProcessIds)
-                .as("Tenant B's process list should not contain tenant A's instance %s", instanceId)
-                .doesNotContain(instanceId);
+    @Then("the item from tenant A is not in the list")
+    public void itemNotVisibleToTenantB() {
+        assertThat(tenantBItemKeys).doesNotContain(context.getLastItemKey());
     }
 
-    @When("I authenticate as {string} and list tasks for {string}")
-    public void authenticateAsTenantBAndListTasks(String tenantBUser, String assignee) {
-        tenantBTaskProcessIds = listAs(tenantBUser, () -> api.listTasksForAssignee(assignee),
-                "content.processInstanceId");
-    }
-
-    @Then("no tasks are returned for that query")
-    public void noTasksReturnedForTenantBQuery() {
-        String instanceId = context.getLastProcessInstanceId();
-        assertThat(tenantBTaskProcessIds)
-                .as("Tenant B should not see tasks from tenant A's process %s", instanceId)
-                .doesNotContain(instanceId);
+    @When("I authenticate as {string} and open that item")
+    public void authenticateAsTenantBAndOpenItem(String username) {
+        String originalToken = context.getCurrentToken();
+        context.setCurrentToken(api.obtainToken(username));
+        try {
+            context.setLastStatusCode(api.getItem(context.getLastItemKey()).statusCode());
+        } finally {
+            context.setCurrentToken(originalToken);
+        }
     }
 
     @When("I authenticate as {string} and list process definitions")
@@ -70,12 +63,9 @@ public class TenantIsolationSteps {
         tenantBAuditEntityIds = listAs(username, api::listAuditEntries, "content.entityId");
     }
 
-    @Then("none of the audit entries belong to tenant A's process")
-    public void noAuditEntriesFromTenantAProcess() {
-        String instanceId = context.getLastProcessInstanceId();
-        assertThat(tenantBAuditEntityIds)
-                .as("Tenant B's audit log should not contain entries for tenant A's process %s", instanceId)
-                .doesNotContain(instanceId);
+    @Then("none of the audit entries are about that item")
+    public void noAuditEntriesAboutTheItem() {
+        assertThat(tenantBAuditEntityIds).doesNotContain(context.getLastItemKey());
     }
 
     private List<String> listAs(String username, Supplier<Response> request, String valuePath) {

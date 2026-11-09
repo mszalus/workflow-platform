@@ -65,90 +65,18 @@ public class ApiClient {
     }
 
     // -------------------------------------------------------------------------
-    // Process instances
-    // -------------------------------------------------------------------------
-
-    public Response startProcess(String processDefinitionKey) {
-        return auth()
-                .body(Map.of("processDefinitionKey", processDefinitionKey))
-                .when()
-                .post(API + "/api/workflow/processes");
-    }
-
-    public Response listProcesses() {
-        return auth().when().get(API + "/api/workflow/processes?size=100");
-    }
-
-    public Response cancelProcess(String processInstanceId) {
-        return auth().when()
-                .delete(API + "/api/workflow/processes/" + processInstanceId);
-    }
-
-    // -------------------------------------------------------------------------
-    // Tasks
-    // -------------------------------------------------------------------------
-
-    public Response listTasksForAssignee(String assignee) {
-        return auth().when()
-                .get(API + "/api/workflow/tasks?assignee=" + assignee + "&size=100");
-    }
-
-    public Response getTask(String taskId) {
-        return auth().when().get(API + "/api/workflow/tasks/" + taskId);
-    }
-
-    public Response completeTask(String taskId) {
-        return auth()
-                .body("{}")
-                .when()
-                .post(API + "/api/workflow/tasks/" + taskId + "/complete");
-    }
-
-    public Response delegateTask(String taskId, String toUserId) {
-        return auth()
-                .body(Map.of("delegateToUserId", toUserId, "comment", "Delegated via BDD test"))
-                .when()
-                .post(API + "/api/workflow/tasks/" + taskId + "/delegate");
-    }
-
-    // -------------------------------------------------------------------------
     // Custom fields
     // -------------------------------------------------------------------------
 
-    public Response createFieldSchema(String processDefinitionKey, String fieldKey, String fieldType) {
+    public Response createTextField(String project, String fieldKey) {
         return auth()
-                .body(Map.of(
-                        "processDefinitionKey", processDefinitionKey,
-                        "fieldKey", fieldKey,
-                        "label", fieldKey,
-                        "fieldType", fieldType,
-                        "required", false,
-                        "sortOrder", 0
-                ))
+                .body(Map.of("project", project, "fieldKey", fieldKey, "label", fieldKey, "fieldType", "TEXT"))
                 .when()
                 .post(API + "/api/fields/schemas");
     }
 
-    public Response listFieldSchemas(String processDefinitionKey) {
-        return auth().when()
-                .get(API + "/api/fields/schemas?processDefinitionKey=" + processDefinitionKey);
-    }
-
-    public Response saveFieldValues(String processInstanceId, String processDefinitionKey,
-                                    Map<String, String> values) {
-        return auth()
-                .body(Map.of(
-                        "processInstanceId", processInstanceId,
-                        "processDefinitionKey", processDefinitionKey,
-                        "values", values
-                ))
-                .when()
-                .post(API + "/api/fields/values");
-    }
-
-    public Response getFieldValues(String processInstanceId) {
-        return auth().when()
-                .get(API + "/api/fields/values?processInstanceId=" + processInstanceId);
+    public Response listFields(String project) {
+        return auth().when().get(API + "/api/fields/schemas?project=" + project);
     }
 
     // -------------------------------------------------------------------------
@@ -200,11 +128,16 @@ public class ApiClient {
                 .post(API + "/api/projects");
     }
 
-    public Response createItem(String project, String type, String title) {
-        return auth()
-                .body(Map.of("project", project, "type", type, "title", title))
-                .when()
-                .post(API + "/api/items");
+    public Response createItem(Map<String, Object> item) {
+        return auth().body(item).when().post(API + "/api/items");
+    }
+
+    public Response listItems() {
+        return auth().when().get(API + "/api/items?size=100");
+    }
+
+    public Response getItem(String key) {
+        return auth().when().get(API + "/api/items/" + key);
     }
 
     public Response transitionItem(String key, String transitionId) {

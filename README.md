@@ -1,6 +1,6 @@
 # Workflow Platform
 
-A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React. Users design workflows visually, deploy them, and end users complete tasks through a web-based task inbox. Every action is audited, custom fields can be attached to any process definition, and in-app notifications are written in the same transaction as the change that causes them.
+A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React. Users design workflows visually, deploy them, and teams track work items through them in a web app. Every action is audited, custom fields can be defined per project and item type, and in-app notifications are written in the same transaction as the change that causes them.
 
 ## Architecture
 
@@ -132,16 +132,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | POST | `/api/workflow/deployments` | Deploy a BPMN process (tracker workflows are validated first) |
 | POST | `/api/workflow/workflows/validate` | Check BPMN against the tracker profile: `[{elementId, rule, message}]` |
 | GET | `/api/workflow/deployments` | List deployments |
-| POST | `/api/workflow/processes` | Start a process instance |
-| GET | `/api/workflow/processes` | List process instances |
-| GET | `/api/workflow/tasks` | List tasks |
-| POST | `/api/workflow/tasks/{id}/complete` | Complete a task |
-| GET | `/api/workflow/history/processes` | Process history |
-| POST | `/api/fields/schemas` | Create a custom field schema for a `project` and `itemTypes` (none means all), or for a `processDefinitionKey` |
+| POST | `/api/fields/schemas` | Create a custom field schema for a `project` and `itemTypes` (none means all) |
 | GET | `/api/fields/schemas?project=...&type=...` | List a project's field schemas, optionally those that apply to one item type |
-| GET | `/api/fields/schemas?processDefinitionKey=...` | List field schemas |
-| POST | `/api/fields/values` | Save field values |
-| GET | `/api/fields/values?processInstanceId=...` | Get field values |
 | GET | `/api/notifications/` | List notifications |
 | GET | `/api/notifications/unread-count` | Get unread count |
 | PUT | `/api/notifications/mark-read` | Mark notifications as read |

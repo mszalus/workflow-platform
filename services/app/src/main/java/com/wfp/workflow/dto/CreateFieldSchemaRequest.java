@@ -9,8 +9,7 @@ import java.util.List;
 
 @Data
 public class CreateFieldSchemaRequest {
-    private String processDefinitionKey;
-    private String project;
+    @NotBlank private String project;
     private List<String> itemTypes;
     @NotBlank private String fieldKey;
     @NotBlank private String label;

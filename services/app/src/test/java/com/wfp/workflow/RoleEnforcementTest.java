@@ -35,7 +35,6 @@ class RoleEnforcementTest {
             "POST,   /api/workflow/deployments",
             "DELETE, /api/workflow/deployments/any",
             "POST,   /api/workflow/workflows/validate",
-            "DELETE, /api/workflow/processes/any",
             "GET,    /api/audit",
     })
     void refusesTenantAdministrationToAPlainUser(String method, String path) throws Exception {
@@ -51,7 +50,6 @@ class RoleEnforcementTest {
             "POST,   /api/workflow/deployments",
             "DELETE, /api/workflow/deployments/any",
             "POST,   /api/workflow/workflows/validate",
-            "DELETE, /api/workflow/processes/any",
             "GET,    /api/audit",
     })
     void letsAnAdminPastTheRoleGate(String method, String path) throws Exception {
@@ -67,10 +65,8 @@ class RoleEnforcementTest {
     @CsvSource({
             "GET, /api/items",
             "GET, /api/projects",
-            "GET, /api/fields/schemas",
             "GET, /api/notifications",
             "GET, /api/workflow/deployments",
-            "GET, /api/workflow/tasks",
     })
     void leavesTheScreensAPlainUserNeedsOpen(String method, String path) throws Exception {
         mockMvc.perform(authenticated(method, path, TestRoles.USER))

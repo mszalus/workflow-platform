@@ -29,7 +29,7 @@ flowchart LR
 > [!CAUTION]
 > **`tenantFilter` is defined once, at package level**
 > `com/wfp/workflow/entity/package-info.java` holds the only `@FilterDef`. Every
-> tenant-scoped entity (Comment, FieldSchema, FieldValue, Notification, AuditEntry)
+> tenant-scoped entity (Comment, FieldSchema, Notification, AuditEntry)
 > declares `@Filter` **only**; a second `@FilterDef` with the same name throws at boot.
 
 The `@FilterDef` must keep `autoEnabled = true`, `applyToLoadByKey = true` and `resolver = CurrentTenantIdResolver.class`; without them the filter silently stops applying.
@@ -50,46 +50,13 @@ Admin — Keycloak Administration.
 
 Known Pitfalls · Data Model ERD · User — Multi-Tenant Isolation
 
-## Event System
+## Audit and Notifications
 
-Events are **in-process**: App is the only producer and the only consumer,
-and there is no message broker. `EventPublisher` hands each event to
-`NotificationService` and then to `AuditService`. Both write their rows in the caller's
-transaction, so a change, its notification and its audit entry commit or roll back
-together.
-
-```mermaid
-flowchart LR
-    API["ProcessService / TaskService"] --> EP["EventPublisher"]
-    FEL["FlowableEventListener"] --> EP
-    EP --> NS["NotificationService<br/>notification row"]
-    EP --> AS["AuditService<br/>audit_entry row"]
-```
-
-### Event types
-
-`process.started` · `task.created` · `task.assigned` · `task.completed` · `task.delegated`
-
-The event classes live in `com.wfp.workflow.event`; every declared type is published.
-Process completion, cancellation and SLA events return as item events in the tracker.
-
-### Work items write their rows directly
-
-`ItemService` doesn't use events. Creating, changing or moving an item writes the item,
-its `wf_item_transition` row, its audit entry (`item.created`, `item.updated` with the
-field diff, `item.transitioned`) and its notifications (`ITEM_ASSIGNED`,
-`ITEM_TRANSITIONED`) itself, in one transaction. `CommentService` does the same for a
-comment on an item (`item.commented`, `ITEM_COMMENTED`). The process and task events below go
-away with the old process and task API (20.e).
-
-### Two publication paths
-
-1. **Explicit**: `ProcessService` and `TaskService` call `EventPublisher` for actions the
-   API initiated (`process.started`, `task.completed`, `task.delegated`). These methods are
-   `@Transactional`, so Flowable joins the same transaction.
-2. **Engine-driven**: `FlowableEventListener` subscribes to the Flowable engine event bus
-   and forwards engine-originated transitions (`task.created`, `task.assigned`), which no
-   API call directly causes. It runs inside the engine command's transaction.
+There is no event bus. Creating, changing or moving an item writes the item, its
+`wf_item_transition` row, its audit entry (`item.created`, `item.updated` with the field
+diff, `item.transitioned`) and its notifications (`ITEM_ASSIGNED`, `ITEM_TRANSITIONED`)
+itself, in one transaction. `CommentService` does the same for a comment on an item
+(`item.commented`, `ITEM_COMMENTED`). `ItemRollbackTest` pins that guarantee.
 
 ## Security and JWT
 
@@ -140,8 +107,8 @@ itself:
 |---|---|
 | `/api/projects/**` | `ProjectController` |
 | `/api/items/**` | `ItemController` |
-| `/api/workflow/**` | `DeploymentController`, `WorkflowController`, `ProcessController`, `TaskController`, `CommentController`, `HistoryController` |
-| `/api/fields/**` | `FieldSchemaController`, `FieldValueController` |
+| `/api/workflow/**` | `DeploymentController`, `WorkflowController` |
+| `/api/fields/**` | `FieldSchemaController` |
 | `/api/notifications/**` | `NotificationController` |
 | `/api/audit/**` | `AuditController` |
 
@@ -177,34 +144,14 @@ The engine reports back through `WorkflowRunListener`: `FlowableRunEvents` liste
 `ACTIVITY_STARTED` on runs that carry an `itemId` and calls `statusEntered` or `runEnded`,
 which `ItemService` implements. Timer-driven moves reach the item the same way.
 
-The older services below serve today's process and task API, which 20.e removes. Their queries
-skip runs that carry an `itemId`, so items can only be moved through the item API.
-
-| Flowable API | Wrapped by | Purpose |
-|---|---|---|
-| `RepositoryService` | `DeploymentService` | deploy BPMN XML, list definitions, fetch XML |
-| `RuntimeService` | `ProcessService` | start and cancel instances, variables |
-| `IdentityService` | `ProcessService` | set authenticated user so the initiator is recorded |
-| `TaskService` | `TaskService` | claim, unclaim, complete, delegate |
-| `HistoryService` | `ProcessHistoryService` | completed processes and tasks |
+`DeploymentService` wraps `RepositoryService` to deploy BPMN XML, list definitions and fetch
+their XML. Everything else goes through `WorkflowEngine`.
 
 ### Native tenant support
 
 Flowable stores a `TENANT_ID_` column on its own tables, so tenant isolation for engine
 data is handled by passing `tenantId` on every engine call rather than by the Hibernate
 filter used for application entities. See Multi-Tenancy.
-
-### Engine events
-
-`FlowableEventListener` subscribes to the engine event bus for `TASK_CREATED` and
-`TASK_ASSIGNED` and hands them to `EventPublisher`. These
-transitions are caused by the engine advancing a process, not by an API call, so they
-cannot be published from a controller. See Event System.
-
-> [!WARNING]
-> **H2 test mode**
-> Flowable integration tests need `MODE=LEGACY` in the H2 JDBC URL. `MODE=PostgreSQL`
-> fails on Flowable schema creation. See Known Pitfalls.
 
 ### See also
 

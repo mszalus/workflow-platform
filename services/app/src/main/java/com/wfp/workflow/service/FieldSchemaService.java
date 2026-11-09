@@ -14,7 +14,6 @@ import com.wfp.security.context.TenantContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -33,12 +32,7 @@ public class FieldSchemaService {
     @Transactional
     public FieldSchemaDto createSchema(CreateFieldSchemaRequest req) {
         String tenantId = TenantContext.requireCurrentTenantId();
-        boolean scopedToProject = StringUtils.hasText(req.getProject());
-        if (scopedToProject == StringUtils.hasText(req.getProcessDefinitionKey())) {
-            throw new BadRequestException("Give either a project or a processDefinitionKey");
-        }
         FieldSchema schema = FieldSchema.builder()
-                .processDefinitionKey(scopedToProject ? null : req.getProcessDefinitionKey())
                 .fieldKey(req.getFieldKey())
                 .label(req.getLabel())
                 .fieldType(req.getFieldType())
@@ -61,9 +55,7 @@ public class FieldSchemaService {
                 schema.getOptions().add(fo);
             }
         }
-        if (scopedToProject) {
-            scopeToProject(schema, req);
-        }
+        scopeToProject(schema, req);
         return toDto(schemaRepository.save(schema));
     }
 
@@ -81,18 +73,6 @@ public class FieldSchemaService {
         return schemaRepository.findByIdAndTenantId(id, tenantId)
                 .map(this::toDto)
                 .orElseThrow(() -> new NotFoundException("FieldSchema", id));
-    }
-
-    public List<FieldSchemaDto> listByProcessDefinition(String processDefinitionKey) {
-        String tenantId = TenantContext.requireCurrentTenantId();
-        return schemaRepository.findByProcessDefinitionKeyAndTenantIdOrderBySortOrder(processDefinitionKey, tenantId)
-                .stream().map(this::toDto).toList();
-    }
-
-    public List<FieldSchemaDto> listAll() {
-        String tenantId = TenantContext.requireCurrentTenantId();
-        return schemaRepository.findByTenantIdOrderBySortOrder(tenantId)
-                .stream().map(this::toDto).toList();
     }
 
     @Transactional
@@ -138,8 +118,7 @@ public class FieldSchemaService {
     private FieldSchemaDto toDto(FieldSchema s) {
         return FieldSchemaDto.builder()
                 .id(s.getId().toString())
-                .processDefinitionKey(s.getProcessDefinitionKey())
-                .project(s.getProject() == null ? null : s.getProject().getKey())
+                .project(s.getProject().getKey())
                 .itemTypes(s.getItemTypes().stream().map(ItemType::getName).sorted().toList())
                 .fieldKey(s.getFieldKey())
                 .label(s.getLabel())

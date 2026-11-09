@@ -45,7 +45,7 @@ class ItemScopeMigrationTest {
         UUID commentOnItemRun = comment("tenant-a", "run-1");
         UUID commentOnOldProcess = comment("tenant-a", "run-without-item");
 
-        flyway().load().migrate();
+        flyway().target("8").load().migrate();
 
         assertThat(commentItem(commentOnItemRun)).isEqualTo(item);
         assertThat(commentItem(commentOnOldProcess)).isNull();
@@ -70,6 +70,18 @@ class ItemScopeMigrationTest {
                 """, "bug-flow")).isEqualTo(1);
         assertThat(count("SELECT count(*) FROM field_schema WHERE project_id IS NOT NULL AND field_key = ?", "unused"))
                 .isZero();
+
+        flyway().load().migrate();
+
+        assertThat(jdbc.queryForList("SELECT id FROM wf_comments", UUID.class)).containsExactly(commentOnItemRun);
+        assertThat(commentItem(commentOnItemRun)).isEqualTo(item);
+        assertThat(count("SELECT count(*) FROM field_schema WHERE field_key = ?", "unused")).isZero();
+        assertThat(count("SELECT count(*) FROM field_schema WHERE field_key = ?", "severity")).isEqualTo(3);
+        assertThat(count("""
+                SELECT count(*) FROM field_option copied_option
+                JOIN field_schema definition ON definition.id = copied_option.field_schema_id
+                WHERE definition.project_id = ? AND copied_option.value = 'High'
+                """, platform)).isEqualTo(1);
     }
 
     private FluentConfiguration flyway() {
