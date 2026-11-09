@@ -1,7 +1,7 @@
 package com.wfp.workflow.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 import com.wfp.common.dto.PagedResponse;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.AuditEntryDto;

@@ -1,6 +1,6 @@
 # C4 Level 3 — Component Diagram: App (the backend service)
 
-The workflow service is the core of the platform. It wraps the Flowable 7.1 BPMN engine and exposes the project, work item, workflow deployment, custom field, notification and audit APIs.
+The workflow service is the core of the platform. It wraps the Flowable 8.0 BPMN engine and exposes the project, work item, workflow deployment, custom field, notification and audit APIs.
 
 ```mermaid
 C4Component

@@ -117,7 +117,7 @@ same paths.
 
 ## Flowable Engine
 
-Flowable 7.1.0 runs **embedded, in-process** inside App — it is not a
+Flowable 8.0.0 runs **embedded, in-process** inside App — it is not a
 separate container. It shares the `workflow` PostgreSQL schema, where its `ACT_*` tables
 sit alongside the application `wf_*` tables.
 
