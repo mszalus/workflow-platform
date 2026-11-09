@@ -35,6 +35,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -304,6 +305,84 @@ class ItemControllerTest {
     }
 
     @Test
+    void renamesAProjectAndAddsAnItemType() throws Exception {
+        updateProject("""
+                {"name":"Renamed","itemTypes":[{"name":"Task","workflowKey":"simple"},
+                                               {"name":"Request","workflowKey":"approval"},
+                                               {"name":"Bug","workflowKey":"simple"}]}
+                """).andExpect(status().isOk())
+                .andExpect(jsonPath("$.key").value("PROJ"))
+                .andExpect(jsonPath("$.name").value("Renamed"));
+
+        perform(get("/api/projects"), "alice", null)
+                .andExpect(jsonPath("$[0].itemTypes[*].name", containsInAnyOrder("Task", "Request", "Bug")));
+        perform(post("/api/items"), "alice", """
+                {"project":"PROJ","type":"Bug","title":"Works on the new type"}
+                """).andExpect(status().isCreated());
+        assertThat(auditEvents("PROJ")).contains("project.updated");
+    }
+
+    @Test
+    void removesAnItemTypeNothingUses() throws Exception {
+        updateProject("""
+                {"name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
+                """).andExpect(status().isOk());
+
+        perform(get("/api/projects"), "alice", null)
+                .andExpect(jsonPath("$[0].itemTypes[*].name", containsInAnyOrder("Task")));
+    }
+
+    @Test
+    void refusesToRemoveAnItemTypeThatHasItems() throws Exception {
+        perform(post("/api/items"), "alice", APPROVAL_ITEM).andExpect(status().isCreated());
+
+        updateProject("""
+                {"name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
+                """).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Item type Request still has items"));
+
+        perform(get("/api/projects"), "alice", null)
+                .andExpect(jsonPath("$[0].itemTypes[*].name", containsInAnyOrder("Task", "Request")));
+    }
+
+    @Test
+    void refusesToRemoveAnItemTypeThatHasFieldDefinitions() throws Exception {
+        updateProject("""
+                {"name":"Platform","itemTypes":[{"name":"Request","workflowKey":"approval"}]}
+                """).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Item type Task still has field definitions"));
+    }
+
+    @Test
+    void refusesInvalidProjectChanges() throws Exception {
+        updateProject("""
+                {"name":"Platform","itemTypes":[{"name":"Task","workflowKey":"approval"},
+                                               {"name":"Request","workflowKey":"approval"}]}
+                """).andExpect(status().isBadRequest());
+        updateProject("""
+                {"name":"Platform","itemTypes":[{"name":"Task","workflowKey":"simple"},
+                                               {"name":"Task","workflowKey":"simple"}]}
+                """).andExpect(status().isBadRequest());
+        updateProject("""
+                {"name":" ","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
+                """).andExpect(status().isBadRequest());
+        updateProject("""
+                {"name":"Platform","itemTypes":[]}
+                """).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void anotherTenantCannotEditAProject() throws Exception {
+        mockMvc.perform(put("/api/projects/PROJ").with(jwt().jwt(token -> token.claim("preferred_username", "mallory")
+                                .claim("tenant_id", "tenant-other")).authorities(TestRoles.ADMIN))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Stolen","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
+                                """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void resolvesFieldDefinitionsByProjectAndItemType() throws Exception {
         createField(textField("[]", "component")).andExpect(status().isCreated());
         createField(textField("[\"Request\"]", "budget")).andExpect(status().isCreated());
@@ -411,6 +490,10 @@ class ItemControllerTest {
                 .filter(notification -> notification.getUserId().equals(user))
                 .map(Notification::getTitle)
                 .toList();
+    }
+
+    private ResultActions updateProject(String body) throws Exception {
+        return perform(put("/api/projects/PROJ"), "admin", body);
     }
 
     private ResultActions createField(String body) throws Exception {

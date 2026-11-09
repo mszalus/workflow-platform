@@ -85,7 +85,7 @@ Click **+ New project**, then enter:
 - **Name**
 - **Item types** — at least one, each using a deployed workflow.
 
-Projects cannot be edited after they are created.
+**Edit** changes the name and adds or removes item types. The key, and the workflow of an existing item type, are fixed. An item type cannot be removed while it has items or field definitions.
 
 ---
 
@@ -229,6 +229,7 @@ Filter by **Who** (a username), **What** (an event type) and a date range, then 
 | Event Type          | Description                               |
 |---------------------|-------------------------------------------|
 | `project.created`   | A project was created                     |
+| `project.updated`   | A project's name or item types changed    |
 | `item.created`      | An item was created                       |
 | `item.updated`      | An item changed, with the field changes   |
 | `item.transitioned` | An item moved to another status           |

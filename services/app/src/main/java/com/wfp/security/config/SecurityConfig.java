@@ -40,6 +40,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/projects").hasRole(ADMIN)
+                .requestMatchers(HttpMethod.PUT, "/api/projects/**").hasRole(ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/fields/schemas").hasRole(ADMIN)
                 .requestMatchers(HttpMethod.DELETE, "/api/fields/schemas/**").hasRole(ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/workflow/deployments").hasRole(ADMIN)

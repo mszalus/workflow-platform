@@ -13,6 +13,7 @@ import java.util.UUID;
 public interface FieldSchemaRepository extends JpaRepository<FieldSchema, UUID> {
     List<FieldSchema> findByProjectOrderBySortOrder(Project project);
     List<FieldSchema> findByProjectAndFieldKey(Project project, String fieldKey);
+    boolean existsByItemTypesContaining(ItemType type);
 
     @Query("select s from FieldSchema s where s.project = :project "
             + "and (s.itemTypes is empty or :type member of s.itemTypes) order by s.sortOrder")

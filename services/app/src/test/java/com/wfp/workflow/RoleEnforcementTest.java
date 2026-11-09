@@ -30,6 +30,7 @@ class RoleEnforcementTest {
     @ParameterizedTest
     @CsvSource({
             "POST,   /api/projects",
+            "PUT,    /api/projects/any",
             "POST,   /api/fields/schemas",
             "DELETE, /api/fields/schemas/1",
             "POST,   /api/workflow/deployments",
@@ -45,6 +46,7 @@ class RoleEnforcementTest {
     @ParameterizedTest
     @CsvSource({
             "POST,   /api/projects",
+            "PUT,    /api/projects/any",
             "POST,   /api/fields/schemas",
             "DELETE, /api/fields/schemas/1",
             "POST,   /api/workflow/deployments",

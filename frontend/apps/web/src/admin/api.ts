@@ -28,6 +28,10 @@ export function createProject(project: Project) {
   return apiClient.post<Project>('/projects', project).then((response) => response.data);
 }
 
+export function updateProject(key: string, changes: Pick<Project, 'name' | 'itemTypes'>) {
+  return apiClient.put<Project>(`/projects/${key}`, changes).then((response) => response.data);
+}
+
 export function createField(field: NewField) {
   return apiClient.post<FieldSchema>('/fields/schemas', field).then((response) => response.data);
 }
