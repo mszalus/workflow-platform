@@ -20,6 +20,25 @@ export interface AuditQuery {
   size: number;
 }
 
+export interface UpgradeSummary {
+  workflowKey: string;
+  openItems: number;
+  sameStatus: number;
+  walkedBack: number;
+  reset: number;
+  failed: number;
+}
+
+export function previewUpgrade(bpmnXml: string) {
+  return apiClient
+    .post<UpgradeSummary>('/workflow/workflows/upgrade-preview', { bpmnXml })
+    .then((response) => response.data);
+}
+
+export function moveOpenItems(workflowKey: string) {
+  return apiClient.post<UpgradeSummary>(`/workflow/workflows/${workflowKey}/upgrade`).then((response) => response.data);
+}
+
 export function listWorkflows() {
   return apiClient.get<ProcessDefinition[]>('/workflow/deployments').then((response) => response.data);
 }

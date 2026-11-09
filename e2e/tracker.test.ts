@@ -109,6 +109,31 @@ test.describe.serial('Tracker', () => {
     expect((await audit.json()).totalElements).toBe(3);
   });
 
+  test('an admin deploys a new version and moves open items to it', async ({ page, request }) => {
+    const token = await adminToken(request);
+    const versionOfItem = async () => {
+      const response = await request.get(`${WEB_URL}/api/items/${projectKey}-1`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return (await response.json()).workflowVersionId;
+    };
+    const versionBefore = await versionOfItem();
+
+    await login(page, 'admin-a');
+    await page.getByRole('link', { name: 'Workflows' }).click();
+    await page.getByRole('row', { name: /trackerFlow/ }).getByRole('link', { name: 'Edit' }).click();
+    await expect(page.locator('[data-element-id="doing"]').first()).toBeVisible({ timeout: 20000 });
+    await page.getByRole('button', { name: 'Deploy' }).click();
+
+    const dialog = page.getByRole('dialog', { name: 'Deploy trackerFlow' });
+    await expect(dialog).toContainText('walked back 0');
+    await dialog.getByLabel(/Move them/).check();
+    await dialog.getByRole('button', { name: 'Deploy' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Workflows' })).toBeVisible();
+    expect(await versionOfItem()).not.toBe(versionBefore);
+  });
+
   test('another tenant cannot see the project', async ({ page }) => {
     await login(page, 'user-b');
 

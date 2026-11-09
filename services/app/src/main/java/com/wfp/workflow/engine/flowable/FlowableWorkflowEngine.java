@@ -3,6 +3,7 @@ package com.wfp.workflow.engine.flowable;
 import com.wfp.common.exception.BadRequestException;
 import com.wfp.common.exception.NotFoundException;
 import com.wfp.workflow.engine.Node;
+import com.wfp.workflow.engine.ProposedWorkflow;
 import com.wfp.workflow.engine.Status;
 import com.wfp.workflow.engine.Step;
 import com.wfp.workflow.engine.TrackerProfileValidator;
@@ -86,10 +87,40 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
     }
 
     @Override
-    public WorkflowRun start(String tenantId, String versionId, UUID itemId) {
-        if (!tenantId.equals(repositoryService.getProcessDefinition(versionId).getTenantId())) {
-            throw new NotFoundException("Workflow version", versionId);
+    public ProposedWorkflow inspect(String bpmnXml) {
+        try {
+            WorkflowGraph graph = parser.parse(bpmnXml);
+            return new ProposedWorkflow(graph.processId(), describer.describe(graph));
+        } catch (IllegalArgumentException | FlowableException e) {
+            throw new BadRequestException("Not a tracker workflow: " + e.getMessage());
         }
+    }
+
+    @Override
+    public WorkflowRun startAt(String tenantId, String versionId, UUID itemId, String statusId) {
+        requireVersionInTenant(tenantId, versionId);
+        ProcessInstance run = runtimeService.createProcessInstanceBuilder()
+                .processDefinitionId(versionId)
+                .start();
+        if (!statusId.equals(describe(versionId).initialStatusId())) {
+            runtimeService.createChangeActivityStateBuilder()
+                    .processInstanceId(run.getId())
+                    .moveActivityIdsToSingleActivityId(runtimeService.getActiveActivityIds(run.getId()), statusId)
+                    .changeState();
+        }
+        runtimeService.setVariable(run.getId(), ITEM_ID, itemId.toString());
+        return new WorkflowRun(run.getId(), versionId);
+    }
+
+    @Override
+    public void cancel(String tenantId, String runId, String reason) {
+        requireRun(tenantId, runId);
+        runtimeService.deleteProcessInstance(runId, reason);
+    }
+
+    @Override
+    public WorkflowRun start(String tenantId, String versionId, UUID itemId) {
+        requireVersionInTenant(tenantId, versionId);
         ProcessInstance run = runtimeService.createProcessInstanceBuilder()
                 .processDefinitionId(versionId)
                 .variable(ITEM_ID, itemId.toString())
@@ -149,6 +180,12 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
                 .map(Task::getTaskDefinitionKey)
                 .collect(Collectors.toSet());
         return steps.stream().filter(step -> openTaskKeys.contains(step.id())).toList();
+    }
+
+    private void requireVersionInTenant(String tenantId, String versionId) {
+        if (!tenantId.equals(repositoryService.getProcessDefinition(versionId).getTenantId())) {
+            throw new NotFoundException("Workflow version", versionId);
+        }
     }
 
     private ProcessInstance requireRun(String tenantId, String runId) {

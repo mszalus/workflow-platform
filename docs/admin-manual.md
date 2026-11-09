@@ -185,6 +185,16 @@ Click **Export** to download the current diagram as a `.bpmn` XML file. This pre
 
 On the Workflows screen, click **Edit** on any workflow to load its BPMN XML into the visual editor. You can modify the diagram and redeploy — Flowable auto-increments the version number.
 
+### Moving Open Items to a New Version
+
+If open items use the workflow you are deploying, **Deploy** asks what to do with them. They stay on their current version unless you choose **Move them to the new version**. A dry run shows how many fall into each outcome:
+
+- **Same status** — the item's status still exists, so it stays there.
+- **Walked back** — its status is gone, so it moves to the most recent earlier status that still exists.
+- **Reset** — none of its earlier statuses exist, so it moves to the first status.
+
+Moved items keep their fields and comments, and each move is recorded in the audit log as `item.workflow.upgraded`. Nobody is notified. Progress inside a status with parallel steps restarts, and boundary timers restart.
+
 ### Deploying
 
 1. Create or import your BPMN diagram in the editor
@@ -230,6 +240,7 @@ Filter by **Who** (a username), **What** (an event type) and a date range, then 
 |---------------------|-------------------------------------------|
 | `project.created`   | A project was created                     |
 | `project.updated`   | A project's name or item types changed    |
+| `item.workflow.upgraded` | An item moved to a new workflow version |
 | `item.created`      | An item was created                       |
 | `item.updated`      | An item changed, with the field changes   |
 | `item.transitioned` | An item moved to another status           |

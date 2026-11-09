@@ -227,6 +227,80 @@ describe('Workflow editor', () => {
   });
 });
 
+describe('Deploying over open items', () => {
+  const summary = { workflowKey: 'bug-flow', openItems: 4, sameStatus: 2, walkedBack: 1, reset: 1, failed: 0 };
+
+  function mockPost(moved = summary) {
+    api.post.mockImplementation((url: string) => {
+      if (url === '/workflow/workflows/upgrade-preview') return Promise.resolve({ data: summary });
+      if (url === '/workflow/workflows/bug-flow/upgrade') return Promise.resolve({ data: moved });
+      return Promise.resolve({ data: [] });
+    });
+  }
+
+  async function openDialog() {
+    renderAt('/admin/workflows/bug-flow%3A3%3A1/edit');
+    await screen.findByText('<saved/>');
+    await waitFor(() =>
+      expect((screen.getByRole('button', { name: 'Deploy' }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy' }));
+    return within(await screen.findByRole('dialog', { name: 'Deploy bug-flow' }));
+  }
+
+  it('shows the dry run and deploys nothing until confirmed', async () => {
+    mockPost();
+    const dialog = await openDialog();
+
+    expect(dialog.getByText('Dry run: same status 2 · walked back 1 · reset 1')).toBeTruthy();
+    expect(api.post).not.toHaveBeenCalledWith('/workflow/deployments', expect.anything());
+  });
+
+  it('keeps items on their version by default', async () => {
+    mockPost();
+    const dialog = await openDialog();
+
+    fireEvent.click(dialog.getByRole('button', { name: 'Deploy' }));
+
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith('/workflow/deployments', { name: 'bug-flow', bpmnXml: '<saved/>' }),
+    );
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeTruthy();
+    expect(api.post).not.toHaveBeenCalledWith('/workflow/workflows/bug-flow/upgrade');
+  });
+
+  it('moves items after deploying when asked to', async () => {
+    mockPost();
+    const dialog = await openDialog();
+
+    fireEvent.click(dialog.getByLabelText(/Move them/));
+    fireEvent.click(dialog.getByRole('button', { name: 'Deploy' }));
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/workflow/workflows/bug-flow/upgrade'));
+    expect(await screen.findByRole('heading', { name: 'Workflows' })).toBeTruthy();
+  });
+
+  it('says so when some items could not be moved', async () => {
+    mockPost({ ...summary, failed: 2 });
+    const dialog = await openDialog();
+
+    fireEvent.click(dialog.getByLabelText(/Move them/));
+    fireEvent.click(dialog.getByRole('button', { name: 'Deploy' }));
+
+    expect(await screen.findByText('Deploy failed: Deployed, but 2 items could not be moved.')).toBeTruthy();
+  });
+
+  it('cancels without deploying', async () => {
+    mockPost();
+    const dialog = await openDialog();
+
+    fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(api.post).not.toHaveBeenCalledWith('/workflow/deployments', expect.anything());
+  });
+});
+
 describe('Fields', () => {
   it('lists the fields of the current project', async () => {
     renderAt('/admin/fields');

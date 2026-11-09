@@ -4,7 +4,8 @@ import { apiClient } from '../../shared-ui';
 import { BpmnEditor, type Violation } from '../../bpmn-editor';
 import type { AxiosError } from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
-import { downloadBpmn, listWorkflows } from '../../admin/api';
+import { downloadBpmn, listWorkflows, moveOpenItems, previewUpgrade, type UpgradeSummary } from '../../admin/api';
+import DeployDialog from '../../components/DeployDialog';
 import { getWorkflowXml } from '../../items/api';
 
 const VALIDATE_DELAY_MS = 500;
@@ -20,6 +21,7 @@ export default function WorkflowEditorPage() {
   const [selectRequest, setSelectRequest] = useState<{ elementId: string }>();
   const [validationError, setValidationError] = useState<string>();
   const [deployError, setDeployError] = useState<string>();
+  const [pendingUpgrade, setPendingUpgrade] = useState<UpgradeSummary>();
 
   const { data: workflows = [] } = useQuery({ queryKey: ['workflows'], queryFn: listWorkflows, enabled: !!id });
   const { data: savedXml } = useQuery({
@@ -55,18 +57,37 @@ export default function WorkflowEditorPage() {
   }, [xml]);
 
   const deploy = useMutation({
-    mutationFn: () => apiClient.post('/workflow/deployments', { name, bpmnXml: xml }),
+    mutationFn: async (moveItems: boolean) => {
+      await apiClient.post('/workflow/deployments', { name, bpmnXml: xml });
+      return moveItems && pendingUpgrade ? moveOpenItems(pendingUpgrade.workflowKey) : undefined;
+    },
     onMutate: () => setDeployError(undefined),
-    onSuccess: () => {
+    onSuccess: (moved) => {
       queryClient.invalidateQueries({ queryKey: ['workflows'] });
-      navigate('/admin/workflows');
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setPendingUpgrade(undefined);
+      if (moved?.failed) {
+        setDeployError(`Deployed, but ${moved.failed} items could not be moved.`);
+      } else {
+        navigate('/admin/workflows');
+      }
     },
     onError: (error: AxiosError<{ message?: string; details?: { violations?: Violation[] } }>) => {
       const rejected = error.response?.data?.details?.violations;
       if (rejected) setViolations(rejected);
+      setPendingUpgrade(undefined);
       setDeployError(error.response?.data?.message ?? error.message);
     },
   });
+
+  const startDeploy = async () => {
+    const summary = await previewUpgrade(xml!).catch(() => undefined);
+    if (summary && summary.openItems > 0) {
+      setPendingUpgrade(summary);
+    } else {
+      deploy.mutate(false);
+    }
+  };
 
   const importFile = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -102,7 +123,7 @@ export default function WorkflowEditorPage() {
           value={name}
           onChange={(event) => setTypedName(event.target.value)}
         />
-        <button disabled={!xml || !name || deploy.isPending} onClick={() => deploy.mutate()}>
+        <button disabled={!xml || !name || deploy.isPending} onClick={startDeploy}>
           {deploy.isPending ? 'Deploying...' : 'Deploy'}
         </button>
       </div>
@@ -131,6 +152,14 @@ export default function WorkflowEditorPage() {
           ))}
         </ul>
       </div>
+      {pendingUpgrade && (
+        <DeployDialog
+          summary={pendingUpgrade}
+          busy={deploy.isPending}
+          onCancel={() => setPendingUpgrade(undefined)}
+          onDeploy={(moveItems) => deploy.mutate(moveItems)}
+        />
+      )}
     </div>
   );
 }

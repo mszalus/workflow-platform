@@ -45,7 +45,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .requestMatchers(HttpMethod.DELETE, "/api/fields/schemas/**").hasRole(ADMIN)
                 .requestMatchers(HttpMethod.POST, "/api/workflow/deployments").hasRole(ADMIN)
                 .requestMatchers(HttpMethod.DELETE, "/api/workflow/deployments/**").hasRole(ADMIN)
-                .requestMatchers(HttpMethod.POST, "/api/workflow/workflows/validate").hasRole(ADMIN)
+                .requestMatchers(HttpMethod.POST, "/api/workflow/workflows/**").hasRole(ADMIN)
                 .requestMatchers("/api/audit/**").hasRole(ADMIN)
                 .anyRequest().authenticated()
             )
