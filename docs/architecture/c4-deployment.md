@@ -12,7 +12,7 @@ architecture-beta
 
     group infra(server)[Infrastructure] in dockerHost
         service postgres(database)[PostgreSQL 16] in infra
-        service keycloak(server)[Keycloak 25] in infra
+        service keycloak(server)[Keycloak 26] in infra
 
     group backends(server)[Backend Services] in dockerHost
         service workflow(server)[Workflow, custom fields, notifications, audit :8081] in backends
@@ -26,7 +26,7 @@ architecture-beta
 | Container | Image | Host Port | Container Port | Depends On |
 |-----------|-------|-----------|---------------|------------|
 | `wfp-postgres` | postgres:16-alpine | 5433 | 5432 | - |
-| `wfp-keycloak` | quay.io/keycloak/keycloak:25.0.6 | 8180 | 8080 | postgres (healthy) |
+| `wfp-keycloak` | quay.io/keycloak/keycloak:26.8.2 | 8180 | 8080 | postgres (healthy) |
 | `wfp-app` | wfp/app | 8081 | 8081 | postgres (healthy) |
 | `wfp-web` | wfp/web | 5175 | 8080 | app (started) |
 

@@ -33,7 +33,7 @@ A multi-tenant BPMN workflow platform built with Flowable, Spring Boot and React
 | BPMN Engine | Flowable 8.0.0 |
 | Backend | Java 21, Spring Boot 4.0 |
 | Database | PostgreSQL 16 |
-| Identity | Keycloak 25 (OIDC/JWT, tenant as a user attribute) |
+| Identity | Keycloak 26 (OIDC/JWT, tenant as an Organization) |
 | Frontend | React 18, TypeScript, Vite, bpmn-js |
 | Build | Gradle 9.2 (Groovy DSL), npm workspaces |
 | Deployment | Docker Compose, Helm/Kubernetes |

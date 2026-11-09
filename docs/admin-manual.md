@@ -261,7 +261,7 @@ Keycloak manages authentication and tenant isolation.
 - **Clients:**
   - `wfp-web` — OIDC client for the tracker app
 - **Client Scopes:**
-  - `tenant` — adds `tenant_id` claim to JWT
+  - `organization` — adds the user's organizations to the JWT `organization` claim
   - `profile` — adds `preferred_username`, `given_name`, `family_name`
   - `email` — adds `email` claim
   - `roles` — adds `realm_access.roles` claim
@@ -272,23 +272,25 @@ Keycloak manages authentication and tenant isolation.
 2. Click **Add User**
 3. Set username, email, first/last name
 4. Under **Credentials**, set a password
-5. Under **Attributes**, add `tenant_id` attribute with the tenant value (e.g., `tenant-a`)
+5. Under **Organizations**, open the tenant's organization and add the user as a member
+
+A new tenant is a new organization. Its **alias** is the tenant id stored with all of the tenant's data, so it can't be changed afterwards.
 
 ### Tenant Isolation
 
-Tenant isolation is enforced through the `tenant_id` JWT claim:
+Tenant isolation is enforced through the `organization` JWT claim:
 
-1. Each user has a `tenant_id` attribute in Keycloak
-2. The `tenant` client scope maps this attribute to the JWT `tenant_id` claim
-3. Each service reads the claim from the validated token and filters all database queries by tenant
-4. A user without a `tenant_id` attribute gets **403 Forbidden** on every API call, so set the attribute for every user
+1. Each tenant is a Keycloak Organization whose alias is the tenant id
+2. The `organization` client scope adds the aliases of the user's organizations to the JWT
+3. The app reads the claim from the validated token and filters all database queries by tenant
+4. A user with no organization, or with more than one, gets **403 Forbidden** on every API call, so make every user a member of exactly one organization
 
 ### Default Configuration
 
-| User      | Tenant   | Attributes                        |
-|-----------|----------|-----------------------------------|
-| `admin-a` | tenant-a | `tenant_id=tenant-a`             |
-| `admin-b` | tenant-b | `tenant_id=tenant-b`             |
+| User      | Organization |
+|-----------|--------------|
+| `admin-a`, `user-a` | `tenant-a` |
+| `admin-b`, `user-b` | `tenant-b` |
 
 ---
 
@@ -312,7 +314,7 @@ docker compose -f docker/docker-compose.yml ps
 | Container          | Image              | Port  | Description            |
 |-------------------|--------------------|-------|------------------------|
 | wfp-postgres      | postgres:16-alpine | 5433  | Database (all schemas) |
-| wfp-keycloak      | keycloak/keycloak:25 | 8180 | Identity provider      |
+| wfp-keycloak      | keycloak/keycloak:26 | 8180 | Identity provider      |
 | wfp-app           | (built)            | 8081  | Workflow engine, custom fields, notifications, audit |
 | wfp-web           | (built)            | 5175  | Tracker app            |
 

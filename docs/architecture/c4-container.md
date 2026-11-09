@@ -9,7 +9,7 @@ C4Container
     Person(admin, "Admin User", "Designs workflows, manages fields, views audit")
     Person(endUser, "End User", "Starts processes, completes tasks")
 
-    System_Ext(keycloak, "Keycloak 25", "OIDC identity provider<br/>Realm: workflow-platform")
+    System_Ext(keycloak, "Keycloak 26", "OIDC identity provider<br/>Realm: workflow-platform")
 
     Container_Boundary(wfp, "Workflow Platform") {
 
@@ -42,7 +42,7 @@ C4Container
 | Tracker app | React 18 + nginx | 5175 (host) | - | User and admin screens, BPMN editor |
 | App | Spring Boot + Flowable 8.0 | 8081 | `workflow` | BPMN engine, process/task lifecycle, custom fields, notifications, audit |
 | PostgreSQL | PostgreSQL 16 | 5433 (host) / 5432 | all 2 schemas | Shared database instance |
-| Keycloak | Keycloak 25 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
+| Keycloak | Keycloak 26 | 8180 (host) / 8080 | `keycloak` | OIDC identity provider |
 
 ## API Routing
 

@@ -342,7 +342,7 @@ class WorkflowUpgradeTest {
 
     private ResultActions perform(MockHttpServletRequestBuilder request, String owner, String user, String body)
             throws Exception {
-        request.with(jwt().jwt(token -> token.claim("preferred_username", user).claim("tenant_id", owner))
+        request.with(jwt().jwt(token -> token.claim("preferred_username", user).claim("organization", List.of(owner)))
                 .authorities("admin".equals(user) ? TestRoles.ADMIN : TestRoles.USER));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

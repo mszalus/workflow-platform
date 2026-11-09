@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
 
+import java.util.List;
+
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -52,7 +54,7 @@ class AuditControllerTest {
     void shouldQueryAuditEntries() throws Exception {
         mockMvc.perform(get("/api/audit")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-test")).authorities(TestRoles.ADMIN))
+                                .claim("organization", List.of("tenant-test"))).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-test"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
@@ -64,7 +66,7 @@ class AuditControllerTest {
     void shouldFilterByEntityType() throws Exception {
         mockMvc.perform(get("/api/audit")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-test")).authorities(TestRoles.ADMIN))
+                                .claim("organization", List.of("tenant-test"))).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-test")
                         .param("entityType", "TASK"))
                 .andExpect(status().isOk())
@@ -75,7 +77,7 @@ class AuditControllerTest {
     void shouldEnforceTenantIsolation() throws Exception {
         mockMvc.perform(get("/api/audit")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-other")).authorities(TestRoles.ADMIN))
+                                .claim("organization", List.of("tenant-other"))).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-other"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());
@@ -85,7 +87,7 @@ class AuditControllerTest {
     void shouldIgnoreForgedTenantHeader() throws Exception {
         mockMvc.perform(get("/api/audit")
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
-                                .claim("tenant_id", "tenant-other")).authorities(TestRoles.ADMIN))
+                                .claim("organization", List.of("tenant-other"))).authorities(TestRoles.ADMIN))
                         .header("X-Tenant-Id", "tenant-test"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isEmpty());

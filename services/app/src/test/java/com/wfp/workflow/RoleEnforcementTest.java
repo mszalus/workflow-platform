@@ -88,7 +88,7 @@ class RoleEnforcementTest {
                                                         List<org.springframework.security.core.GrantedAuthority> roles) {
         return request(HttpMethod.valueOf(method), path.trim())
                 .with(jwt().jwt(token -> token.claim("preferred_username", "someone")
-                        .claim("tenant_id", TENANT)).authorities(roles))
+                        .claim("organization", List.of(TENANT))).authorities(roles))
                 .contentType("application/json")
                 .content("{}");
     }

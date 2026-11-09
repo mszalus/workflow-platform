@@ -146,13 +146,13 @@ test.describe('2. Authentication Tests', () => {
     }
   });
 
-  test('JWT contains expected claims (preferred_username, tenant_id)', async ({ request }) => {
+  test('JWT contains expected claims (preferred_username, organization)', async ({ request }) => {
     for (const [name, user] of Object.entries(USERS)) {
       const token = await getToken(request, user.username);
       const payload = decodeJwtPayload(token);
 
       expect(payload.preferred_username, `${name}: missing preferred_username`).toBe(user.username);
-      expect(payload.tenant_id, `${name}: missing tenant_id`).toBe(user.tenant);
+      expect(payload.organization, `${name}: wrong organization`).toEqual([user.tenant]);
     }
   });
 

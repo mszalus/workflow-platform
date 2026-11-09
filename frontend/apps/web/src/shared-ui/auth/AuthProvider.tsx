@@ -76,7 +76,7 @@ export function AuthProvider({ children, keycloakUrl, realm, clientId }: AuthPro
     initialized,
     authenticated,
     token: keycloak.token,
-    tenantId: tokenParsed?.tenant_id as string | undefined,
+    tenantId: (tokenParsed?.organization as string[] | undefined)?.[0],
     userId: tokenParsed?.sub,
     username: tokenParsed?.preferred_username as string | undefined,
     roles: (tokenParsed?.realm_access?.roles as string[]) ?? [],

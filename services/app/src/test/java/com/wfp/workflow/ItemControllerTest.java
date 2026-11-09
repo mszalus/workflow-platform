@@ -407,7 +407,7 @@ class ItemControllerTest {
     @Test
     void anotherTenantCannotEditAProject() throws Exception {
         mockMvc.perform(put("/api/projects/PROJ").with(jwt().jwt(token -> token.claim("preferred_username", "mallory")
-                                .claim("tenant_id", "tenant-other")).authorities(TestRoles.ADMIN))
+                                .claim("organization", List.of("tenant-other"))).authorities(TestRoles.ADMIN))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Stolen","itemTypes":[{"name":"Task","workflowKey":"simple"}]}
@@ -540,7 +540,7 @@ class ItemControllerTest {
     }
 
     private RequestPostProcessor otherTenantUser() {
-        return jwt().jwt(token -> token.claim("preferred_username", "mallory").claim("tenant_id", "tenant-other"))
+        return jwt().jwt(token -> token.claim("preferred_username", "mallory").claim("organization", List.of("tenant-other")))
                 .authorities(TestRoles.USER);
     }
 
@@ -564,7 +564,7 @@ class ItemControllerTest {
     private ResultActions send(MockHttpServletRequestBuilder request, String tenantId, String user, String body)
             throws Exception {
         request.with(jwt().jwt(token -> token.claim("preferred_username", user)
-                .claim("tenant_id", tenantId)).authorities("admin".equals(user) ? TestRoles.ADMIN : TestRoles.USER));
+                .claim("organization", List.of(tenantId))).authorities("admin".equals(user) ? TestRoles.ADMIN : TestRoles.USER));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);
         }

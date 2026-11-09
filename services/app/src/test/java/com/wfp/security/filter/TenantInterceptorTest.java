@@ -10,6 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -35,7 +37,7 @@ class TenantInterceptorTest {
 
     @Test
     void rejectsJwtWithoutTenantClaim() {
-        authenticateWith(jwt(null));
+        authenticateWith(jwt());
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Tenant-Id", "tenant-b");
 
@@ -44,12 +46,23 @@ class TenantInterceptorTest {
         assertThat(TenantContext.getCurrentTenantId()).isNull();
     }
 
-    private static Jwt jwt(String tenantId) {
+    @Test
+    void rejectsJwtWithSeveralOrganizations() {
+        authenticateWith(jwt("tenant-a", "tenant-b"));
+
+        assertThatThrownBy(() -> interceptor.preHandle(new MockHttpServletRequest(), new MockHttpServletResponse(),
+                new Object()))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Token belongs to several organizations");
+        assertThat(TenantContext.getCurrentTenantId()).isNull();
+    }
+
+    private static Jwt jwt(String... organizations) {
         Jwt.Builder builder = Jwt.withTokenValue("token")
                 .header("alg", "none")
                 .claim("preferred_username", "user");
-        if (tenantId != null) {
-            builder.claim(TenantInterceptor.TENANT_CLAIM, tenantId);
+        if (organizations.length > 0) {
+            builder.claim(TenantInterceptor.ORGANIZATION_CLAIM, List.of(organizations));
         }
         return builder.build();
     }
