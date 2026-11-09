@@ -20,6 +20,16 @@ erDiagram
         string tenant_id "NOT NULL, filtered"
     }
 
+    wf_item_attachment {
+        uuid id PK
+        string tenant_id "NOT NULL, filtered"
+        uuid item_id FK "NOT NULL"
+        string file_name "NOT NULL"
+        long size_bytes "NOT NULL"
+        bytea content "NOT NULL, up to 10 MB"
+        string uploaded_by "NOT NULL"
+        instant uploaded_at "NOT NULL, immutable"
+    }
 
     wf_project {
         uuid id PK
@@ -212,6 +222,7 @@ erDiagram
     wf_item_type ||--o{ wf_item : "type"
     wf_item ||--o{ wf_item_transition : "status history"
     wf_item ||--o{ wf_comments : "comments"
+    wf_item ||--o{ wf_item_attachment : "attachments"
 
     %% Custom fields relationships
     field_schema ||--o{ field_option : "has options (cascade ALL, orphanRemoval)"

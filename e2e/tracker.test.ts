@@ -85,6 +85,17 @@ test.describe.serial('Tracker', () => {
     await page.getByRole('button', { name: 'Post' }).click();
     await expect(page.getByText('Picking this up')).toBeVisible();
 
+    await page.getByLabel(/Attach a file/).setInputFiles({
+      name: 'notes.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('attachment body'),
+    });
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'notes.txt', exact: true }).click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toBe('notes.txt');
+    expect(fs.readFileSync(await download.path(), 'utf-8')).toBe('attachment body');
+
     await page.getByRole('link', { name: 'Board' }).click();
     const card = page.getByTestId(`card-${key}`);
     await expect(column(page, 'Open').getByTestId(`card-${key}`)).toBeVisible();

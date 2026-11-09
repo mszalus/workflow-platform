@@ -1,27 +1,35 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
+import { useIsAdmin } from '../auth/useIsAdmin';
 import FieldInput from '../components/FieldInput';
 import ItemDiagram from '../components/ItemDiagram';
 import {
   addComment,
   apiErrorMessage,
   completeStep,
+  deleteAttachment,
+  downloadAttachment,
   getItem,
+  listAttachments,
   listComments,
   listHistory,
   listFieldDefinitions,
   transitionItem,
   updateItem,
+  uploadAttachment,
   type FieldValues,
   type Item,
+  type ItemAttachment,
   type ItemHistoryEntry,
   type Priority,
 } from '../items/api';
 import { PRIORITIES } from '../items/filters';
 import { timeAgo } from '../items/timeAgo';
+import { useAuth } from '../shared-ui';
 
 const panel = { background: '#fff', padding: '1rem', borderRadius: 4, marginBottom: '1rem' };
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 function useItemSaver(itemKey: string) {
   const queryClient = useQueryClient();
@@ -95,6 +103,64 @@ function Description({ item }: { item: Item }) {
           <button onClick={() => setEditing(true)}>Edit</button>
         </>
       )}
+    </section>
+  );
+}
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function Attachments({ itemKey }: { itemKey: string }) {
+  const queryClient = useQueryClient();
+  const { username } = useAuth();
+  const isAdmin = useIsAdmin();
+  const [tooLarge, setTooLarge] = useState(false);
+  const { data: attachments = [] } = useQuery({
+    queryKey: ['attachments', itemKey],
+    queryFn: () => listAttachments(itemKey),
+  });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['attachments', itemKey] });
+  const upload = useMutation({ mutationFn: (file: File) => uploadAttachment(itemKey, file), onSuccess: refresh });
+  const remove = useMutation({ mutationFn: (id: string) => deleteAttachment(itemKey, id), onSuccess: refresh });
+  const download = useMutation({ mutationFn: (file: ItemAttachment) => downloadAttachment(itemKey, file) });
+  const failure = upload.error ?? remove.error ?? download.error;
+
+  const chooseFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const fits = file.size <= MAX_ATTACHMENT_BYTES;
+    setTooLarge(!fits);
+    if (fits) upload.mutate(file);
+  };
+  const confirmDelete = (file: ItemAttachment) => {
+    if (window.confirm(`Delete ${file.fileName}?`)) remove.mutate(file.id);
+  };
+
+  return (
+    <section style={panel}>
+      <h2 style={{ fontSize: '1rem', marginTop: 0 }}>Attachments</h2>
+      {attachments.map((file) => (
+        <div key={file.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.2rem 0' }}>
+          <button onClick={() => download.mutate(file)}>{file.fileName}</button>
+          <span style={{ flex: 1, fontSize: '0.85rem', color: '#666' }}>
+            {formatSize(file.sizeBytes)} · {file.uploadedBy} · {timeAgo(file.uploadedAt)}
+          </span>
+          {(isAdmin || file.uploadedBy === username) && (
+            <button aria-label={`Delete ${file.fileName}`} onClick={() => confirmDelete(file)}>
+              Delete
+            </button>
+          )}
+        </div>
+      ))}
+      <label style={{ display: 'block', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+        Attach a file (up to 10 MB) <input type="file" disabled={upload.isPending} onChange={chooseFile} />
+      </label>
+      {tooLarge && <p role="alert">Files can be at most 10 MB</p>}
+      {failure && <p role="alert">{apiErrorMessage(failure)}</p>}
     </section>
   );
 }
@@ -257,6 +323,7 @@ export default function ItemDetailPage() {
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
         <div style={{ flex: 2 }}>
           <Description item={item} />
+          <Attachments itemKey={item.key} />
           <Comments itemKey={item.key} />
           <History itemKey={item.key} />
         </div>

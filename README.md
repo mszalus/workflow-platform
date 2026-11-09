@@ -129,6 +129,10 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | PATCH | `/api/items/{key}` | Change fixed or custom fields |
 | POST | `/api/items/{key}/transitions` | Move a work item to another status |
 | GET | `/api/items/{key}/history` | Status and field changes, newest first |
+| GET | `/api/items/{key}/attachments` | List a work item's files, newest first |
+| POST | `/api/items/{key}/attachments` | Upload a file, up to 10 MB (multipart field `file`) |
+| GET | `/api/items/{key}/attachments/{id}/content` | Download a file |
+| DELETE | `/api/items/{key}/attachments/{id}` | Delete a file (its uploader or an admin) |
 | GET | `/api/items/{key}/comments` | List a work item's comments, oldest first |
 | POST | `/api/items/{key}/comments` | Comment on a work item and notify its reporter and assignee |
 | POST | `/api/workflow/deployments` | Deploy a BPMN process (tracker workflows are validated first) |

@@ -1,6 +1,7 @@
 package com.wfp.workflow.controller;
 
 import com.wfp.common.dto.PagedResponse;
+import com.wfp.workflow.dto.AttachmentDto;
 import com.wfp.workflow.dto.CommentDto;
 import com.wfp.workflow.dto.CompleteStepRequest;
 import com.wfp.workflow.dto.CreateCommentRequest;
@@ -9,16 +10,24 @@ import com.wfp.workflow.dto.ItemDto;
 import com.wfp.workflow.dto.ItemFilter;
 import com.wfp.workflow.dto.ItemHistoryEntry;
 import com.wfp.workflow.dto.TransitionItemRequest;
+import com.wfp.workflow.entity.ItemAttachment;
+import com.wfp.workflow.service.AttachmentService;
 import com.wfp.workflow.service.CommentService;
 import com.wfp.workflow.service.ItemHistoryService;
 import com.wfp.workflow.service.ItemService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.propertyeditors.StringArrayPropertyEditor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -29,10 +38,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/items")
@@ -42,6 +54,7 @@ public class ItemController {
     private final ItemService itemService;
     private final CommentService commentService;
     private final ItemHistoryService historyService;
+    private final AttachmentService attachmentService;
 
     @InitBinder
     void keepCommasInsideFilterValues(WebDataBinder binder) {
@@ -104,6 +117,37 @@ public class ItemController {
     public CommentDto addComment(@PathVariable String key, @Valid @RequestBody CreateCommentRequest request,
                                  @AuthenticationPrincipal Jwt jwt) {
         return commentService.addToItem(key, request.getContent(), username(jwt));
+    }
+
+    @GetMapping("/{key}/attachments")
+    public List<AttachmentDto> attachments(@PathVariable String key) {
+        return attachmentService.list(key);
+    }
+
+    @PostMapping(path = "/{key}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.CREATED)
+    public AttachmentDto addAttachment(@PathVariable String key, @RequestParam MultipartFile file,
+                                       @AuthenticationPrincipal Jwt jwt) {
+        return attachmentService.add(key, file, username(jwt));
+    }
+
+    @GetMapping("/{key}/attachments/{id}/content")
+    public ResponseEntity<byte[]> downloadAttachment(@PathVariable String key, @PathVariable UUID id) {
+        ItemAttachment attachment = attachmentService.download(key, id);
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(attachment.getFileName(), StandardCharsets.UTF_8)
+                .build();
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(attachment.getContent());
+    }
+
+    @DeleteMapping("/{key}/attachments/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAttachment(@PathVariable String key, @PathVariable UUID id, @AuthenticationPrincipal Jwt jwt,
+                                 HttpServletRequest request) {
+        attachmentService.delete(key, id, username(jwt), request.isUserInRole("ADMIN"));
     }
 
     private static String username(Jwt jwt) {

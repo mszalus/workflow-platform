@@ -62,7 +62,9 @@ beforeEach(() => {
     if (url === '/notifications') return Promise.resolve({ data: { content: [itemNotification] } });
     if (url === '/items') return Promise.resolve({ data: { content: [] } });
     if (url === '/items/PROJ-1') return Promise.resolve({ data: openedItem });
-    if (['/items/PROJ-1/comments', '/items/PROJ-1/history', '/fields/schemas'].includes(url)) {
+    if (
+      ['/items/PROJ-1/comments', '/items/PROJ-1/history', '/items/PROJ-1/attachments', '/fields/schemas'].includes(url)
+    ) {
       return Promise.resolve({ data: [] });
     }
     return Promise.resolve({ data: projects });

@@ -100,6 +100,7 @@ Click an item's key to open it.
 - **Edit** changes the description.
 - Change the assignee, priority or custom fields on the right, then click **Save changes**.
 - **History** lists status changes and field changes, newest first.
+- **Attachments** holds files of up to 10 MB each. Click a file's name to download it. You can delete files you uploaded, and admins can delete any file. Uploaded files are not scanned for viruses.
 - Add a comment below the description. The reporter and assignee are notified, except whoever wrote it.
 - The diagram shows the workflow with the current status highlighted.
 

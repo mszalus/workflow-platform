@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { ProjectProvider, type Project } from '../projects/ProjectContext';
 
-const api = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn(), post: vi.fn(), patch: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), put: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 
 vi.mock('../shared-ui', () => ({
   useAuth: () => ({ username: 'user-a', tenantId: 'tenant-a', roles: ['user'], logout: vi.fn() }),
@@ -85,6 +85,11 @@ const history = [
   { timestamp: new Date().toISOString(), actor: 'user-b', kind: 'CREATED' },
 ];
 
+const attachments = [
+  { id: 'a1', fileName: 'mine.pdf', sizeBytes: 2048, uploadedBy: 'user-a', uploadedAt: new Date().toISOString() },
+  { id: 'a2', fileName: 'theirs.png', sizeBytes: 512, uploadedBy: 'user-b', uploadedAt: new Date().toISOString() },
+];
+
 let itemsResponse = page([]);
 
 function renderAt(path: string) {
@@ -111,6 +116,7 @@ beforeEach(() => {
   api.put.mockReset().mockResolvedValue({ data: undefined });
   api.post.mockReset();
   api.patch.mockReset();
+  api.delete.mockReset();
   api.get.mockReset().mockImplementation((url: string, config?: { params: URLSearchParams }) => {
     if (url === '/items') {
       const reportedByMe = config?.params.get('filter') === 'reporter:eq:me';
@@ -123,6 +129,7 @@ beforeEach(() => {
       });
     }
     if (url === '/items/PROJ-1/history') return Promise.resolve({ data: history });
+    if (url === '/items/PROJ-1/attachments') return Promise.resolve({ data: attachments });
     if (url === '/fields/schemas') return Promise.resolve({ data: [answerField] });
     if (url === '/notifications/unread-count') return Promise.resolve({ data: { count: 0 } });
     return Promise.resolve({ data: projects });
@@ -287,7 +294,8 @@ describe('Item detail', () => {
       if (url === '/items/PROJ-1') {
         return Promise.resolve({ data: item({ transitions: [], openSteps: [{ id: 'review', name: 'Review' }] }) });
       }
-      return Promise.resolve({ data: url === '/items/PROJ-1/comments' || url === '/fields/schemas' ? [] : projects });
+      const emptyLists = ['/items/PROJ-1/comments', '/items/PROJ-1/attachments', '/fields/schemas'];
+      return Promise.resolve({ data: emptyLists.includes(url) ? [] : projects });
     });
     api.post.mockResolvedValue({ data: item({ transitions: [], openSteps: [] }) });
     renderAt('/items/PROJ-1');
@@ -295,6 +303,50 @@ describe('Item detail', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Complete: Review' }));
 
     await waitFor(() => expect(api.post).toHaveBeenCalledWith('/items/PROJ-1/steps', { stepId: 'review' }));
+  });
+
+  it('lists attachments and offers delete only on my own', async () => {
+    renderAt('/items/PROJ-1');
+
+    expect(await screen.findByRole('button', { name: 'theirs.png' })).toBeTruthy();
+    expect(screen.getByText(/2 KB · user-a/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Delete mine.pdf' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Delete theirs.png' })).toBeNull();
+  });
+
+  it('uploads a chosen file', async () => {
+    api.post.mockResolvedValue({ data: {} });
+    renderAt('/items/PROJ-1');
+
+    const file = new File(['hello'], 'notes.txt');
+    fireEvent.change(await screen.findByLabelText(/Attach a file/), { target: { files: [file] } });
+
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const [url, form, config] = api.post.mock.calls[0];
+    expect(url).toBe('/items/PROJ-1/attachments');
+    expect((form as FormData).get('file')).toBe(file);
+    expect(config.headers['Content-Type']).toBe('multipart/form-data');
+  });
+
+  it('refuses a file over the limit without uploading it', async () => {
+    renderAt('/items/PROJ-1');
+
+    const file = new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'big.bin');
+    fireEvent.change(await screen.findByLabelText(/Attach a file/), { target: { files: [file] } });
+
+    expect((await screen.findByRole('alert')).textContent).toBe('Files can be at most 10 MB');
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('deletes an attachment after confirmation', async () => {
+    api.delete.mockResolvedValue({ data: undefined });
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderAt('/items/PROJ-1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete mine.pdf' }));
+
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/items/PROJ-1/attachments/a1'));
+    confirm.mockRestore();
   });
 
   it('posts a comment', async () => {

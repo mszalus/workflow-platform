@@ -60,6 +60,14 @@ export interface ItemHistoryEntry {
   reason?: string;
 }
 
+export interface ItemAttachment {
+  id: string;
+  fileName: string;
+  sizeBytes: number;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
 export interface ItemQuery {
   project?: string;
   filters?: string[];
@@ -119,6 +127,36 @@ export function listComments(key: string) {
 
 export function addComment(key: string, content: string) {
   return apiClient.post<ItemComment>(`/items/${key}/comments`, { content }).then((response) => response.data);
+}
+
+export function listAttachments(key: string) {
+  return apiClient.get<ItemAttachment[]>(`/items/${key}/attachments`).then((response) => response.data);
+}
+
+export function uploadAttachment(key: string, file: File) {
+  const form = new FormData();
+  form.append('file', file);
+  return apiClient
+    .post<ItemAttachment>(`/items/${key}/attachments`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    .then((response) => response.data);
+}
+
+export async function downloadAttachment(key: string, attachment: ItemAttachment) {
+  const { data } = await apiClient.get<Blob>(`/items/${key}/attachments/${attachment.id}/content`, {
+    responseType: 'blob',
+  });
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = attachment.fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export function deleteAttachment(key: string, id: string) {
+  return apiClient.delete(`/items/${key}/attachments/${id}`);
 }
 
 export function listFieldDefinitions(project: string, type?: string) {
