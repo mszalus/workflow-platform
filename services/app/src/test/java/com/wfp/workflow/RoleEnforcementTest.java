@@ -36,6 +36,8 @@ class RoleEnforcementTest {
             "POST,   /api/workflow/deployments",
             "DELETE, /api/workflow/deployments/any",
             "POST,   /api/workflow/workflows/validate",
+            "POST,   /api/workflow/workflows/upgrade-preview",
+            "POST,   /api/workflow/workflows/any/upgrade",
             "GET,    /api/audit",
     })
     void refusesTenantAdministrationToAPlainUser(String method, String path) throws Exception {
@@ -52,6 +54,8 @@ class RoleEnforcementTest {
             "POST,   /api/workflow/deployments",
             "DELETE, /api/workflow/deployments/any",
             "POST,   /api/workflow/workflows/validate",
+            "POST,   /api/workflow/workflows/upgrade-preview",
+            "POST,   /api/workflow/workflows/any/upgrade",
             "GET,    /api/audit",
     })
     void letsAnAdminPastTheRoleGate(String method, String path) throws Exception {

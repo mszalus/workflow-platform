@@ -131,6 +131,8 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | GET | `/api/items/{key}/comments` | List a work item's comments, oldest first |
 | POST | `/api/items/{key}/comments` | Comment on a work item and notify its reporter and assignee |
 | POST | `/api/workflow/deployments` | Deploy a BPMN process (tracker workflows are validated first) |
+| POST | `/api/workflow/workflows/upgrade-preview` | Dry run: how moving open items to this BPMN would affect them |
+| POST | `/api/workflow/workflows/{key}/upgrade` | Move open items to the latest version |
 | POST | `/api/workflow/workflows/validate` | Check BPMN against the tracker profile: `[{elementId, rule, message}]` |
 | GET | `/api/workflow/deployments` | List deployments |
 | POST | `/api/fields/schemas` | Create a custom field schema for a `project` and `itemTypes` (none means all) |

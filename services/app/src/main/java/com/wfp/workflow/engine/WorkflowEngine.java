@@ -11,7 +11,13 @@ public interface WorkflowEngine {
 
     WorkflowDescriptor describe(String versionId);
 
+    ProposedWorkflow inspect(String bpmnXml);
+
     WorkflowRun start(String tenantId, String versionId, UUID itemId);
+
+    WorkflowRun startAt(String tenantId, String versionId, UUID itemId, String statusId);
+
+    void cancel(String tenantId, String runId, String reason);
 
     void transition(String tenantId, String runId, String transitionId);
 
