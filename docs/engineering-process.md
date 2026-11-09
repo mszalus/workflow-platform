@@ -39,7 +39,8 @@ and `docs/design/`. This file covers only how we work.
 | PR opened or updated | `acceptance-tests` (BDD against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
 | PR opened or updated | `e2e-playwright` (Playwright against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
 | PR opened or updated | Claude code review | `.github/workflows/claude-code-review.yml` | nothing, advisory |
-| Push to `main` | `docker-build` (images and Trivy), plus the PR jobs | `.github/workflows/ci.yml` | nothing; a red run becomes an issue in the current Phase 0 milestone |
+| PR opened or updated | `docker-build` (images and Trivy) | `.github/workflows/ci.yml` | nothing yet; it becomes required after 5 green runs in a row (#60) |
+| Push to `main` | The PR jobs | `.github/workflows/ci.yml` | nothing; a red run becomes an issue in the current Phase 0 milestone |
 | Weekly | OWASP dependency check, `npm audit` | `.github/workflows/security.yml` | nothing |
 
 - Both hooks skip the tests when every changed file is `*.md`, under `docs/` or under `.claude/`.
