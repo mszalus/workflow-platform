@@ -260,6 +260,39 @@ class ItemControllerTest {
     }
 
     @Test
+    void historyMergesStatusAndFieldChangesNewestFirst() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+        perform(patch("/api/items/PROJ-1"), "bob", """
+                {"priority":"HIGH","fields":{"severity":"Low"}}
+                """).andExpect(status().isOk());
+        transition("startWork").andExpect(status().isOk());
+
+        perform(get("/api/items/PROJ-1/history"), "carol", null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$[0].kind").value("STATUS"))
+                .andExpect(jsonPath("$[0].from").value("Open"))
+                .andExpect(jsonPath("$[0].to").value("Doing"))
+                .andExpect(jsonPath("$[0].transition").value("Start work"))
+                .andExpect(jsonPath("$[1].kind").value("FIELD"))
+                .andExpect(jsonPath("$[1].actor").value("bob"))
+                .andExpect(jsonPath("$[1].field").value("priority"))
+                .andExpect(jsonPath("$[1].from").value("MEDIUM"))
+                .andExpect(jsonPath("$[1].to").value("HIGH"))
+                .andExpect(jsonPath("$[2].field").value("fields.severity"))
+                .andExpect(jsonPath("$[3].kind").value("CREATED"))
+                .andExpect(jsonPath("$[3].actor").value("alice"));
+    }
+
+    @Test
+    void historyIsNotForAnotherTenantOrAnUnknownItem() throws Exception {
+        perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/items/PROJ-1/history").with(otherTenantUser())).andExpect(status().isNotFound());
+        perform(get("/api/items/PROJ-99/history"), "alice", null).andExpect(status().isNotFound());
+    }
+
+    @Test
     void commentsRoundTripOnAnItemOldestFirst() throws Exception {
         perform(post("/api/items"), "alice", ITEM).andExpect(status().isCreated());
 

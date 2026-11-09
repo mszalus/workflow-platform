@@ -9,11 +9,13 @@ import {
   completeStep,
   getItem,
   listComments,
+  listHistory,
   listFieldDefinitions,
   transitionItem,
   updateItem,
   type FieldValues,
   type Item,
+  type ItemHistoryEntry,
   type Priority,
 } from '../items/api';
 import { PRIORITIES } from '../items/filters';
@@ -25,6 +27,7 @@ function useItemSaver(itemKey: string) {
   const queryClient = useQueryClient();
   return (item: Item) => {
     queryClient.setQueryData(['item', itemKey], item);
+    queryClient.invalidateQueries({ queryKey: ['history', itemKey] });
     queryClient.invalidateQueries({ queryKey: ['items'] });
   };
 }
@@ -144,6 +147,37 @@ function Comments({ itemKey }: { itemKey: string }) {
   );
 }
 
+const LONG_TEXT_FIELDS = ['description'];
+
+function describeChange(entry: ItemHistoryEntry) {
+  if (entry.kind === 'CREATED') return 'created';
+  if (entry.kind === 'STATUS') {
+    const transition = entry.transition ? ` (${entry.transition})` : '';
+    const reason = entry.reason ? ` - ${entry.reason}` : '';
+    return `${entry.from} -> ${entry.to}${transition}${reason}`;
+  }
+  const field = entry.field?.replace(/^fields\./, '') ?? '';
+  if (LONG_TEXT_FIELDS.includes(field)) return `${field} changed`;
+  return `${field} ${entry.from ?? 'empty'} -> ${entry.to ?? 'empty'}`;
+}
+
+function History({ itemKey }: { itemKey: string }) {
+  const { data: entries = [] } = useQuery({ queryKey: ['history', itemKey], queryFn: () => listHistory(itemKey) });
+
+  return (
+    <section style={panel}>
+      <h2 style={{ fontSize: '1rem', marginTop: 0 }}>History</h2>
+      {entries.map((entry, index) => (
+        <div key={index} style={{ display: 'flex', gap: '0.75rem', padding: '0.2rem 0', fontSize: '0.9rem' }}>
+          <span style={{ width: 70, color: '#666' }}>{timeAgo(entry.timestamp)}</span>
+          <span style={{ width: 90 }}>{entry.actor}</span>
+          <span style={{ flex: 1 }}>{describeChange(entry)}</span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 function Details({ item }: { item: Item }) {
   const saveItem = useItemSaver(item.key);
   const [assignee, setAssignee] = useState(item.assignee ?? '');
@@ -224,6 +258,7 @@ export default function ItemDetailPage() {
         <div style={{ flex: 2 }}>
           <Description item={item} />
           <Comments itemKey={item.key} />
+          <History itemKey={item.key} />
         </div>
         <div style={{ flex: 1 }}>
           <Details key={item.updatedAt} item={item} />

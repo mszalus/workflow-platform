@@ -7,8 +7,10 @@ import com.wfp.workflow.dto.CreateCommentRequest;
 import com.wfp.workflow.dto.CreateItemRequest;
 import com.wfp.workflow.dto.ItemDto;
 import com.wfp.workflow.dto.ItemFilter;
+import com.wfp.workflow.dto.ItemHistoryEntry;
 import com.wfp.workflow.dto.TransitionItemRequest;
 import com.wfp.workflow.service.CommentService;
+import com.wfp.workflow.service.ItemHistoryService;
 import com.wfp.workflow.service.ItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ public class ItemController {
 
     private final ItemService itemService;
     private final CommentService commentService;
+    private final ItemHistoryService historyService;
 
     @InitBinder
     void keepCommasInsideFilterValues(WebDataBinder binder) {
@@ -84,6 +87,11 @@ public class ItemController {
     public ItemDto completeStep(@PathVariable String key, @Valid @RequestBody CompleteStepRequest request,
                                 @AuthenticationPrincipal Jwt jwt) {
         return itemService.completeStep(key, request.getStepId(), request.getReason(), username(jwt));
+    }
+
+    @GetMapping("/{key}/history")
+    public List<ItemHistoryEntry> history(@PathVariable String key) {
+        return historyService.history(key);
     }
 
     @GetMapping("/{key}/comments")

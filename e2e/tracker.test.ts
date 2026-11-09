@@ -97,6 +97,11 @@ test.describe.serial('Tracker', () => {
 
     await card.dragTo(column(page, 'Open'));
     await expect(column(page, 'Open').getByTestId(`card-${key}`)).toContainText('Open');
+
+    await card.getByRole('link').click();
+    await expect(page.getByRole('heading', { name: 'History' })).toBeVisible();
+    await expect(page.getByText('Open -> Doing (Start work)')).toBeVisible();
+    await expect(page.getByText('Done -> Open (Reopen)')).toBeVisible();
   });
 
   test('the audit log records the item', async ({ request }) => {

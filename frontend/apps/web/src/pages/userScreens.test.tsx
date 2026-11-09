@@ -64,6 +64,27 @@ function page(content: unknown[]) {
   return { content, page: 0, size: 25, totalElements: content.length, totalPages: 1, last: true };
 }
 
+const history = [
+  {
+    timestamp: new Date().toISOString(),
+    actor: 'user-a',
+    kind: 'STATUS',
+    from: 'Open',
+    to: 'Doing',
+    transition: 'Start work',
+  },
+  {
+    timestamp: new Date().toISOString(),
+    actor: 'user-b',
+    kind: 'FIELD',
+    field: 'fields.answer',
+    from: 'No',
+    to: 'Yes',
+  },
+  { timestamp: new Date().toISOString(), actor: 'user-b', kind: 'FIELD', field: 'description', from: 'a', to: 'b' },
+  { timestamp: new Date().toISOString(), actor: 'user-b', kind: 'CREATED' },
+];
+
 let itemsResponse = page([]);
 
 function renderAt(path: string) {
@@ -101,6 +122,7 @@ beforeEach(() => {
         data: [{ id: 'c1', userId: 'user-b', content: 'Reproduced', createdAt: '2026-11-01T10:00:00Z' }],
       });
     }
+    if (url === '/items/PROJ-1/history') return Promise.resolve({ data: history });
     if (url === '/fields/schemas') return Promise.resolve({ data: [answerField] });
     if (url === '/notifications/unread-count') return Promise.resolve({ data: { count: 0 } });
     return Promise.resolve({ data: projects });
@@ -236,6 +258,15 @@ describe('Item detail', () => {
     expect(await screen.findByRole('heading', { name: 'Fix login' })).toBeTruthy();
     expect(screen.getByText('It redirects badly')).toBeTruthy();
     expect(await screen.findByText('Reproduced')).toBeTruthy();
+  });
+
+  it('shows the history newest first', async () => {
+    renderAt('/items/PROJ-1');
+
+    expect(await screen.findByText('Open -> Doing (Start work)')).toBeTruthy();
+    expect(screen.getByText('answer No -> Yes')).toBeTruthy();
+    expect(screen.getByText('description changed')).toBeTruthy();
+    expect(screen.getByText('created')).toBeTruthy();
   });
 
   it('moves the item and shows its new status', async () => {

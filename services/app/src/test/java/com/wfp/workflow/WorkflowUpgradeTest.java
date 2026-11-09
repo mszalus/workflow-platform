@@ -192,6 +192,11 @@ class WorkflowUpgradeTest {
         assertThat(audit).extracting(AuditEntry::getEntityId)
                 .containsExactlyInAnyOrder("PROJ-1", "PROJ-2", "PROJ-3");
         assertThat(notifications()).isEqualTo(notificationsBefore);
+        perform(get("/api/items/PROJ-3/history"), tenant, "alice", null)
+                .andExpect(jsonPath("$[0].kind").value("STATUS"))
+                .andExpect(jsonPath("$[0].from").value("Triage"))
+                .andExpect(jsonPath("$[0].to").value("Intake"))
+                .andExpect(jsonPath("$[0].reason").value("WORKFLOW_UPGRADE"));
     }
 
     @Test
