@@ -30,7 +30,7 @@ public class TenantInterceptor implements HandlerInterceptor {
         String userId = jwt.getClaimAsString("preferred_username");
         List<String> organizations = jwt.getClaimAsStringList(ORGANIZATION_CLAIM);
 
-        if (organizations == null || organizations.isEmpty()) {
+        if (organizations == null || organizations.isEmpty() || organizations.getFirst().isBlank()) {
             log.warn("Rejected token for '{}' without a '{}' claim", userId, ORGANIZATION_CLAIM);
             throw new ForbiddenException("Token has no tenant");
         }

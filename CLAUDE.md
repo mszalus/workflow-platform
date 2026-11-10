@@ -145,7 +145,7 @@ helm install wfp helm/workflow-platform/ -f helm/workflow-platform/values-local.
 
 ## Tenancy
 
-Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInterceptor` in each service → `TenantContext` → Hibernate `tenantFilter` and the `tenantId` argument on every Flowable call. A query or engine call without the tenant is a cross-tenant data leak. Read the Multi-Tenancy section of [docs/architecture/concepts.md](docs/architecture/concepts.md) before changing any of these layers.
+Every request is tenant-scoped: validated JWT `organization` claim (exactly one Keycloak Organization, whose alias is the tenant id) → `TenantInterceptor` in each service → `TenantContext` → Hibernate `tenantFilter` and the `tenantId` argument on every Flowable call. A query or engine call without the tenant is a cross-tenant data leak. Read the Multi-Tenancy section of [docs/architecture/concepts.md](docs/architecture/concepts.md) before changing any of these layers.
 
 ## Known Pitfalls
 
@@ -160,7 +160,7 @@ Every request is tenant-scoped: validated JWT `tenant_id` claim → `TenantInter
 
 - Backend integration tests run the full Spring context on H2 (`@SpringBootTest`, `MODE=LEGACY`)
 - Test config: `src/test/resources/application-test.yml` with `SPRING_PROFILES_ACTIVE=test`
-- Authenticated endpoint tests use Spring Security's `jwt()` request post-processor with a `tenant_id` claim; service-layer tests use `TenantContext.runAs`
+- Authenticated endpoint tests use Spring Security's `jwt()` request post-processor with an `organization` claim (`List.of(tenant)`); service-layer tests use `TenantContext.runAs`
 - Frontend: Vitest with React Testing Library on jsdom. One config, `frontend/vitest.config.ts`, runs every `*.test.ts(x)` under `apps/*/src`: `cd frontend && npm test` (`npm run test:coverage` for the coverage report, as CI does)
 - Acceptance: Cucumber BDD in `tests/bdd-acceptance` and Playwright in `e2e/` (`npm test`), both run in CI against a fresh Docker stack. `npm run screenshots` in `e2e/` refreshes `docs/screenshots/`
 

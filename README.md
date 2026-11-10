@@ -164,8 +164,8 @@ workflow-platform/
 
 Tenant isolation is enforced at every layer:
 
-1. **JWT** — Keycloak issues tokens with a `tenant_id` claim
-2. **Service** — `TenantInterceptor` reads `tenant_id` from the validated JWT into `TenantContext` (ThreadLocal) and rejects a token without it (403)
+1. **JWT** — Keycloak issues tokens with an `organization` claim listing the user's Keycloak Organization, whose alias is the tenant id
+2. **Service** — `TenantInterceptor` reads the organization from the validated JWT into `TenantContext` (ThreadLocal) and rejects a token with no organization or several (403)
 3. **JPA** — Hibernate `@Filter` automatically adds `WHERE tenant_id = :tenantId` to all queries
 4. **Flowable** — all engine API calls include `tenantId`
 

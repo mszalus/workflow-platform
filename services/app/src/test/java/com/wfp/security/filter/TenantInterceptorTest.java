@@ -47,6 +47,17 @@ class TenantInterceptorTest {
     }
 
     @Test
+    void rejectsJwtWithBlankOrganization() {
+        authenticateWith(jwt(" "));
+
+        assertThatThrownBy(() -> interceptor.preHandle(new MockHttpServletRequest(), new MockHttpServletResponse(),
+                new Object()))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Token has no tenant");
+        assertThat(TenantContext.getCurrentTenantId()).isNull();
+    }
+
+    @Test
     void rejectsJwtWithSeveralOrganizations() {
         authenticateWith(jwt("tenant-a", "tenant-b"));
 
