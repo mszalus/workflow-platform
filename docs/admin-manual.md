@@ -83,7 +83,7 @@ Click **+ New project**, then enter:
 
 - **Key** — 2 to 10 capital letters or digits, starting with a letter. Item keys are built from it, such as `PROJ-12`.
 - **Name**
-- **Item types** — at least one, each using a deployed workflow.
+- **Item types** — at least one, each using a workflow. The built-in **Default** workflow is always available, so a new tenant can create projects right away.
 
 **Edit** changes the name and adds or removes item types. The key, and the workflow of an existing item type, are fixed. An item type cannot be removed while it has items or field definitions.
 
@@ -94,6 +94,8 @@ Click **+ New project**, then enter:
 ![Workflows](screenshots/admin-workflows.png)
 
 The table shows the latest version of each deployed workflow. **Edit** opens it in the editor, and **Export BPMN** downloads it. Click **+ New** to start a new workflow or to import a file.
+
+Every tenant also has the **Default** workflow, marked **Built-in**: New → To do → In progress → Done, with **Reopen** and **Close** from Done, one status per board column. It is shared by all tenants, so it can be neither edited nor deleted, and the id `default` is reserved for it. **Use as template** copies it under an id and name of your choice into the editor, where you change it and deploy it as your own workflow.
 
 ---
 

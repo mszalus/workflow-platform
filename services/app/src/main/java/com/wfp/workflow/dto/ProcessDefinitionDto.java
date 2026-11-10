@@ -12,4 +12,5 @@ public class ProcessDefinitionDto {
     private int version;
     private String deploymentId;
     private boolean suspended;
+    private boolean builtIn;
 }

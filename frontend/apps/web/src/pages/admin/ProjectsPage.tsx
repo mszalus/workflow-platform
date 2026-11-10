@@ -84,7 +84,7 @@ function ProjectForm({ project, onDone }: { project?: Project; onDone: () => voi
             )}
             {workflows.map((workflow) => (
               <option key={workflow.key} value={workflow.key}>
-                {workflow.key}
+                {workflow.builtIn ? `${workflow.key} (built-in)` : workflow.key}
               </option>
             ))}
           </select>{' '}

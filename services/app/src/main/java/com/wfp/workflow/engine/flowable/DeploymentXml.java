@@ -24,6 +24,7 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -48,6 +49,15 @@ class DeploymentXml {
             setTransitionConditions(document, transitionFlowIds(graph));
         }
         return serialize(document);
+    }
+
+    List<String> processIds(String bpmnXml) {
+        NodeList processes = parse(bpmnXml).getElementsByTagNameNS("*", "process");
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < processes.getLength(); i++) {
+            ids.add(((Element) processes.item(i)).getAttribute("id"));
+        }
+        return ids;
     }
 
     private static boolean usesStatusCategories(Document document) {
