@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: app
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
   datasource:
     url: jdbc:postgresql://localhost:5432/wfp?currentSchema=workflow
     username: wfp
