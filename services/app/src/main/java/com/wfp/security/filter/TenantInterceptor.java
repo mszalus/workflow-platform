@@ -12,11 +12,13 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.List;
+
 @Slf4j
 @Component
 public class TenantInterceptor implements HandlerInterceptor {
 
-    public static final String TENANT_CLAIM = "tenant_id";
+    public static final String ORGANIZATION_CLAIM = "organization";
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -26,13 +28,18 @@ public class TenantInterceptor implements HandlerInterceptor {
 
         Jwt jwt = jwtAuth.getToken();
         String userId = jwt.getClaimAsString("preferred_username");
-        String tenantId = jwt.getClaimAsString(TENANT_CLAIM);
+        List<String> organizations = jwt.getClaimAsStringList(ORGANIZATION_CLAIM);
 
-        if (tenantId == null || tenantId.isBlank()) {
-            log.warn("Rejected token for '{}' without a '{}' claim", userId, TENANT_CLAIM);
+        if (organizations == null || organizations.isEmpty() || organizations.getFirst().isBlank()) {
+            log.warn("Rejected token for '{}' without a '{}' claim", userId, ORGANIZATION_CLAIM);
             throw new ForbiddenException("Token has no tenant");
         }
+        if (organizations.size() > 1) {
+            log.warn("Rejected token for '{}' with several organizations", userId);
+            throw new ForbiddenException("Token belongs to several organizations");
+        }
 
+        String tenantId = organizations.getFirst();
         TenantContext.setCurrentTenantId(tenantId);
         MDC.put("tenantId", tenantId);
         if (userId != null) {

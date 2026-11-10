@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -146,7 +147,7 @@ class ItemFilterQueryTest {
     void keepsAnotherTenantsItemsOutOfTheResult() throws Exception {
         mockMvc.perform(get("/api/items?filter=cf.severity:eq:High")
                         .with(jwt().jwt(token -> token.claim("preferred_username", "mallory")
-                                .claim("tenant_id", "tenant-other")).authorities(TestRoles.USER)))
+                                .claim("organization", List.of("tenant-other"))).authorities(TestRoles.USER)))
                 .andExpect(jsonPath("$.totalElements").value(0));
     }
 
@@ -172,7 +173,7 @@ class ItemFilterQueryTest {
 
     private ResultActions perform(MockHttpServletRequestBuilder request, String user, String body) throws Exception {
         request.with(jwt().jwt(token -> token.claim("preferred_username", user)
-                .claim("tenant_id", tenant))
+                .claim("organization", List.of(tenant)))
                 .authorities("admin".equals(user) ? TestRoles.ADMIN : TestRoles.USER));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -142,7 +143,7 @@ class ItemAttachmentTest {
     void anotherTenantCannotListDownloadUploadOrDelete() throws Exception {
         String id = upload("report.pdf", "application/pdf", PDF_BYTES, "alice");
         RequestPostProcessor mallory = jwt().jwt(token -> token.claim("preferred_username", "mallory")
-                .claim("tenant_id", "other-" + UUID.randomUUID())).authorities(TestRoles.ADMIN);
+                .claim("organization", List.of("other-" + UUID.randomUUID()))).authorities(TestRoles.ADMIN);
 
         mockMvc.perform(get("/api/items/PROJ-1/attachments").with(mallory)).andExpect(status().isNotFound());
         mockMvc.perform(get("/api/items/PROJ-1/attachments/{id}/content", id).with(mallory))
@@ -167,12 +168,12 @@ class ItemAttachmentTest {
     }
 
     private RequestPostProcessor user(String name) {
-        return jwt().jwt(token -> token.claim("preferred_username", name).claim("tenant_id", tenant))
+        return jwt().jwt(token -> token.claim("preferred_username", name).claim("organization", List.of(tenant)))
                 .authorities(TestRoles.USER);
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request, String name, String body) throws Exception {
-        request.with(jwt().jwt(token -> token.claim("preferred_username", name).claim("tenant_id", tenant))
+        request.with(jwt().jwt(token -> token.claim("preferred_username", name).claim("organization", List.of(tenant)))
                 .authorities(TestRoles.ADMIN));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

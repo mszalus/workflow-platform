@@ -92,7 +92,7 @@ flowchart LR
 
 The chain is today's, minus the gateway:
 
-1. The Keycloak token carries `tenant_id`, from a user attribute. **Decided 2026-10-01:** keep the attribute for now; moving tenants to Keycloak Organizations is in Phase 2 (#76). To keep that move free of data migration, each organization's alias will equal today's tenant id.
+1. The Keycloak token carries the user's Keycloak Organization in its `organization` claim (#76). The organization alias is the tenant id, so no stored data changed. A token with several organizations is rejected.
 2. `TenantInterceptor` puts the tenant in `TenantContext` and rejects a token without one.
 3. JPA: the auto-enabled Hibernate filter applies the tenant to every query and load by id, and fails closed without a tenant (#58, #66).
 4. Flowable: every call passes the tenant. The facade's `transition` and `cancel` must check that the run belongs to the caller's tenant, which is exactly what #71 fixes today.

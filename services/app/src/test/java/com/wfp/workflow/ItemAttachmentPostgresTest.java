@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
@@ -80,7 +81,7 @@ class ItemAttachmentPostgresTest {
     }
 
     private RequestPostProcessor admin() {
-        return jwt().jwt(token -> token.claim("preferred_username", "admin").claim("tenant_id", tenant))
+        return jwt().jwt(token -> token.claim("preferred_username", "admin").claim("organization", List.of(tenant)))
                 .authorities(TestRoles.ADMIN);
     }
 }

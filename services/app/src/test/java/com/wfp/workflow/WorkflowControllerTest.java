@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -120,7 +121,7 @@ class WorkflowControllerTest {
 
     private ResultActions send(String path, Map<String, String> body) throws Exception {
         return mockMvc.perform(post(path)
-                .with(jwt().jwt(token -> token.claim("preferred_username", "admin").claim("tenant_id", tenant)).authorities(TestRoles.ADMIN))
+                .with(jwt().jwt(token -> token.claim("preferred_username", "admin").claim("organization", List.of(tenant))).authorities(TestRoles.ADMIN))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)));
     }

@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -94,7 +95,7 @@ class ItemRollbackTest {
     }
 
     private ResultActions perform(MockHttpServletRequestBuilder request, String user, String body) throws Exception {
-        request.with(jwt().jwt(token -> token.claim("preferred_username", user).claim("tenant_id", tenant))
+        request.with(jwt().jwt(token -> token.claim("preferred_username", user).claim("organization", List.of(tenant)))
                 .authorities("admin".equals(user) ? TestRoles.ADMIN : TestRoles.USER));
         if (body != null) {
             request.contentType(MediaType.APPLICATION_JSON).content(body);

@@ -7,6 +7,7 @@ const WEB_URL = 'http://localhost:5175';
 async function login(page: Page, username: string) {
   await page.goto(WEB_URL);
   await page.getByRole('textbox', { name: 'Username or email' }).fill(username);
+  await page.getByRole('button', { name: 'Sign In' }).click();
   await page.getByRole('textbox', { name: 'Password' }).fill('password');
   await page.getByRole('button', { name: 'Sign In' }).click();
   await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible({ timeout: 20000 });

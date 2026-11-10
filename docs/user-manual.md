@@ -38,7 +38,7 @@ The project selector at the top left chooses the project that **Items**, **Board
 ## Login
 
 1. Open the URL above. You are redirected to the Keycloak login page.
-2. Enter your username and password and click **Sign In**.
+2. Enter your username and click **Sign In**, then enter your password and click **Sign In** again.
 3. You land on **My work**.
 
 ![Login page](screenshots/keycloak-login.png)

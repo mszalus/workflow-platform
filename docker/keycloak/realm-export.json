@@ -1,6 +1,7 @@
 {
   "realm": "workflow-platform",
   "enabled": true,
+  "organizationsEnabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
@@ -32,7 +33,7 @@
         "profile",
         "email",
         "roles",
-        "tenant"
+        "organization"
       ]
     },
     {
@@ -56,7 +57,7 @@
         "profile",
         "email",
         "roles",
-        "tenant"
+        "organization"
       ]
     }
   ],
@@ -156,7 +157,7 @@
       ]
     },
     {
-      "name": "tenant",
+      "name": "organization",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
@@ -164,12 +165,12 @@
       },
       "protocolMappers": [
         {
-          "name": "tenant_id",
+          "name": "organization",
           "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "protocolMapper": "oidc-organization-membership-mapper",
           "config": {
-            "user.attribute": "tenant_id",
-            "claim.name": "tenant_id",
+            "claim.name": "organization",
+            "multivalued": "true",
             "id.token.claim": "true",
             "access.token.claim": "true",
             "jsonType.label": "String"
@@ -194,12 +195,7 @@
       ],
       "realmRoles": [
         "admin"
-      ],
-      "attributes": {
-        "tenant_id": [
-          "tenant-a"
-        ]
-      }
+      ]
     },
     {
       "username": "user-a",
@@ -216,12 +212,7 @@
       ],
       "realmRoles": [
         "user"
-      ],
-      "attributes": {
-        "tenant_id": [
-          "tenant-a"
-        ]
-      }
+      ]
     },
     {
       "username": "admin-b",
@@ -238,12 +229,7 @@
       ],
       "realmRoles": [
         "admin"
-      ],
-      "attributes": {
-        "tenant_id": [
-          "tenant-b"
-        ]
-      }
+      ]
     },
     {
       "username": "user-b",
@@ -260,12 +246,49 @@
       ],
       "realmRoles": [
         "user"
+      ]
+    }
+  ],
+  "organizations": [
+    {
+      "name": "Tenant A",
+      "alias": "tenant-a",
+      "enabled": true,
+      "domains": [
+        {
+          "name": "tenant-a.example.com"
+        }
       ],
-      "attributes": {
-        "tenant_id": [
-          "tenant-b"
-        ]
-      }
+      "members": [
+        {
+          "username": "admin-a",
+          "membershipType": "UNMANAGED"
+        },
+        {
+          "username": "user-a",
+          "membershipType": "UNMANAGED"
+        }
+      ]
+    },
+    {
+      "name": "Tenant B",
+      "alias": "tenant-b",
+      "enabled": true,
+      "domains": [
+        {
+          "name": "tenant-b.example.com"
+        }
+      ],
+      "members": [
+        {
+          "username": "admin-b",
+          "membershipType": "UNMANAGED"
+        },
+        {
+          "username": "user-b",
+          "membershipType": "UNMANAGED"
+        }
+      ]
     }
   ]
 }

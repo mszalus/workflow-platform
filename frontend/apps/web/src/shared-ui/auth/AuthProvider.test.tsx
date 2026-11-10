@@ -51,7 +51,7 @@ describe('AuthProvider', () => {
     keycloak.token = 'token-1';
     keycloak.tokenParsed = {
       sub: 'user-1',
-      tenant_id: 'tenant-a',
+      organization: ['tenant-a'],
       preferred_username: 'alice',
       realm_access: { roles: ['user'] },
     };

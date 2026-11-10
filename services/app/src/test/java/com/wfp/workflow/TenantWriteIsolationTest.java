@@ -11,6 +11,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -76,7 +78,7 @@ class TenantWriteIsolationTest {
     private ResultActions deleteDeploymentAs(String tenantId) throws Exception {
         return mockMvc.perform(delete("/api/workflow/deployments/{id}", deploymentId)
                 .with(jwt().jwt(token -> token.claim("preferred_username", "user-" + tenantId)
-                        .claim("tenant_id", tenantId)).authorities(TestRoles.ADMIN)));
+                        .claim("organization", List.of(tenantId))).authorities(TestRoles.ADMIN)));
     }
 
     private boolean deploymentExists() {

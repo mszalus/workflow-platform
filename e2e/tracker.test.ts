@@ -12,6 +12,7 @@ const title = `Tracker flow ${projectKey}`;
 async function login(page: Page, username: string) {
   await page.goto(WEB_URL);
   await page.getByLabel('Username or email').fill(username);
+  await page.getByRole('button', { name: 'Sign In' }).click();
   await page.getByLabel('Password', { exact: true }).fill('password');
   await page.getByRole('button', { name: 'Sign In' }).click();
   await expect(page.getByRole('heading', { name: 'My work' })).toBeVisible({ timeout: 20000 });

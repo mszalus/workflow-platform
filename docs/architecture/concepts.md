@@ -11,7 +11,7 @@ separate layers — a break in any one of them is a cross-tenant data leak.
 
 ```mermaid
 flowchart LR
-    JWT["JWT<br/>tenant_id claim"] --> SVC["Service<br/>TenantInterceptor"]
+    JWT["JWT<br/>organization claim"] --> SVC["Service<br/>TenantInterceptor"]
     SVC -->|"ThreadLocal"| CTX["TenantContext"]
     CTX --> RES["CurrentTenantIdResolver"]
     RES -->|"supplies :tenantId"| HIB["Hibernate @Filter<br/>tenant_id = :tenantId"]
@@ -20,7 +20,7 @@ flowchart LR
 
 | Layer | Mechanism | Lives in |
 |---|---|---|
-| Request | `TenantInterceptor` reads the validated JWT's `tenant_id` claim into `TenantContext` (ThreadLocal) and rejects a token without it (403). No header is trusted | `com.wfp.security` in app |
+| Request | `TenantInterceptor` reads the validated JWT's `organization` claim into `TenantContext` (ThreadLocal) and rejects a token with no organization or several (403). No header is trusted | `com.wfp.security` in app |
 | JPA | The `tenantFilter` is `autoEnabled` in every Hibernate session and `applyToLoadByKey`, so every query and every load by id from the database gets `tenant_id = :tenantId`. `CurrentTenantIdResolver` supplies the tenant from `TenantContext` and throws when there is none. Inserts are not filtered: the entity's own `tenant_id` is written | entity classes, `com.wfp.security` |
 | Engine | every Flowable call passes `tenantId`; Flowable stores it in `TENANT_ID_` | Flowable Engine |
 
@@ -41,9 +41,10 @@ through its parent (`FieldSchema`, `Project`), which is already filtered.
 
 ### Identity side
 
-Each Keycloak user in the single realm carries a `tenant_id` **user attribute**, which a
-protocol mapper stamps onto issued tokens as the `tenant_id` claim. Moving tenants to
-Keycloak Organizations is planned (#76). See Security and JWT and
+Each tenant is a **Keycloak Organization** in the single realm, and the organization's alias
+is the tenant id. A protocol mapper lists the user's organizations in the token's
+`organization` claim. The platform assumes one tenant per token, so a token with no
+organization or with several is rejected. See Security and JWT and
 Admin — Keycloak Administration.
 
 ### See also
@@ -60,7 +61,7 @@ itself, in one transaction. `CommentService` does the same for a comment on an i
 
 ## Security and JWT
 
-Keycloak 25 is the sole identity provider. Every service is an OAuth2 **resource server**;
+Keycloak 26 is the sole identity provider. Every service is an OAuth2 **resource server**;
 none of them holds a session.
 
 ### Flow
@@ -71,7 +72,7 @@ none of them holds a session.
    web app's nginx proxies it to app.
 3. app validates the signature against the Keycloak JWK Set and accepts no
    unauthenticated traffic, whether it's reached through the web app or directly.
-4. `JwtTenantConverter` maps realm roles to Spring authorities and reads `tenant_id`; the
+4. `JwtTenantConverter` maps realm roles to Spring authorities and `TenantInterceptor` reads `organization`; the
    tenant comes only from the JWT, never from a header — see Multi-Tenancy.
 
 ### Roles
@@ -244,7 +245,7 @@ Integration tests activate `SPRING_PROFILES_ACTIVE=test` and read
 
 ### Fixtures
 
-Tests build tokens with Spring Security's `jwt()` request post-processor (with a `tenant_id`
+Tests build tokens with Spring Security's `jwt()` request post-processor (with an `organization`
 claim) and set a tenant for service-level work with `TenantContext.runAs`.
 
 ### Traps
