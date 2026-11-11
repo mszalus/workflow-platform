@@ -101,6 +101,15 @@ describe('AuthProvider', () => {
     );
   });
 
+  it('exposes no tenant when the token lists several organizations', async () => {
+    keycloak.tokenParsed = { ...keycloak.tokenParsed, organization: ['tenant-a', 'tenant-b'] };
+    renderProvider();
+
+    const identity = JSON.parse((await screen.findByTestId('identity')).textContent ?? '');
+    expect(identity.authenticated).toBe(true);
+    expect(identity.tenantId).toBeUndefined();
+  });
+
   it('gives apiClient the token once authenticated', async () => {
     renderProvider();
     await screen.findByTestId('identity');
