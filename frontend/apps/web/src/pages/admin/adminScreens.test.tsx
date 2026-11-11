@@ -195,7 +195,7 @@ describe('Workflows', () => {
     );
   });
 
-  it('marks the built-in workflow and offers it only as a template', async () => {
+  it('marks the built-in workflow and gives it no Edit link', async () => {
     renderAt('/admin/workflows');
 
     const builtIn = (await screen.findByText('Built-in')).closest('tr')!;
@@ -203,9 +203,32 @@ describe('Workflows', () => {
     expect(within(builtIn).getByRole('button', { name: 'Use as template' })).toBeTruthy();
   });
 
+  it('offers a workflow of the tenant as a template too', async () => {
+    renderAt('/admin/workflows');
+
+    const own = (await screen.findByText('Bug workflow')).closest('tr')!;
+    expect(within(own).getByRole('link', { name: 'Edit' })).toBeTruthy();
+    expect(within(own).getByRole('button', { name: 'Use as template' })).toBeTruthy();
+  });
+
+  it('refuses the id of an existing workflow for the copy', async () => {
+    renderAt('/admin/workflows');
+    const builtIn = (await screen.findByText('Built-in')).closest('tr')!;
+    fireEvent.click(within(builtIn).getByRole('button', { name: 'Use as template' }));
+
+    const dialog = within(screen.getByRole('dialog', { name: 'Use as template' }));
+    fireEvent.change(dialog.getByLabelText('New workflow id'), { target: { value: 'bug-flow' } });
+    fireEvent.change(dialog.getByLabelText('New workflow name'), { target: { value: 'Copy' } });
+    fireEvent.click(dialog.getByRole('button', { name: 'Open in editor' }));
+
+    expect(dialog.getByRole('alert').textContent).toBe('A workflow with this id already exists.');
+    expect(screen.queryByTestId('editor')).toBeNull();
+  });
+
   it('copies the built-in workflow under a new id into the editor', async () => {
     renderAt('/admin/workflows');
-    fireEvent.click(await screen.findByRole('button', { name: 'Use as template' }));
+    const builtIn = (await screen.findByText('Built-in')).closest('tr')!;
+    fireEvent.click(within(builtIn).getByRole('button', { name: 'Use as template' }));
 
     const dialog = within(screen.getByRole('dialog', { name: 'Use as template' }));
     fireEvent.change(dialog.getByLabelText('New workflow id'), { target: { value: 'bugFlow2' } });

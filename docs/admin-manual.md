@@ -95,7 +95,7 @@ Click **+ New project**, then enter:
 
 The table shows the latest version of each deployed workflow. **Edit** opens it in the editor, and **Export BPMN** downloads it. Click **+ New** to start a new workflow or to import a file.
 
-Every tenant also has the **Default** workflow, marked **Built-in**: New → To do → In progress → Done, with **Reopen** and **Close** from Done, one status per board column. It is shared by all tenants, so it can be neither edited nor deleted, and the id `default` is reserved for it. **Use as template** copies it under an id and name of your choice into the editor, where you change it and deploy it as your own workflow.
+Every tenant also has the **Default** workflow, marked **Built-in**: New → To do → In progress → Done, with **Reopen** and **Close** from Done, one status per board column. It is shared by all tenants, so it can be neither edited nor deleted, and the id `default` is reserved for it. **Use as template**, available on every workflow, copies that workflow under a new id and name of your choice into the editor, where you change it and deploy it as a separate workflow. The id must not belong to an existing workflow. To change a workflow of your own in place, use **Edit**: deploying then adds a new version of the same workflow.
 
 ---
 
