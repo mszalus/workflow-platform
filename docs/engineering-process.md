@@ -23,7 +23,7 @@ and `docs/design/`. This file covers only how we work.
 
 ## Branches and merging
 
-- `main` is protected. Changes land only through a PR, and `backend-build`, `frontend-build`, `helm-lint`, `acceptance-tests` and `e2e-playwright` must pass. Nobody pushes to `main` directly, admins and Claude included.
+- `main` is protected. Changes land only through a PR, and `backend-build`, `frontend-build`, `helm-lint`, `acceptance-tests`, `e2e-playwright`, `docker-build` and `claude-review` must pass. Nobody pushes to `main` directly, admins and Claude included.
 - One branch per logical change, named `feat/`, `fix/`, `docs/` or `chore/` plus a short slug. Branch from current `main` and merge within days.
 - Claude opens the PR: as a draft while work is in progress, and ready for review once the local gates pass.
 - **Only the human merges**, after reading the diff. Claude never merges, including its own `chore/` PRs.
@@ -38,7 +38,7 @@ and `docs/design/`. This file covers only how we work.
 | PR opened or updated | `backend-build`; `frontend-build` (lint, format, typecheck, `npm audit`); `helm-lint` | `.github/workflows/ci.yml` | the merge |
 | PR opened or updated | `acceptance-tests` (BDD against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
 | PR opened or updated | `e2e-playwright` (Playwright against a fresh Docker stack) | `.github/workflows/ci.yml` | the merge |
-| PR opened or updated | Claude code review | `.github/workflows/claude-code-review.yml` | nothing, advisory |
+| PR opened, updated or labelled | `claude-review` (Claude code review with a verdict) | `.github/workflows/claude-code-review.yml` | the merge, when the verdict is `BLOCK` |
 | PR opened or updated | `docker-build` (images and Trivy) | `.github/workflows/ci.yml` | the merge |
 | Push to `main` | The PR jobs | `.github/workflows/ci.yml` | nothing; a red run becomes an issue in the current Phase 0 milestone |
 | Weekly | OWASP dependency check, `npm audit` | `.github/workflows/security.yml` | nothing |
@@ -64,7 +64,23 @@ Human attention goes to two checkpoints: approving the plan and reviewing the PR
 1. **Plan.** Work that involves a design choice or spans more than one file of logic starts in plan mode. The human approves the plan before code is written.
 2. **Build.** The work session implements the plan and commits and pushes through the hooks.
 3. **Self-review.** For changes to security, tenancy, events or the database schema, run `/code-review` before marking the PR ready.
-4. **PR review.** The Claude review comments (advisory), CI gates the merge, and the human reads the diff and merges. The merge closes the issue.
+4. **PR review.** The Claude review comments and gives a verdict, CI gates the merge, and the human reads the diff and merges. The merge closes the issue.
+
+### Claude review verdict
+
+Claude reviews every PR in the `claude-review` job and posts its comments as `github-actions[bot]`. The summary comment starts with a verdict:
+
+- `Verdict: PASS`: no findings, or only minor ones. The check passes.
+- `Verdict: BLOCK`: at least one finding must be fixed first (wrong behaviour, data loss, a tenant or authorization leak, a broken build or deployment). The check fails and GitHub refuses the merge.
+
+To clear a `BLOCK`:
+
+- **Fix it.** Push a commit. The review runs again and gives a new verdict.
+- **Override it**, when the finding is wrong or you accept it. Add the `review-override` label to the PR: in the PR's right-hand sidebar under **Labels**, or with `gh pr edit <n> --add-label review-override`. The job runs again without a review, passes within a minute, and the PR can be merged. Say in a PR comment why you overrode it.
+
+While the label is set, later pushes are still reviewed, but the verdict does not block. Remove the label (`gh pr edit <n> --remove-label review-override`) to make the review block again. Only people with triage access or higher can add labels.
+
+If the check fails with "posted no verdict", the review itself did not finish: re-run the job from the PR's **Checks** tab.
 
 ## Delegating to subagents
 
