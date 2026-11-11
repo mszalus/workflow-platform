@@ -71,12 +71,13 @@ export function AuthProvider({ children, keycloakUrl, realm, clientId }: AuthPro
   const logout = useCallback(() => keycloak.logout(), [keycloak]);
 
   const tokenParsed = keycloak.tokenParsed;
+  const organizations = (tokenParsed?.organization as string[] | undefined) ?? [];
   const value: AuthContextType = {
     keycloak,
     initialized,
     authenticated,
     token: keycloak.token,
-    tenantId: (tokenParsed?.organization as string[] | undefined)?.[0],
+    tenantId: organizations.length === 1 ? organizations[0] : undefined,
     userId: tokenParsed?.sub,
     username: tokenParsed?.preferred_username as string | undefined,
     roles: (tokenParsed?.realm_access?.roles as string[]) ?? [],
