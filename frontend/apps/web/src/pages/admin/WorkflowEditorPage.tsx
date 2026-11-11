@@ -103,7 +103,7 @@ export default function WorkflowEditorPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 6rem)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 7.5rem)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
         <h1 style={{ fontSize: '1.4rem', margin: 0, flex: 1 }}>Workflow editor</h1>
         <input
