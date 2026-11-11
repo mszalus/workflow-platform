@@ -7,21 +7,24 @@ import App from './App';
 import { keycloakUrl } from './auth/keycloakUrl';
 import { ProjectProvider } from './projects/ProjectContext';
 import RequireOrganization from './components/RequireOrganization';
+import { ThemeProvider } from './theme';
 
 const queryClient = new QueryClient();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider keycloakUrl={keycloakUrl} realm="workflow-platform" clientId="wfp-web">
-      <RequireOrganization>
-        <QueryClientProvider client={queryClient}>
-          <ProjectProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </ProjectProvider>
-        </QueryClientProvider>
-      </RequireOrganization>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider keycloakUrl={keycloakUrl} realm="workflow-platform" clientId="wfp-web">
+        <RequireOrganization>
+          <QueryClientProvider client={queryClient}>
+            <ProjectProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </ProjectProvider>
+          </QueryClientProvider>
+        </RequireOrganization>
+      </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

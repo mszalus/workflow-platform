@@ -1,8 +1,10 @@
-import { useState, type CSSProperties } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { AppShell, Avatar, Button, Group, NavLink, Stack, Text } from '@mantine/core';
 import { useAuth } from '../shared-ui';
 import { keycloakUsersUrl } from '../auth/keycloakUrl';
 import { useIsAdmin } from '../auth/useIsAdmin';
+import { BORDER, SUBTLE_INK, SURFACE } from '../theme';
 import CreateItemDialog from './CreateItemDialog';
 import NotificationBell from './NotificationBell';
 import ProjectSwitcher from './ProjectSwitcher';
@@ -20,21 +22,17 @@ const adminLinks = [
   { to: '/admin/audit', label: 'Audit log' },
 ];
 
-function linkStyle({ isActive }: { isActive: boolean }): CSSProperties {
-  return {
-    display: 'block',
-    padding: '0.6rem 1rem',
-    color: isActive ? '#bbdefb' : '#ccc',
-    textDecoration: 'none',
-    background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-  };
-}
-
 function NavLinks({ links }: { links: { to: string; label: string }[] }) {
+  const { pathname } = useLocation();
   return links.map((link) => (
-    <NavLink key={link.to} to={link.to} style={linkStyle}>
-      {link.label}
-    </NavLink>
+    <NavLink
+      key={link.to}
+      component={Link}
+      to={link.to}
+      label={link.label}
+      active={pathname.startsWith(link.to)}
+      style={{ borderRadius: 3 }}
+    />
   ));
 }
 
@@ -44,48 +42,59 @@ export default function Layout() {
   const [creating, setCreating] = useState(false);
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      <nav
-        style={{
-          width: 220,
-          background: '#0d47a1',
-          color: '#fff',
-          padding: '1rem 0',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div style={{ padding: '0 1rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.2rem', margin: '0 0 0.5rem' }}>WFP</h2>
+    <AppShell header={{ height: 56 }} navbar={{ width: 240, breakpoint: 0 }} padding="xl">
+      <AppShell.Header style={{ borderColor: BORDER }}>
+        <Group h="100%" px="md" justify="space-between">
+          <Group gap="xl">
+            <Text fw={700} size="lg" c="brand.6">
+              WFP Tracker
+            </Text>
+            <Button onClick={() => setCreating(true)}>+ Create</Button>
+          </Group>
+          <Group gap="md">
+            <NotificationBell />
+            <Group gap="xs">
+              <Avatar size="sm" color="brand" radius="xl">
+                {username?.charAt(0).toUpperCase()}
+              </Avatar>
+              <Text size="sm">
+                {username} · {tenantId}
+              </Text>
+            </Group>
+            <Button variant="subtle" color="gray" size="compact-sm" onClick={logout}>
+              Log out
+            </Button>
+          </Group>
+        </Group>
+      </AppShell.Header>
+      <AppShell.Navbar p="md" style={{ background: SURFACE, borderColor: BORDER }}>
+        <Stack gap="lg">
           <ProjectSwitcher />
-        </div>
-        <NavLinks links={userLinks} />
-        {isAdmin && (
-          <>
-            <h3 style={{ fontSize: '0.75rem', margin: '1.5rem 1rem 0.5rem', color: '#bbdefb' }}>ADMIN</h3>
-            <NavLinks links={adminLinks} />
-            <a href={keycloakUsersUrl} target="_blank" rel="noreferrer" style={linkStyle({ isActive: false })}>
-              Users and groups
-            </a>
-          </>
-        )}
-        <div style={{ marginTop: 'auto', padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.2)' }}>
-          <div style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
-            {username} · {tenantId}
-          </div>
-          <button onClick={logout}>Log out</button>
-        </div>
-      </nav>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
-        <header style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', padding: '0.75rem 1.5rem' }}>
-          <NotificationBell />
-          <button onClick={() => setCreating(true)}>+ Create</button>
-        </header>
-        <main style={{ flex: 1, overflow: 'auto', padding: '0 1.5rem 1.5rem' }}>
-          <Outlet />
-        </main>
-      </div>
+          <Stack gap={2}>
+            <NavLinks links={userLinks} />
+          </Stack>
+          {isAdmin && (
+            <Stack gap={2}>
+              <Text size="xs" fw={700} c={SUBTLE_INK} px="sm" mb={4}>
+                ADMIN
+              </Text>
+              <NavLinks links={adminLinks} />
+              <NavLink
+                component="a"
+                href={keycloakUsersUrl}
+                target="_blank"
+                rel="noreferrer"
+                label="Users and groups"
+                style={{ borderRadius: 3 }}
+              />
+            </Stack>
+          )}
+        </Stack>
+      </AppShell.Navbar>
+      <AppShell.Main>
+        <Outlet />
+      </AppShell.Main>
       {creating && <CreateItemDialog onClose={() => setCreating(false)} />}
-    </div>
+    </AppShell>
   );
 }

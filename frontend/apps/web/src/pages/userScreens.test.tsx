@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from '../theme';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '../App';
 import { ProjectProvider, type Project } from '../projects/ProjectContext';
@@ -99,7 +100,9 @@ function renderAt(path: string) {
     <QueryClientProvider client={queryClient}>
       <ProjectProvider>
         <MemoryRouter initialEntries={[path]}>
-          <App />
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
         </MemoryRouter>
       </ProjectProvider>
     </QueryClientProvider>,
