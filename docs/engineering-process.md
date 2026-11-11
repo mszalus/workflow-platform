@@ -46,7 +46,7 @@ and `docs/design/`. This file covers only how we work.
 - Both hooks skip the tests when every changed file is `*.md`, under `docs/` or under `.claude/`.
 - The hooks fire only for commands Claude runs, not for git in your own terminal. Branch protection is the safety net; the hooks exist to fail fast.
 - E2E tests run in CI, not locally before a push: CI starts a fresh stack, while every local checkout shares one Docker stack.
-- Doc screenshots are not part of the E2E run. Refresh them on purpose with `cd e2e && npm run screenshots` and commit them in a `docs/` PR.
+- Doc screenshots are not part of the E2E run. Refresh them on purpose with `cd e2e && npm run screenshots` and commit them in a `docs/` PR. The run first creates the `DEMO` project it photographs (`npm run demo-data`), so it works on a fresh stack; use a fresh stack to keep other test data out of the pictures.
 - Known gaps in these gates are issues labelled `process`: `gh issue list --label process`.
 
 ## Local Docker stack

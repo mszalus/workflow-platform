@@ -4,7 +4,8 @@
   "scripts": {
     "test": "npx playwright test --project=e2e",
     "test:headed": "npx playwright test --project=e2e --headed",
-    "screenshots": "npx playwright test --project=screenshots"
+    "screenshots": "npx playwright test --project=screenshots",
+    "demo-data": "npx playwright test --project=demo-data"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0"
