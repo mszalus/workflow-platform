@@ -8,7 +8,7 @@ const PROJECT = 'DEMO';
 const SAMPLE_WORKFLOW = fs.readFileSync(path.join(__dirname, 'samples', 'tracker-flow.bpmn20.xml'), 'utf-8');
 
 const ITEMS = [
-  { type: 'Bug', title: 'Login page loops after the session expires', priority: 'HIGH', assignee: 'user-a', severity: 'major', transitions: ['accept', 'startWork'] },
+  { type: 'Bug', title: 'Login page loops after the session expires', priority: 'HIGH', assignee: 'user-a', severity: 'major', comment: 'Reproduced on the staging stack. The refresh token is not renewed.', transitions: ['accept', 'startWork'] },
   { type: 'Task', title: 'Write the onboarding guide', priority: 'MEDIUM', assignee: 'user-a', transitions: ['accept'] },
   { type: 'Task', title: 'Upgrade the PostgreSQL driver', priority: 'LOW', assignee: 'admin-a', transitions: ['accept', 'startWork', 'finish'] },
   { type: 'Bug', title: 'Export drops rows with empty dates', priority: 'MEDIUM', assignee: 'user-a', severity: 'minor', transitions: [] },
@@ -44,30 +44,38 @@ setup('demo project with items', async ({ request }) => {
   }
 
   const projects: { key: string }[] = await admin.get('/projects');
-  if (projects.some((project) => project.key === PROJECT)) {
-    return;
+  if (!projects.some((project) => project.key === PROJECT)) {
+    await admin.post('/projects', {
+      key: PROJECT,
+      name: 'Demo project',
+      itemTypes: [
+        { name: 'Task', workflowKey: 'default' },
+        { name: 'Bug', workflowKey: 'default' },
+      ],
+    });
   }
-  await admin.post('/projects', {
-    key: PROJECT,
-    name: 'Demo project',
-    itemTypes: [
-      { name: 'Task', workflowKey: 'default' },
-      { name: 'Bug', workflowKey: 'default' },
-    ],
-  });
-  await admin.post('/fields/schemas', {
-    project: PROJECT,
-    itemTypes: ['Bug'],
-    fieldKey: 'severity',
-    label: 'Severity',
-    fieldType: 'DROPDOWN',
-    options: [
-      { label: 'Minor', value: 'minor', sortOrder: 0 },
-      { label: 'Major', value: 'major', sortOrder: 1 },
-    ],
-  });
 
-  for (const { type, title, priority, assignee, severity, transitions } of ITEMS) {
+  const fields: { fieldKey: string }[] = await admin.get(`/fields/schemas?project=${PROJECT}`);
+  if (!fields.some((field) => field.fieldKey === 'severity')) {
+    await admin.post('/fields/schemas', {
+      project: PROJECT,
+      itemTypes: ['Bug'],
+      fieldKey: 'severity',
+      label: 'Severity',
+      fieldType: 'DROPDOWN',
+      options: [
+        { label: 'Minor', value: 'minor', sortOrder: 0 },
+        { label: 'Major', value: 'major', sortOrder: 1 },
+      ],
+    });
+  }
+
+  const existing: { content: { title: string }[] } = await admin.get(`/items?project=${PROJECT}&size=100`);
+  const existingTitles = existing.content.map((item) => item.title);
+  for (const { type, title, priority, assignee, severity, comment, transitions } of ITEMS) {
+    if (existingTitles.includes(title)) {
+      continue;
+    }
     const item = await user.post('/items', {
       project: PROJECT,
       type,
@@ -77,11 +85,11 @@ setup('demo project with items', async ({ request }) => {
       description: 'Sample item created by the demo data script.',
       fields: severity ? { severity } : {},
     });
+    if (comment) {
+      await admin.post(`/items/${item.key}/comments`, { content: comment });
+    }
     for (const transitionId of transitions) {
       await user.post(`/items/${item.key}/transitions`, { transitionId });
     }
   }
-  await admin.post(`/items/${PROJECT}-1/comments`, {
-    content: 'Reproduced on the staging stack. The refresh token is not renewed.',
-  });
 });
