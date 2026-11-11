@@ -68,6 +68,13 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
                 .processDefinitionTenantId(tenantId)
                 .latestVersion()
                 .singleResult();
+        if (latest == null && BuiltInWorkflow.KEY.equals(workflowKey)) {
+            latest = repositoryService.createProcessDefinitionQuery()
+                    .processDefinitionKey(workflowKey)
+                    .processDefinitionWithoutTenantId()
+                    .latestVersion()
+                    .singleResult();
+        }
         if (latest == null) {
             throw new NotFoundException("Workflow", workflowKey);
         }
@@ -101,6 +108,7 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
         requireVersionInTenant(tenantId, versionId);
         ProcessInstance run = runtimeService.createProcessInstanceBuilder()
                 .processDefinitionId(versionId)
+                .overrideProcessDefinitionTenantId(tenantId)
                 .start();
         if (!statusId.equals(describe(versionId).initialStatusId())) {
             runtimeService.createChangeActivityStateBuilder()
@@ -123,6 +131,7 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
         requireVersionInTenant(tenantId, versionId);
         ProcessInstance run = runtimeService.createProcessInstanceBuilder()
                 .processDefinitionId(versionId)
+                .overrideProcessDefinitionTenantId(tenantId)
                 .variable(ITEM_ID, itemId.toString())
                 .start();
         return new WorkflowRun(run.getId(), versionId);
@@ -183,7 +192,8 @@ public class FlowableWorkflowEngine implements WorkflowEngine {
     }
 
     private void requireVersionInTenant(String tenantId, String versionId) {
-        if (!tenantId.equals(repositoryService.getProcessDefinition(versionId).getTenantId())) {
+        ProcessDefinition version = repositoryService.getProcessDefinition(versionId);
+        if (!BuiltInWorkflow.isBuiltIn(version) && !tenantId.equals(version.getTenantId())) {
             throw new NotFoundException("Workflow version", versionId);
         }
     }

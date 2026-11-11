@@ -17,7 +17,7 @@
 
 ## Getting Started
 
-The Workflow Platform is a work item tracker. Each item belongs to a project, has a type such as Bug or Task, and moves through the statuses of its workflow. You can:
+The Workflow Platform is a work item tracker. Each item belongs to a project, has a type such as Bug or Task, and moves through the statuses of its workflow. Every tenant has the built-in **Default** workflow, New → To do → In progress → Done, and admins can add their own. You can:
 
 - See the items assigned to you
 - Create, filter and sort items

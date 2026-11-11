@@ -30,7 +30,14 @@ const projects: Project[] = [
   },
 ];
 
-const workflows = [{ id: 'bug-flow:3:1', key: 'bug-flow', name: 'Bug workflow', version: 3 }];
+const workflows = [
+  { id: 'bug-flow:3:1', key: 'bug-flow', name: 'Bug workflow', version: 3, builtIn: false },
+  { id: 'default:1:9', key: 'default', name: 'Default', version: 1, builtIn: true },
+];
+
+const defaultXml =
+  '<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI">' +
+  '<process id="default" name="Default"/><bpmndi:BPMNPlane bpmnElement="default"/></definitions>';
 
 const severity = {
   id: 'f1',
@@ -71,6 +78,7 @@ beforeEach(() => {
   api.get.mockReset().mockImplementation((url: string) => {
     if (url === '/workflow/deployments') return Promise.resolve({ data: workflows });
     if (url === '/workflow/deployments/bug-flow:3:1/bpmn') return Promise.resolve({ data: { bpmnXml: '<saved/>' } });
+    if (url === '/workflow/deployments/default:1:9/bpmn') return Promise.resolve({ data: { bpmnXml: defaultXml } });
     if (url === '/fields/schemas') return Promise.resolve({ data: [severity] });
     if (url === '/audit') return Promise.resolve({ data: { content: [auditEntry], totalPages: 1, last: true } });
     if (url === '/notifications/unread-count') return Promise.resolve({ data: { count: 0 } });
@@ -90,6 +98,7 @@ describe('Projects', () => {
     fireEvent.click(screen.getByRole('button', { name: '+ New project' }));
     const form = within(screen.getByRole('form', { name: 'New project' }));
     await form.findByRole('option', { name: 'bug-flow' });
+    expect(form.getByRole('option', { name: 'default (built-in)' })).toBeTruthy();
 
     fireEvent.change(form.getByLabelText('Key'), { target: { value: 'OPS' } });
     fireEvent.change(form.getByLabelText('Name'), { target: { value: 'Operations' } });
@@ -184,6 +193,29 @@ describe('Workflows', () => {
     expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe(
       '/admin/workflows/bug-flow%3A3%3A1/edit',
     );
+  });
+
+  it('marks the built-in workflow and offers it only as a template', async () => {
+    renderAt('/admin/workflows');
+
+    const builtIn = (await screen.findByText('Built-in')).closest('tr')!;
+    expect(within(builtIn).queryByRole('link', { name: 'Edit' })).toBeNull();
+    expect(within(builtIn).getByRole('button', { name: 'Use as template' })).toBeTruthy();
+  });
+
+  it('copies the built-in workflow under a new id into the editor', async () => {
+    renderAt('/admin/workflows');
+    fireEvent.click(await screen.findByRole('button', { name: 'Use as template' }));
+
+    const dialog = within(screen.getByRole('dialog', { name: 'Use as template' }));
+    fireEvent.change(dialog.getByLabelText('New workflow id'), { target: { value: 'bugFlow2' } });
+    fireEvent.change(dialog.getByLabelText('New workflow name'), { target: { value: 'Bug flow 2' } });
+    fireEvent.click(dialog.getByRole('button', { name: 'Open in editor' }));
+
+    const editor = await screen.findByTestId('editor');
+    expect(editor.textContent).toContain('<process id="bugFlow2" name="Bug flow 2"/>');
+    expect(editor.textContent).toContain('bpmnElement="bugFlow2"');
+    expect((screen.getByLabelText('Workflow name') as HTMLInputElement).value).toBe('Bug flow 2');
   });
 });
 

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../shared-ui';
 import { BpmnEditor, type Violation } from '../../bpmn-editor';
 import type { AxiosError } from 'axios';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { downloadBpmn, listWorkflows, moveOpenItems, previewUpgrade, type UpgradeSummary } from '../../admin/api';
 import DeployDialog from '../../components/DeployDialog';
 import { getWorkflowXml } from '../../items/api';
@@ -12,11 +12,12 @@ const VALIDATE_DELAY_MS = 500;
 
 export default function WorkflowEditorPage() {
   const { id } = useParams<{ id: string }>();
+  const template = useLocation().state as { xml: string; name: string } | null;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [xml, setXml] = useState<string>();
-  const [typedName, setTypedName] = useState<string>();
+  const [xml, setXml] = useState<string | undefined>(template?.xml);
+  const [typedName, setTypedName] = useState<string | undefined>(template?.name);
   const [violations, setViolations] = useState<Violation[]>([]);
   const [selectRequest, setSelectRequest] = useState<{ elementId: string }>();
   const [validationError, setValidationError] = useState<string>();

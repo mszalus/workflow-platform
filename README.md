@@ -139,7 +139,7 @@ All endpoints require a valid JWT from Keycloak (except health checks).
 | POST | `/api/workflow/workflows/upgrade-preview` | Dry run: how moving open items to this BPMN would affect them |
 | POST | `/api/workflow/workflows/{key}/upgrade` | Move open items to the latest version |
 | POST | `/api/workflow/workflows/validate` | Check BPMN against the tracker profile: `[{elementId, rule, message}]` |
-| GET | `/api/workflow/deployments` | List deployments |
+| GET | `/api/workflow/deployments` | List the tenant's workflows and the built-in `default` one |
 | POST | `/api/fields/schemas` | Create a custom field schema for a `project` and `itemTypes` (none means all) |
 | GET | `/api/fields/schemas?project=...&type=...` | List a project's field schemas, optionally those that apply to one item type |
 | GET | `/api/notifications/` | List notifications |

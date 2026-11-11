@@ -1,5 +1,6 @@
 package com.wfp.workflow.engine.flowable;
 
+import com.wfp.common.exception.BadRequestException;
 import com.wfp.common.exception.NotFoundException;
 import com.wfp.security.context.TenantContext;
 import com.wfp.workflow.dto.DeploymentDto;
@@ -12,7 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +26,10 @@ public class DeploymentService {
 
     public DeploymentDto deploy(String name, String category, String bpmnXml) {
         String tenantId = TenantContext.requireCurrentTenantId();
+        if (deploymentXml.processIds(bpmnXml).contains(BuiltInWorkflow.KEY)) {
+            throw new BadRequestException(BuiltInWorkflow.KEY
+                    + " is the built-in workflow; give your workflow another id");
+        }
         Deployment deployment = repositoryService.createDeployment()
                 .name(name)
                 .category(category)
@@ -34,34 +41,43 @@ public class DeploymentService {
 
     public List<ProcessDefinitionDto> listProcessDefinitions() {
         String tenantId = TenantContext.requireCurrentTenantId();
-        return repositoryService.createProcessDefinitionQuery()
+        List<ProcessDefinition> own = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionTenantId(tenantId)
                 .latestVersion()
-                .orderByProcessDefinitionName()
-                .asc()
-                .list()
-                .stream()
+                .list();
+        List<ProcessDefinition> builtIn = repositoryService.createProcessDefinitionQuery()
+                .processDefinitionKey(BuiltInWorkflow.KEY)
+                .processDefinitionWithoutTenantId()
+                .latestVersion()
+                .list();
+        return Stream.concat(own.stream(), builtIn.stream())
+                .sorted(Comparator.comparing(DeploymentService::displayName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toDto)
                 .toList();
+    }
+
+    private static String displayName(ProcessDefinition pd) {
+        return pd.getName() != null ? pd.getName() : pd.getKey();
     }
 
     private ProcessDefinitionDto toDto(ProcessDefinition pd) {
         return ProcessDefinitionDto.builder()
                 .id(pd.getId())
                 .key(pd.getKey())
-                .name(pd.getName() != null ? pd.getName() : pd.getKey())
+                .name(displayName(pd))
                 .version(pd.getVersion())
                 .deploymentId(pd.getDeploymentId())
                 .suspended(pd.isSuspended())
+                .builtIn(BuiltInWorkflow.isBuiltIn(pd))
                 .build();
     }
 
     private ProcessDefinition getProcessDefinition(String processDefinitionId) {
+        String tenantId = TenantContext.requireCurrentTenantId();
         ProcessDefinition pd = repositoryService.createProcessDefinitionQuery()
                 .processDefinitionId(processDefinitionId)
-                .processDefinitionTenantId(TenantContext.requireCurrentTenantId())
                 .singleResult();
-        if (pd == null) {
+        if (pd == null || !(BuiltInWorkflow.isBuiltIn(pd) || tenantId.equals(pd.getTenantId()))) {
             throw new NotFoundException("ProcessDefinition", processDefinitionId);
         }
         return pd;

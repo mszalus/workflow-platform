@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             xmlns:wfp="http://wfp.com/schema/tracker"
+             targetNamespace="http://wfp.com/workflows">
+  <process id="default" name="Default" isExecutable="true">
+    <startEvent id="start"/>
+    <userTask id="new" name="New" wfp:statusCategory="OPEN"/>
+    <userTask id="todo" name="To do" wfp:statusCategory="TODO"/>
+    <userTask id="inProgress" name="In progress" wfp:statusCategory="IN_PROGRESS"/>
+    <userTask id="done" name="Done" wfp:statusCategory="DONE"/>
+    <exclusiveGateway id="afterDone"/>
+    <endEvent id="closed" name="Closed"/>
+    <sequenceFlow id="toNew" sourceRef="start" targetRef="new"/>
+    <sequenceFlow id="accept" name="Accept" sourceRef="new" targetRef="todo"/>
+    <sequenceFlow id="startWork" name="Start work" sourceRef="todo" targetRef="inProgress"/>
+    <sequenceFlow id="finish" name="Finish" sourceRef="inProgress" targetRef="done"/>
+    <sequenceFlow id="doneLeaves" sourceRef="done" targetRef="afterDone"/>
+    <sequenceFlow id="reopen" name="Reopen" sourceRef="afterDone" targetRef="todo"/>
+    <sequenceFlow id="close" name="Close" sourceRef="afterDone" targetRef="closed"/>
+  </process>
+  <bpmndi:BPMNDiagram id="diagram">
+    <bpmndi:BPMNPlane id="plane" bpmnElement="default">
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start"><dc:Bounds x="40" y="62" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="new_di" bpmnElement="new"><dc:Bounds x="130" y="40" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="todo_di" bpmnElement="todo"><dc:Bounds x="290" y="40" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="inProgress_di" bpmnElement="inProgress"><dc:Bounds x="450" y="40" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="done_di" bpmnElement="done"><dc:Bounds x="610" y="40" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="afterDone_di" bpmnElement="afterDone"><dc:Bounds x="770" y="55" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="closed_di" bpmnElement="closed"><dc:Bounds x="880" y="62" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="toNew_di" bpmnElement="toNew"><di:waypoint x="76" y="80"/><di:waypoint x="130" y="80"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="accept_di" bpmnElement="accept"><di:waypoint x="230" y="80"/><di:waypoint x="290" y="80"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="startWork_di" bpmnElement="startWork"><di:waypoint x="390" y="80"/><di:waypoint x="450" y="80"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="finish_di" bpmnElement="finish"><di:waypoint x="550" y="80"/><di:waypoint x="610" y="80"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="doneLeaves_di" bpmnElement="doneLeaves"><di:waypoint x="710" y="80"/><di:waypoint x="770" y="80"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="reopen_di" bpmnElement="reopen"><di:waypoint x="795" y="105"/><di:waypoint x="795" y="170"/><di:waypoint x="340" y="170"/><di:waypoint x="340" y="120"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="close_di" bpmnElement="close"><di:waypoint x="820" y="80"/><di:waypoint x="880" y="80"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

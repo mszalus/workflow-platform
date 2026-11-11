@@ -16,8 +16,8 @@ export interface ProcessDefinition {
   category?: string;
   description?: string;
   deploymentId: string;
-  tenantId: string;
   suspended: boolean;
+  builtIn: boolean;
 }
 
 export interface Notification {

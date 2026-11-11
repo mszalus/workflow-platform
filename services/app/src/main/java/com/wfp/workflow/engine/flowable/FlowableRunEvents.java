@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.flowable.common.engine.api.delegate.event.FlowableEngineEventType;
 import org.flowable.common.engine.api.delegate.event.FlowableEvent;
 import org.flowable.common.engine.api.delegate.event.FlowableEventListener;
-import org.flowable.engine.RepositoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.delegate.event.FlowableActivityEvent;
 import org.springframework.stereotype.Component;
@@ -20,7 +19,6 @@ import java.util.UUID;
 public class FlowableRunEvents implements FlowableEventListener {
 
     private final RuntimeService runtimeService;
-    private final RepositoryService repositoryService;
     private final FlowableWorkflowEngine engine;
     private final WorkflowRunListener listener;
 
@@ -40,7 +38,10 @@ public class FlowableRunEvents implements FlowableEventListener {
         }
         WorkflowGraph graph = engine.graph(activity.getProcessDefinitionId());
         Node node = graph.node(activity.getActivityId()).orElseThrow();
-        String tenantId = repositoryService.getProcessDefinition(activity.getProcessDefinitionId()).getTenantId();
+        String tenantId = runtimeService.createExecutionQuery()
+                .executionId(activity.getExecutionId())
+                .singleResult()
+                .getTenantId();
         if (graph.isStatus(node)) {
             listener.statusEntered(tenantId, UUID.fromString(itemId.toString()), node.id());
         } else if (graph.endsRun(node)) {

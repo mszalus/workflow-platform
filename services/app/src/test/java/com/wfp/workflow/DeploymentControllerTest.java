@@ -90,12 +90,12 @@ class DeploymentControllerTest {
                         .with(jwt().jwt(j -> j.claim("preferred_username", "admin")
                                 .claim("organization", List.of("tenant-list"))).authorities(TestRoles.ADMIN)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].id").exists())
-                .andExpect(jsonPath("$[0].key").value("unnamedProcess"))
-                .andExpect(jsonPath("$[0].name").value("unnamedProcess"))
-                .andExpect(jsonPath("$[0].version").value(1))
-                .andExpect(jsonPath("$[0].deploymentId").exists())
-                .andExpect(jsonPath("$[0].suspended").value(false));
+                .andExpect(jsonPath("$[*].key").value(org.hamcrest.Matchers.contains("default", "unnamedProcess")))
+                .andExpect(jsonPath("$[1].id").exists())
+                .andExpect(jsonPath("$[1].name").value("unnamedProcess"))
+                .andExpect(jsonPath("$[1].version").value(1))
+                .andExpect(jsonPath("$[1].deploymentId").exists())
+                .andExpect(jsonPath("$[1].suspended").value(false))
+                .andExpect(jsonPath("$[1].builtIn").value(false));
     }
 }
