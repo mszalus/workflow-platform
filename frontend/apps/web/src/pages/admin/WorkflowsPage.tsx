@@ -24,13 +24,25 @@ export function renameProcess(xml: string, id: string, name: string) {
   return new XMLSerializer().serializeToString(document);
 }
 
-function TemplateDialog({ template, onClose }: { template: ProcessDefinition; onClose: () => void }) {
+function TemplateDialog({
+  template,
+  takenIds,
+  onClose,
+}: {
+  template: ProcessDefinition;
+  takenIds: string[];
+  onClose: () => void;
+}) {
   const navigate = useNavigate();
   const [id, setId] = useState('');
   const [name, setName] = useState('');
+  const idTaken = takenIds.includes(id);
 
   const open = async (event: FormEvent) => {
     event.preventDefault();
+    if (idTaken) {
+      return;
+    }
     const xml = renameProcess(await getWorkflowXml(template.id), id, name);
     navigate('/admin/workflows/new', { state: { xml, name } });
   };
@@ -53,6 +65,7 @@ function TemplateDialog({ template, onClose }: { template: ProcessDefinition; on
           onChange={(event) => setId(event.target.value)}
         />
       </label>
+      {idTaken && <p role="alert">A workflow with this id already exists.</p>}
       <label style={{ display: 'block', marginBottom: '0.5rem' }}>
         New workflow name <input required value={name} onChange={(event) => setName(event.target.value)} />
       </label>
@@ -71,7 +84,13 @@ export default function WorkflowsPage() {
         <h1 style={{ fontSize: '1.4rem', margin: 0 }}>Workflows</h1>
         <Link to="/admin/workflows/new">+ New</Link>
       </div>
-      {template && <TemplateDialog template={template} onClose={() => setTemplate(undefined)} />}
+      {template && (
+        <TemplateDialog
+          template={template}
+          takenIds={workflows.map((workflow) => workflow.key)}
+          onClose={() => setTemplate(undefined)}
+        />
+      )}
       <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff' }}>
         <thead>
           <tr>
@@ -90,11 +109,12 @@ export default function WorkflowsPage() {
               </td>
               <td style={cell}>v{workflow.version}</td>
               <td style={cell}>
-                {workflow.builtIn ? (
-                  <button onClick={() => setTemplate(workflow)}>Use as template</button>
-                ) : (
-                  <Link to={`/admin/workflows/${encodeURIComponent(workflow.id)}/edit`}>Edit</Link>
-                )}{' '}
+                {!workflow.builtIn && (
+                  <>
+                    <Link to={`/admin/workflows/${encodeURIComponent(workflow.id)}/edit`}>Edit</Link>{' '}
+                  </>
+                )}
+                <button onClick={() => setTemplate(workflow)}>Use as template</button>{' '}
                 <button onClick={() => exportWorkflow(workflow)}>Export BPMN</button>
               </td>
             </tr>
