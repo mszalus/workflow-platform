@@ -285,7 +285,7 @@ Tenant isolation is enforced through the `organization` JWT claim:
 1. Each tenant is a Keycloak Organization whose alias is the tenant id
 2. The `organization` client scope adds the aliases of the user's organizations to the JWT
 3. The app reads the claim from the validated token and filters all database queries by tenant
-4. A user with no organization, or with more than one, gets **403 Forbidden** on every API call, so make every user a member of exactly one organization
+4. A user with no organization, or with more than one, gets **403 Forbidden** on every API call and the app shows "Your account isn't assigned to an organization", so make every user a member of exactly one organization
 
 ### Default Configuration
 

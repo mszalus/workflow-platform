@@ -146,6 +146,7 @@ The platform supports multiple tenants (organizations). Each tenant's data is co
 |-------|----------|
 | "Loading..." stuck on screen | Check that all backend services are running. Verify the API health at `http://localhost:8081/actuator/health` |
 | Redirected to login repeatedly | Your JWT token may have expired. Clear browser cookies and log in again |
+| "Your account isn't assigned to an organization" | Your account belongs to no organization, or to more than one. Ask an administrator to make you a member of exactly one |
 | "There are no projects yet" | Ask an administrator to create a project |
 | A drop on the board is refused | The workflow has no transition from the item's status to that column |
 | "This workflow has no diagram to show" | The workflow was deployed without a layout. Everything else on the item works |
