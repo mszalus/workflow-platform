@@ -68,6 +68,14 @@ Once running, the services are available at:
 | App (API) | http://localhost:8081 |
 | PostgreSQL | localhost:5433 (wfp/wfp_secret) |
 
+A fresh stack has no projects. To add a demo project (`DEMO`) with a custom field and a few items in `tenant-a`:
+
+```bash
+cd e2e && npm ci && npm run demo-data
+```
+
+Running it again changes nothing.
+
 ## Local Development
 
 ### Backend

@@ -9,6 +9,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'e2e', testIgnore: 'screenshots.test.ts' },
-    { name: 'screenshots', testMatch: 'screenshots.test.ts' },
+    { name: 'demo-data', testMatch: 'demo-data.setup.ts' },
+    { name: 'screenshots', testMatch: 'screenshots.test.ts', dependencies: ['demo-data'] },
   ],
 });

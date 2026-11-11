@@ -28,7 +28,8 @@ test.describe('Screenshot Capture', () => {
 
   test('User screens', async ({ page }) => {
     await login(page, 'user-a');
-    await page.getByLabel('Project').selectOption('PROJ');
+    await page.getByLabel('Project').selectOption('DEMO');
+    await expect(page.getByRole('link', { name: 'DEMO-1', exact: true })).toBeVisible();
     await capture(page, 'my-work');
 
     await page.getByRole('link', { name: 'Items' }).click();
@@ -41,26 +42,26 @@ test.describe('Screenshot Capture', () => {
     await capture(page, 'create-item');
     await page.getByRole('button', { name: 'Cancel' }).click();
 
-    await page.locator('tbody tr').first().getByRole('link').click();
+    await page.getByRole('link', { name: 'DEMO-1', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Comments' })).toBeVisible();
     await page.waitForTimeout(800);
     await capture(page, 'item-detail');
 
     await page.getByRole('link', { name: 'Board' }).click();
-    await expect(page.getByRole('region', { name: 'Open', exact: true })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Open', exact: true }).getByRole('link').first()).toBeVisible();
     await capture(page, 'board');
   });
 
   test('Admin screens', async ({ page }) => {
     await login(page, 'admin-a');
-    await page.getByLabel('Project').selectOption('PROJ');
+    await page.getByLabel('Project').selectOption('DEMO');
 
     await page.getByRole('link', { name: 'Projects' }).click();
-    await expect(page.getByRole('cell', { name: 'PROJ', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'DEMO', exact: true })).toBeVisible();
     await capture(page, 'admin-projects');
 
     await page.getByRole('link', { name: 'Workflows' }).click();
-    const workflow = page.getByRole('row', { name: /simple/ });
+    const workflow = page.getByRole('row', { name: /trackerFlow/ });
     await expect(workflow).toBeVisible();
     await capture(page, 'admin-workflows');
 
